@@ -17,6 +17,7 @@ class SMA_ATR_Exit(bt.Strategy):
         atr_len=10,
         atr_mult=Decimal("3.0"),
         stop_loss_pct=Decimal("0.1"),
+        verbose=True,
     )
 
     def __init__(self):
@@ -62,7 +63,8 @@ class SMA_ATR_Exit(bt.Strategy):
                 self.stop_price = None
                 self.sl_price = None
             else:
-                print(f"  SIZE IS 0 OR NEGATIVE, NOT BUYING")
+                if self.p.verbose:
+                    print(f"  SIZE IS 0 OR NEGATIVE, NOT BUYING")
 
         # --------------------------
         # Manage existing position exits
@@ -89,7 +91,8 @@ class SMA_ATR_Exit(bt.Strategy):
             # Check if either stop is hit
             if self.data.close[0] <= self.stop_price or self.data.close[0] <= self.sl_price:
                 if self.data.close[0] <= self.sl_price:
-                    print(f"STOP LOSS HIT!")
+                    if self.p.verbose:
+                        print(f"STOP LOSS HIT!")
                 self.order = self.sell(size=self.position.size)
                 self.stop_price = None
                 self.sl_price = None
@@ -103,13 +106,14 @@ class SMA_ATR_Exit(bt.Strategy):
             # Order submitted/accepted - no action required
             return
 
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                print(f"BUY Executed: {self.data.datetime.date(0)}, size={order.executed.size}, price={order.executed.price}")
-            elif order.issell():
-                print(f"SELL Executed: {self.data.datetime.date(0)}, size={order.executed.size}, price={order.executed.price}")
-                self.exiting = False
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            print(f"ORDER FAILED: {self.data.datetime.date(0)}, status={order.getstatusname()}")
+        if self.p.verbose:
+            if order.status in [order.Completed]:
+                if order.isbuy():
+                    print(f"BUY Executed: {self.data.datetime.date(0)}, size={order.executed.size}, price={order.executed.price}")
+                elif order.issell():
+                    print(f"SELL Executed: {self.data.datetime.date(0)}, size={order.executed.size}, price={order.executed.price}")
+                    self.exiting = False
+            elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+                print(f"ORDER FAILED: {self.data.datetime.date(0)}, status={order.getstatusname()}")
 
         self.order = None
