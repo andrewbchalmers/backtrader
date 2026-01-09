@@ -1,11 +1,11 @@
 from decimal import Decimal
 import backtrader as bt
 
-class SMA_ATR_Exit(bt.Strategy):
+class Strategy(bt.Strategy):
     # Enable plotting for the strategy
     plotinfo = dict(
-        plot=True,       # allow plotting
-        subplot=False,   # main chart
+        plot=True,
+        subplot=True,
         plotlinelabels=True
     )
 
@@ -24,9 +24,10 @@ class SMA_ATR_Exit(bt.Strategy):
         # --------------------------
         # Indicators
         # --------------------------
-        self.fast_sma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.fast_len)
-        self.slow_sma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.slow_len)
+        self.fast = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.fast_len)
+        self.slow = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.slow_len)
         self.atr = bt.indicators.ATR(self.data, period=self.p.atr_len)
+        self.crossover = bt.indicators.CrossOver(self.fast, self.slow)
 
         # Track open orders & stops
         self.order = None
@@ -53,7 +54,7 @@ class SMA_ATR_Exit(bt.Strategy):
         # --------------------------
         # Entry: fast SMA crosses above slow SMA
         # --------------------------
-        if self.fast_sma[0] > self.slow_sma[0] and self.fast_sma[-1] <= self.slow_sma[-1]:
+        if self.crossover > 0:
             cash = self.broker.getcash()
             size = int((cash * 0.98) / self.data.close[0])
 
@@ -113,7 +114,7 @@ class SMA_ATR_Exit(bt.Strategy):
                 elif order.issell():
                     print(f"SELL Executed: {self.data.datetime.date(0)}, size={order.executed.size}, price={order.executed.price}")
                     self.exiting = False
-            elif order.status in[order.Canceled, order.Margin, order.Rejected]:
+            elif order.status in [order.Canceled, order.Margin, order.Rejected]:
                 print(f"ORDER FAILED: {self.data.datetime.date(0)}, status={order.getstatusname()}")
 
         self.order = None

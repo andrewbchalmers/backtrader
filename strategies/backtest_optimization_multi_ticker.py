@@ -84,7 +84,7 @@ def backtest_with_params(symbol, params, df_cache, period="2y", initial_cash=10_
         return None
 
 
-def optimize_strategy_multi_stock(csv_file, param_grid, period="1y", initial_cash=10_000):
+def optimize_strategy_multi_stock(csv_file, param_grid, period="2y", initial_cash=10_000):
     """
     Optimize strategy parameters across multiple stocks
 
@@ -222,6 +222,17 @@ def print_optimization_results(df_results, metric='avg_return_pct', top_n=5):
         print(f"  Avg Max Drawdown:  {row['avg_max_drawdown']:7.2f}%")
         print(f"  Total Trades:      {int(row['total_trades'])}")
         print(f"  Avg Trade Win %:   {row['avg_win_rate']:7.1f}%")
+
+        # Only print new metrics if they exist
+        if 'avg_rr_ratio' in row:
+            print(f"  Avg RR Ratio:      {row['avg_rr_ratio']:7.2f}")
+        if 'avg_expectancy' in row:
+            print(f"  Avg Expectancy:    ${row['avg_expectancy']:7.2f}")
+        if 'avg_profit_factor' in row:
+            print(f"  Avg Profit Factor: {row['avg_profit_factor']:7.2f}")
+        if 'avg_trade_pnl' in row:
+            print(f"  Avg Trade P&L:     ${row['avg_trade_pnl']:7.2f}")
+
         print(f"  Stock Win Rate:    {row['stock_win_rate']:7.1f}% ({int(row['winning_stocks'])}/{int(row['stocks_tested'])} stocks)")
         print()
 
@@ -246,8 +257,8 @@ if __name__ == "__main__":
     param_grid = {
         'fast_len': [7, 10, 14, 20],
         'slow_len': [15, 18, 26, 50, 100],
-        'atr_len': [10, 14, 20],
-        'atr_mult': [Decimal("2.0"), Decimal("3.0"), Decimal("4.0")],
+        'atr_len': [7, 10, 14, 20],
+        'atr_mult': [Decimal("2.0"), Decimal("3.0"), Decimal("3.5"), Decimal("4.0")],
         'stop_loss_pct': [Decimal("0.05"), Decimal("0.1"), Decimal("0.15")]
     }
 
@@ -262,8 +273,6 @@ if __name__ == "__main__":
     )
 
     if results is not None and not results.empty:
-        print(f"Number of parameter sets with results: {len(results)}")
-
         # Print top 5 by average return
         print_optimization_results(results, metric='avg_return_pct', top_n=5)
 
@@ -275,9 +284,3 @@ if __name__ == "__main__":
 
         # Save all results
         save_results(results, filename='multi_stock_optimization_results.csv')
-    else:
-        print("❌ No valid results generated. All backtests may have failed.")
-        print("Check if:")
-        print("  - Stock tickers in CSV are valid")
-        print("  - Data was successfully downloaded")
-        print("  - Parameter combinations are reasonable")

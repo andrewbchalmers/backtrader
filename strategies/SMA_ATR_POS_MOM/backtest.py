@@ -9,7 +9,7 @@ import backtrader as bt
 import yfinance as yf
 from math import isnan
 import matplotlib.pyplot as plt
-from sma_atr import SMA_ATR_Exit
+from sma_atr import Strategy
 import pandas as pd
 import numpy as np
 
@@ -41,8 +41,8 @@ class PortfolioValue(bt.Observer):
 
 
 # 1️⃣ Download data
-symbol = "LULU"
-df = yf.download(symbol, period="2y", interval="1d")
+symbol = "SPOT"
+df = yf.download(symbol, period="1y", interval="1d")
 df.index = df.index.tz_localize(None)
 df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
 df.columns = ['open', 'high', 'low', 'close', 'volume']
@@ -74,7 +74,7 @@ data = bt.feeds.PandasData(
     volume='volume'
 )
 cerebro.adddata(data)
-cerebro.addstrategy(SMA_ATR_Exit,
+cerebro.addstrategy(Strategy,
                     fast_len=20,
                     slow_len=15,
                     atr_len=14,
