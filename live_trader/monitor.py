@@ -22,12 +22,32 @@ class LiveTradingMonitor:
         self.warmup_days = warmup_days
         self.buy_alerts_sent = {}  # Track when buy alerts were sent: {symbol: date}
 
+        # Clear any pending_exit flags from previous sessions
+        self._clear_pending_exit_flags()
+
         # Import chart generator
         from chart_generator import ChartGenerator
         self.chart_gen = ChartGenerator(strategy_loader, strategy_params)
 
         # Start continuous reply listener
         self.notifier.start_listening(self._handle_reply)
+
+    def _clear_pending_exit_flags(self):
+        """Clear pending_exit flags on startup (they don't persist across restarts)"""
+        positions = self.position_manager.list_all()
+        cleared = 0
+
+        for symbol, position in positions.items():
+            if position.get('pending_exit'):
+                del position['pending_exit']
+                if 'exit_alerted_date' in position:
+                    del position['exit_alerted_date']
+                self.position_manager.positions[symbol] = position
+                cleared += 1
+
+        if cleared > 0:
+            self.position_manager._save()
+            print(f"ℹ️  Cleared {cleared} pending exit flag(s) from previous session")
 
     def get_live_data(self, symbol, period="1y"):
         """Fetch live data for a symbol"""

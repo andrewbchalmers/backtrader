@@ -18,7 +18,33 @@ class PushbulletNotifier:
         self.listener_thread = None
         self.listening = False
         self.processed_push_ids = set()  # Track processed pushes to avoid duplicates
+
+        # Clean up old pushes on startup to free storage
+        self._cleanup_old_pushes()
+
         print(f"✓ Pushbullet initialized")
+
+    def _cleanup_old_pushes(self, keep_recent=100):
+        """Delete old pushes to free up storage space (for free tier)"""
+        try:
+            pushes = self.pb.get_pushes()
+
+            if len(pushes) > keep_recent:
+                # Keep only the most recent ones
+                old_pushes = pushes[keep_recent:]
+                deleted = 0
+
+                for push in old_pushes:
+                    try:
+                        self.pb.delete_push(push.get('iden'))
+                        deleted += 1
+                    except:
+                        pass
+
+                if deleted > 0:
+                    print(f"ℹ️  Cleaned up {deleted} old push(es) to free storage")
+        except Exception as e:
+            print(f"⚠️  Could not cleanup old pushes: {e}")
 
     def send_notification(self, title, message):
         """Send push notification"""
@@ -33,6 +59,7 @@ class PushbulletNotifier:
     def send_notification_with_image(self, title, message, image_buffer, filename="chart.png"):
         """
         Send push notification with an attached image
+        Auto-cleans old pushes to stay within free tier limits
 
         Args:
             title: Notification title
@@ -44,6 +71,9 @@ class PushbulletNotifier:
             bool: Success status
         """
         try:
+            # Clean up old pushes before uploading new image
+            self._cleanup_old_pushes(keep_recent=100)
+
             # Upload the file
             file_data = self.pb.upload_file(image_buffer, filename)
 
@@ -56,11 +86,17 @@ class PushbulletNotifier:
 
             print(f"✓ Notification with image sent: {title}")
             return True
+
         except Exception as e:
-            print(f"❌ Notification with image failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
+            # If file upload fails (Pro required or limit hit), send text only
+            if "pushbullet_pro_required" in str(e) or "rate_limit" in str(e):
+                print(f"⚠️  Image upload failed (Pro required or limit hit), sending text only")
+                return self.send_notification(title, message)
+            else:
+                print(f"❌ Notification with image failed: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
 
     def start_listening(self, callback):
         """

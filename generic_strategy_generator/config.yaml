@@ -1,0 +1,63 @@
+# Generic Strategy Generator Configuration
+
+# Data Settings
+data:
+  source: "yahoo"  # yahoo, csv, database
+  start_date: "2020-01-01"
+  end_date: "2024-12-31"
+  data_dir: "data/historical"
+
+# Backtest Settings
+backtest:
+  initial_capital: 100000
+  commission: 0.001  # 0.1%
+  slippage: 0.0005   # 0.05%
+  position_size: 0.95  # Use 95% of capital per trade
+  
+# Strategy Generation
+strategy:
+  # Entry condition types: crossover, threshold, breakout
+  entry_types: ["crossover", "threshold", "breakout"]
+  # Exit condition types: crossover, stop_loss, take_profit, trailing_stop
+  exit_types: ["crossover", "stop_loss", "take_profit"]
+  # Maximum combinations to test (0 = unlimited)
+  max_combinations: 0
+
+# Performance Filters (minimum requirements)
+filters:
+  min_trades: 10
+  max_drawdown: 0.30  # 30%
+  min_sharpe: 0.5
+  min_profit_factor: 1.2
+  min_win_rate: 0.35
+
+# Optimization Settings
+optimization:
+  # Scoring weights (must sum to 1.0)
+  weights:
+    total_return: 0.25
+    sharpe_ratio: 0.20
+    max_drawdown: 0.20
+    profit_factor: 0.15
+    win_rate: 0.10
+    recovery_factor: 0.10
+  
+  # Top N strategies to export
+  top_n: 50
+  
+  # Enable multi-objective optimization (Pareto frontier)
+  pareto_optimization: true
+
+# Execution Settings
+execution:
+  parallel_workers: 4
+  save_interval: 100  # Save results every N strategies
+  verbose: true
+
+# Output Settings
+output:
+  database: "results/strategies.db"
+  top_strategies_csv: "results/top_strategies.csv"
+  reports_dir: "results/reports"
+  generate_plots: true
+  plot_top_n: 10

@@ -59,6 +59,23 @@ class ChartGenerator:
         if len(df_chart) == 0:
             return None
 
+        # Add current price as today's point if market is open or recently closed
+        current_price = df['Close'].iloc[-1]
+        last_date = df_chart.index[-1]
+        today = pd.Timestamp.now().normalize()
+
+        # If last data is from today or we can append today's price
+        if last_date.date() < today.date():
+            # Last close was yesterday, add today's current price
+            df_chart.loc[today] = {
+                'Open': current_price,
+                'High': current_price,
+                'Low': current_price,
+                'Close': current_price,
+                'Volume': 0
+            }
+            print(f"  Added current price ${current_price:.2f} as today's point")
+
         # Calculate indicators using full data (includes warmup)
         # Need enough data for longest indicator period
         df_calc = df.tail(days + self.warmup_days).copy()
@@ -79,13 +96,39 @@ class ChartGenerator:
         buy_signals = []
         sell_signals = []
 
+        # Track simulated positions to detect sells
+        simulated_position = None  # {'entry_price': float, 'stop_loss': float, 'entry_idx': int}
+
         for i in range(1, len(df_chart)):
             current_df = df.iloc[:-(len(df_chart) - i - 1)] if i < len(df_chart) - 1 else df
 
-            # Check for buy signal
-            signal = self.strategy.get_entry_signal(current_df, self.params)
-            if signal['signal']:
-                buy_signals.append((df_chart.index[i], df_chart['Close'].iloc[i]))
+            if simulated_position is None:
+                # Not in a position - check for buy signal
+                signal = self.strategy.get_entry_signal(current_df, self.params)
+                if signal['signal']:
+                    buy_signals.append((df_chart.index[i], df_chart['Close'].iloc[i]))
+                    # Start tracking simulated position
+                    simulated_position = {
+                        'entry_price': signal['price'],
+                        'stop_loss': signal['stop_loss'],
+                        'entry_idx': i
+                    }
+            else:
+                # In a position - check for exit signal
+                exit_signal = self.strategy.get_exit_signal(
+                    current_df,
+                    self.params,
+                    simulated_position['entry_price'],
+                    simulated_position['stop_loss']
+                )
+
+                if exit_signal['signal']:
+                    # Stop hit - record sell signal
+                    sell_signals.append((df_chart.index[i], df_chart['Close'].iloc[i]))
+                    simulated_position = None  # Exit position
+                else:
+                    # Update trailing stop
+                    simulated_position['stop_loss'] = exit_signal['new_stop']
 
         # Create figure with single plot (no ATR)
         fig, ax1 = plt.subplots(1, 1, figsize=(14, 8), facecolor='#1e1e1e')
@@ -105,12 +148,12 @@ class ChartGenerator:
         if not fast_sma.empty:
             ax1.plot(df_chart.index, fast_sma,
                      label=f'Fast SMA ({self.params.get("fast_len", 7)})',
-                     color='#00ff88', linewidth=1.5, alpha=0.8)
+                     color='#ff6b6b', linewidth=1.5, alpha=0.8)
 
         if not slow_sma.empty:
             ax1.plot(df_chart.index, slow_sma,
                      label=f'Slow SMA ({self.params.get("slow_len", 50)})',
-                     color='#ff6b6b', linewidth=1.5, alpha=0.8)
+                     color='#00ff88', linewidth=1.5, alpha=0.8)
 
         if not trend_ma.empty:
             ax1.plot(df_chart.index, trend_ma,
