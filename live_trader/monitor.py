@@ -22,6 +22,10 @@ class LiveTradingMonitor:
         self.warmup_days = warmup_days
         self.buy_alerts_sent = {}  # Track when buy alerts were sent: {symbol: date}
 
+        # Import chart generator
+        from chart_generator import ChartGenerator
+        self.chart_gen = ChartGenerator(strategy_loader, strategy_params)
+
         # Start continuous reply listener
         self.notifier.start_listening(self._handle_reply)
 
@@ -342,7 +346,7 @@ class LiveTradingMonitor:
 
     def handle_last_signal_query(self, reply):
         """
-        Handle 'LAST SYMBOL' query - shows last signal for a stock
+        Handle 'LAST SYMBOL' query - shows last signal for a stock with chart
 
         Args:
             reply: The reply string like "LAST NVDA"
@@ -358,92 +362,89 @@ class LiveTradingMonitor:
 
         symbol = parts[1].upper()
 
+        # Get data for chart (need more for indicators)
+        df = self.get_live_data(symbol, period="3mo")  # Get 3 months for indicator calculation
+
+        if df is None or len(df) < 30:
+            self.notifier.send_notification(
+                f"❌ {symbol}",
+                "Unable to fetch sufficient data for this symbol"
+            )
+            return
+
+        # Generate chart
+        print(f"📊 Generating chart for {symbol}...")
+        chart_buffer = self.chart_gen.generate_chart(symbol, df, days=30)
+
         # Check if we're currently holding it
         position = self.position_manager.get(symbol)
         if position:
-            entry_date = position['entry_date'][:10]  # Get just the date part
+            entry_date = position['entry_date'][:10]
             entry_price = position['entry_price']
             stop_loss = position['stop_loss']
 
             # Get current price and P&L
-            df = self.get_live_data(symbol)
-            if df is not None:
-                current_price = df['Close'].iloc[-1]
-                pnl = ((current_price / entry_price) - 1) * 100
+            current_price = df['Close'].iloc[-1]
+            pnl = ((current_price / entry_price) - 1) * 100
 
-                title = f"📊 {symbol} - Current Position"
-                message = (
-                    f"Signal: BUY\n"
-                    f"Date: {entry_date}\n"
-                    f"Entry: ${entry_price:.2f}\n"
-                    f"Current: ${current_price:.2f}\n"
-                    f"P&L: {pnl:+.2f}%\n"
-                    f"Stop: ${stop_loss:.2f}"
-                )
-
-                if position.get('pending_exit'):
-                    message += f"\n\n⚠️ Exit signal active!\nReply: SOLD {symbol}"
-            else:
-                title = f"📊 {symbol} - Current Position"
-                message = (
-                    f"Signal: BUY\n"
-                    f"Date: {entry_date}\n"
-                    f"Entry: ${entry_price:.2f}\n"
-                    f"Stop: ${stop_loss:.2f}\n"
-                    f"(Unable to fetch current price)"
-                )
-
-            self.notifier.send_notification(title, message)
-            print(f"✓ Sent last signal info for {symbol} (currently holding)")
-            return
-
-        # Not holding - check for recent signals
-        df = self.get_live_data(symbol)
-        if df is None or len(df) < 2:
-            self.notifier.send_notification(
-                f"❌ {symbol}",
-                "Unable to fetch data for this symbol"
+            title = f"📊 {symbol} - Current Position"
+            message = (
+                f"Signal: BUY\n"
+                f"Date: {entry_date}\n"
+                f"Entry: ${entry_price:.2f}\n"
+                f"Current: ${current_price:.2f}\n"
+                f"P&L: {pnl:+.2f}%\n"
+                f"Stop: ${stop_loss:.2f}"
             )
-            return
 
-        # Check for recent BUY signal (last 5 days)
-        buy_signal_found = False
-        for i in range(min(5, len(df))):
-            idx = -(i + 1)
-            current_df = df.iloc[:len(df) + idx + 1]
+            if position.get('pending_exit'):
+                message += f"\n\n⚠️ Exit signal active!\nReply: SOLD {symbol}"
 
-            if len(current_df) < 200:
-                continue
+        else:
+            # Not holding - check for recent signals
+            buy_signal_found = False
+            for i in range(min(5, len(df))):
+                idx = -(i + 1)
+                current_df = df.iloc[:len(df) + idx + 1]
 
-            signal = self.strategy.get_entry_signal(current_df, self.params)
+                if len(current_df) < 200:
+                    continue
 
-            if signal['signal']:
-                signal_date = df.index[idx].strftime('%Y-%m-%d')
-                signal_price = signal['price']
-                current_price = df['Close'].iloc[-1]
-                pnl = ((current_price / signal_price) - 1) * 100
-                days_ago = i
+                signal = self.strategy.get_entry_signal(current_df, self.params)
 
+                if signal['signal']:
+                    signal_date = df.index[idx].strftime('%Y-%m-%d')
+                    signal_price = signal['price']
+                    current_price = df['Close'].iloc[-1]
+                    pnl = ((current_price / signal_price) - 1) * 100
+                    days_ago = i
+
+                    title = f"📊 {symbol} - Last Signal"
+                    message = (
+                        f"Signal: BUY\n"
+                        f"Date: {signal_date} ({days_ago} day(s) ago)\n"
+                        f"Price then: ${signal_price:.2f}\n"
+                        f"Price now: ${current_price:.2f}\n"
+                        f"Change: {pnl:+.2f}%\n\n"
+                        f"⚠️ Not currently holding"
+                    )
+                    buy_signal_found = True
+                    break
+
+            if not buy_signal_found:
                 title = f"📊 {symbol} - Last Signal"
-                message = (
-                    f"Signal: BUY\n"
-                    f"Date: {signal_date} ({days_ago} day(s) ago)\n"
-                    f"Price then: ${signal_price:.2f}\n"
-                    f"Price now: ${current_price:.2f}\n"
-                    f"Change: {pnl:+.2f}%\n\n"
-                    f"⚠️ Not currently holding"
-                )
+                message = "No recent signals in the last 5 days"
 
-                self.notifier.send_notification(title, message)
-                print(f"✓ Sent last signal info for {symbol} (not holding)")
-                buy_signal_found = True
-                break
-
-        if not buy_signal_found:
-            title = f"📊 {symbol} - Last Signal"
-            message = "No recent signals in the last 5 days"
+        # Send with chart
+        if chart_buffer:
+            self.notifier.send_notification_with_image(
+                title, message, chart_buffer, f"{symbol}_chart.png"
+            )
+            print(f"✓ Sent last signal info with chart for {symbol}")
+        else:
+            # Fallback to text only
             self.notifier.send_notification(title, message)
-            print(f"✓ No recent signals for {symbol}")
+            print(f"✓ Sent last signal info for {symbol} (chart generation failed)")
 
     def handle_holdings_query(self):
         """Handle 'HOLDING' or 'HOLDINGS' query - shows all current positions with P&L"""

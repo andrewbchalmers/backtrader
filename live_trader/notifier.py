@@ -30,6 +30,38 @@ class PushbulletNotifier:
             print(f"❌ Notification failed: {e}")
             return False
 
+    def send_notification_with_image(self, title, message, image_buffer, filename="chart.png"):
+        """
+        Send push notification with an attached image
+
+        Args:
+            title: Notification title
+            message: Notification message
+            image_buffer: BytesIO buffer containing PNG image
+            filename: Filename for the attachment
+
+        Returns:
+            bool: Success status
+        """
+        try:
+            # Upload the file
+            file_data = self.pb.upload_file(image_buffer, filename)
+
+            # Send the file with message
+            push = self.pb.push_file(
+                **file_data,
+                title=title,
+                body=message
+            )
+
+            print(f"✓ Notification with image sent: {title}")
+            return True
+        except Exception as e:
+            print(f"❌ Notification with image failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     def start_listening(self, callback):
         """
         Start continuous listener for user replies in background thread
