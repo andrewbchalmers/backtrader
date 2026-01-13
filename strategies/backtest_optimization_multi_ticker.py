@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('Agg')
 import backtrader as bt
 import yfinance as yf
-from SMA_ATR.sma_atr import SMA_ATR_Exit
+from SMA_ATR.sma_atr import Strategy
 import pandas as pd
 from itertools import product
 from decimal import Decimal
@@ -42,7 +42,7 @@ def backtest_with_params(symbol, params, df_cache, period="2y", initial_cash=10_
         )
         cerebro.adddata(data)
         # Add verbose=False to suppress strategy logs during optimization
-        cerebro.addstrategy(SMA_ATR_Exit, verbose=False, **params)
+        cerebro.addstrategy(Strategy, verbose=False, **params)
 
         cerebro.broker.setcash(initial_cash)
         cerebro.broker.setcommission(commission=0.0)

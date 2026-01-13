@@ -1,7 +1,7 @@
 from decimal import Decimal
 import backtrader as bt
 
-class SMA_ATR_Exit(bt.Strategy):
+class Strategy(bt.Strategy):
     # Enable plotting for the strategy
     plotinfo = dict(
         plot=True,       # allow plotting

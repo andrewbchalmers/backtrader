@@ -8,7 +8,7 @@ import backtrader as bt
 import yfinance as yf
 from math import isnan
 import matplotlib.pyplot as plt
-from sma_atr import SMA_ATR_Exit
+from sma_atr import Strategy
 import pandas as pd
 import numpy as np
 import csv
@@ -109,9 +109,9 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
 
         # Add strategy with custom parameters
         if strategy_params:
-            cerebro.addstrategy(SMA_ATR_Exit, **strategy_params)
+            cerebro.addstrategy(Strategy, **strategy_params)
         else:
-            cerebro.addstrategy(SMA_ATR_Exit)
+            cerebro.addstrategy(Strategy)
 
         # Broker settings
         cerebro.broker.setcash(initial_cash)

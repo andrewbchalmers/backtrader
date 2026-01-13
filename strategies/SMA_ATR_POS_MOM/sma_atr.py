@@ -16,9 +16,9 @@ class Strategy(bt.Strategy):
         # ATR exit
         atr_len=10,
         atr_mult=Decimal("3.0"),
+        trend_len=200,
         stop_loss_pct=Decimal("0.1"),
         # Trend filter
-        trend_len=200,  # 200 MA for trend filter
         verbose=True,
     )
 
@@ -42,6 +42,19 @@ class Strategy(bt.Strategy):
         self.sl_price = None    # Fixed percentage stop
         self.exiting = False
 
+        # Track when strategy is ready (all indicators have enough data)
+        self.indicators_ready = False
+
+    def prenext(self):
+        """Called when not all indicators have enough data yet"""
+        # Check if all indicators are ready
+        # The longest indicator (trend_ma at 200 periods) needs to be ready
+        if len(self) >= self.p.trend_len:
+            self.indicators_ready = True
+            if self.p.verbose:
+                print(f"✓ All indicators ready at bar {len(self)} ({self.data.datetime.date(0)})")
+        # Don't trade during prenext - indicators aren't ready yet
+
     # --------------------------
     # Helper: cancel existing order
     # --------------------------
@@ -54,6 +67,10 @@ class Strategy(bt.Strategy):
     # Entry signal
     # --------------------------
     def next(self):
+        # Safety check - ensure all indicators are ready
+        if not self.indicators_ready:
+            return
+
         # Do nothing if an order is pending
         if self.order:
             return

@@ -9,7 +9,7 @@ import backtrader as bt
 import yfinance as yf
 from math import isnan
 import matplotlib.pyplot as plt
-from sma_atr import SMA_ATR_Exit
+from sma_atr import Strategy
 import pandas as pd
 import numpy as np
 
@@ -40,17 +40,114 @@ class PortfolioValue(bt.Observer):
         self.lines.value[0] = self._owner.broker.getvalue()
 
 
-# 1️⃣ Download data
-symbol = "LULU"
-df = yf.download(symbol, period="2y", interval="1d")
+def CalculateLookback(strategy_class, strategy_params=None):
+    """
+    Generic function to calculate lookback period from strategy parameters.
+    Finds the highest integer value in the strategy's params that likely represents
+    a period/length parameter.
+
+    Args:
+        strategy_class: The strategy class (not instance)
+        strategy_params: Optional dict of parameter overrides
+
+    Returns:
+        int: Maximum lookback period needed
+    """
+    # Get default params from strategy class
+    # backtrader params can be accessed as attributes
+    params_dict = {}
+
+    # Get all parameter names and their default values
+    for param_name in dir(strategy_class.params):
+        if not param_name.startswith('_'):
+            param_value = getattr(strategy_class.params, param_name)
+            params_dict[param_name] = param_value
+
+    # Merge with any overrides
+    if strategy_params:
+        params_dict.update(strategy_params)
+
+    # Find all integer/Decimal parameters that represent periods
+    # Common naming patterns: *_len, *_period, *_window, trend_*, fast_*, slow_*
+    lookback_candidates = []
+
+    for param_name, param_value in params_dict.items():
+        # Convert Decimal to int if needed
+        if isinstance(param_value, Decimal):
+            try:
+                param_value = int(param_value)
+            except (ValueError, TypeError):
+                continue
+
+        # Check if it's an integer and likely a period parameter
+        if isinstance(param_value, int) and param_value > 0:
+            # Exclude parameters that are clearly not periods
+            exclude_patterns = ['verbose', 'plot', 'print']
+            if not any(pattern in param_name.lower() for pattern in exclude_patterns):
+                lookback_candidates.append(param_value)
+
+    # Return the maximum value, or 0 if none found
+    max_lookback = max(lookback_candidates) if lookback_candidates else 0
+
+    print(f"\n📊 Calculated Lookback: {max_lookback} bars")
+    print(f"   Found period parameters: {sorted(lookback_candidates, reverse=True)}")
+
+    return max_lookback
+
+
+# 1️⃣ Download data with lookback
+symbol = "SOFI"
+
+# Define strategy parameters
+strategy_params = {
+    'fast_len': 7,
+    'slow_len': 50,
+    'atr_len': 10,
+    'atr_mult': Decimal("3.0"),
+    'stop_loss_pct': Decimal("0.1")
+}
+
+# Calculate required lookback for the strategy
+lookback_bars = CalculateLookback(Strategy, strategy_params)
+
+# Download extra data for lookback period
+# Add 50% buffer to ensure we have enough data even with market closures
+total_bars_needed = 252 + lookback_bars  # 1 year + lookback
+days_to_download = int(total_bars_needed * 1.5)  # Add buffer for weekends/holidays
+
+print(f"   Downloading approximately {days_to_download} days of data...")
+
+df = yf.download(symbol, period=f"{days_to_download}d", interval="1d")
 df.index = df.index.tz_localize(None)
 df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
 df.columns = ['open', 'high', 'low', 'close', 'volume']
 
-# Download SPY for benchmark comparison
-start_date = df.index[0]
-end_date = df.index[-1]
-spy_df = yf.download('SPY', start=start_date, end=end_date, progress=False)
+# Split data into lookback period and test period
+if len(df) > lookback_bars:
+    lookback_df = df.iloc[:lookback_bars]
+    test_df = df.iloc[lookback_bars:]
+    print(f"   Lookback period: {lookback_df.index[0].date()} to {lookback_df.index[-1].date()} ({len(lookback_df)} bars)")
+    print(f"   Test period: {test_df.index[0].date()} to {test_df.index[-1].date()} ({len(test_df)} bars)")
+    print(f"   Note: Strategy will use prenext() to skip trading until all indicators are ready")
+
+    # Use the full dataframe for backtesting - backtrader will handle the warmup
+    # The strategy's prenext() method ensures no trades during indicator warmup
+    actual_test_start_date = test_df.index[0]
+    actual_test_start_idx = lookback_bars
+else:
+    print(f"⚠️  Warning: Downloaded data ({len(df)} bars) is less than lookback requirement ({lookback_bars} bars)")
+    actual_test_start_date = df.index[0]
+    actual_test_start_idx = 0
+
+# Download SPY for benchmark comparison (matching the test period only)
+if len(df) > lookback_bars:
+    spy_start_date = test_df.index[0]
+    spy_end_date = test_df.index[-1]
+else:
+    spy_start_date = df.index[0]
+    spy_end_date = df.index[-1]
+
+spy_df = yf.download('SPY', start=spy_start_date, end=spy_end_date, progress=False)
 spy_df.index = spy_df.index.tz_localize(None)
 
 # Calculate SPY buy-and-hold return
@@ -74,12 +171,12 @@ data = bt.feeds.PandasData(
     volume='volume'
 )
 cerebro.adddata(data)
-cerebro.addstrategy(SMA_ATR_Exit,
-                    fast_len=20,
-                    slow_len=15,
-                    atr_len=14,
-                    atr_mult=Decimal("4.0"),
-                    stop_loss_pct=Decimal("0.05")
+cerebro.addstrategy(Strategy,
+                    fast_len=strategy_params['fast_len'],
+                    slow_len=strategy_params['slow_len'],
+                    atr_len=strategy_params['atr_len'],
+                    atr_mult=strategy_params['atr_mult'],
+                    stop_loss_pct=strategy_params['stop_loss_pct']
                     )
 
 # Broker
@@ -100,6 +197,7 @@ cerebro.addobserver(bt.observers.Trades, plot=True, subplot=False)
 cerebro.addobserver(PortfolioValue)
 
 # 3️⃣ Run
+print(f"\n🚀 Running backtest...")
 results = cerebro.run()
 strat = results[0]
 
@@ -168,15 +266,15 @@ recovery_factor = (total_return / dd['max']['moneydown']) if dd['max']['moneydow
 # System Quality Number (Van Tharp)
 sqn_score = sqn.get('sqn', 0)
 
-# Annualized return (approximate based on period)
-days_traded = len(df)
+# Annualized return (approximate based on TEST PERIOD, not including lookback)
+days_traded = len(test_df) if len(df) > lookback_bars else len(df)
 years = days_traded / 252  # Approximate trading days per year
 annualized_return = ((final_value / initial_cash) ** (1 / years) - 1) * 100 if years > 0 else 0
 
 # Calculate time in market
 if total_trades > 0:
     total_bars_in_trades = trades.get('len', {}).get('total', 0)
-    time_in_market = (total_bars_in_trades / len(df)) * 100
+    time_in_market = (total_bars_in_trades / days_traded) * 100
 else:
     time_in_market = 0
 
@@ -237,7 +335,8 @@ print("="*60 + "\n")
 
 plt.style.use('dark_background')
 
-# 4️⃣ Plot
+# 4️⃣ Generate backtrader's built-in plot (includes warmup period)
+print("\n📊 Creating backtrader plot...")
 figs = cerebro.plot(
     style='candlestick',
     iplot=False,
@@ -248,33 +347,76 @@ figs = cerebro.plot(
 
 # Save backtrader plot
 for fig in figs:
-    fig[0].savefig(f"{symbol}_backtest.png", dpi=150, bbox_inches='tight')
+    fig[0].savefig(f"{symbol}_backtest_full.png", dpi=150, bbox_inches='tight')
+print(f"✓ Saved backtrader plot (with warmup period) to {symbol}_backtest_full.png")
 
-# 5️⃣ Create custom comparison plot
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+# 5️⃣ Create custom plots (test period only - indicators fully loaded)
+print("📊 Creating custom charts (test period only)...")
+
+# Create figure with 3 subplots
+fig = plt.figure(figsize=(16, 12))
 fig.patch.set_facecolor('#1a1a1a')
+gs = fig.add_gridspec(3, 1, height_ratios=[2, 1, 1], hspace=0.3)
+
+# Subplot 1: Price chart with indicators
+ax1 = fig.add_subplot(gs[0])
+ax1.set_facecolor('#2a2a2a')
+
+# Get data for test period only
+test_start_idx = actual_test_start_idx
+test_data = df.iloc[test_start_idx:]
+test_dates = test_data.index
+
+# Plot candlesticks (simplified as OHLC lines)
+ax1.plot(test_dates, test_data['close'], color='white', linewidth=1, alpha=0.8, label='Close')
+
+# Calculate and plot SMAs for test period
+# We need to calculate from the beginning of df to get correct values, then slice
+from_start_fast = df['close'].rolling(window=strategy_params['fast_len']).mean()
+from_start_slow = df['close'].rolling(window=strategy_params['slow_len']).mean()
+
+fast_sma_test = from_start_fast.iloc[test_start_idx:]
+slow_sma_test = from_start_slow.iloc[test_start_idx:]
+
+ax1.plot(test_dates, fast_sma_test, color='#00ff88', linewidth=1.5, label=f'SMA {strategy_params["fast_len"]}', alpha=0.8)
+ax1.plot(test_dates, slow_sma_test, color='#ff6b6b', linewidth=1.5, label=f'SMA {strategy_params["slow_len"]}', alpha=0.8)
+
+# Add buy/sell markers from trade history
+# We'll extract this from the strategy's order execution
+ax1.set_ylabel('Price ($)', fontsize=12, color='white')
+ax1.set_title(f'{symbol} - Price Chart with Indicators (Test Period Only - Indicators Fully Loaded)', fontsize=14, fontweight='bold', color='white')
+ax1.legend(loc='upper left', fontsize=9)
+ax1.grid(True, alpha=0.2)
+ax1.tick_params(colors='white')
+
+# Subplot 2: Portfolio value comparison
+ax2 = fig.add_subplot(gs[1])
+ax2.set_facecolor('#2a2a2a')
 
 # Get portfolio values and dates using the observer line buffer
+# BUT only for the test period (after lookback)
 portfolio_values = []
 dates = []
 
 # Access the line buffer array directly
 observer = strat.observers.portfoliovalue
 for i in range(len(observer.lines.value)):
-    try:
-        val = observer.lines.value.array[i]
-        if not np.isnan(val) and val > 0:
-            portfolio_values.append(val)
-            dates.append(df.index[i].date())
-    except (IndexError, AttributeError):
-        break
+    # Only include values from the test period
+    if i >= actual_test_start_idx:
+        try:
+            val = observer.lines.value.array[i]
+            if not np.isnan(val) and val > 0:
+                portfolio_values.append(val)
+                dates.append(df.index[i].date())
+        except (IndexError, AttributeError):
+            break
 
 # Make sure we have data
 if len(portfolio_values) < 2:
     print("❌ Insufficient portfolio value data for plotting")
     exit(0)
 
-print(f"Debug: Collected {len(portfolio_values)} portfolio values")
+print(f"Debug: Collected {len(portfolio_values)} portfolio values (test period only)")
 
 # Calculate SPY values over time - must match dates exactly
 spy_values = []
@@ -311,50 +453,50 @@ print(f"Debug: SPY range: ${min(spy_values):,.2f} to ${max(spy_values):,.2f}")
 # Convert dates to proper datetime for plotting
 dates = pd.to_datetime(dates)
 
-# Plot 1: Portfolio value comparison
-ax1.plot(dates, portfolio_values, label=f'{symbol} Strategy', linewidth=2, color='#00ff88')
-ax1.plot(dates, spy_values, label='SPY Buy & Hold', linewidth=2, color='#ff6b6b', linestyle='--')
-ax1.axhline(y=initial_cash, color='gray', linestyle=':', alpha=0.5, label='Initial Capital')
-ax1.set_ylabel('Portfolio Value ($)', fontsize=12, color='white')
-ax1.set_title(f'{symbol} Strategy vs SPY Buy & Hold', fontsize=14, fontweight='bold', color='white')
-ax1.legend(loc='upper left', fontsize=10)
-ax1.grid(True, alpha=0.2)
-ax1.tick_params(colors='white')
-ax1.set_facecolor('#2a2a2a')
-
-# Format y-axis as currency
-ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
-# Plot 2: Cumulative returns %
-strategy_returns = [(v / initial_cash - 1) * 100 for v in portfolio_values]
-spy_returns = [(v / initial_cash - 1) * 100 for v in spy_values]
-
-ax2.plot(dates, strategy_returns, label=f'{symbol} Strategy', linewidth=2, color='#00ff88')
-ax2.plot(dates, spy_returns, label='SPY Buy & Hold', linewidth=2, color='#ff6b6b', linestyle='--')
-ax2.axhline(y=0, color='gray', linestyle=':', alpha=0.5)
-ax2.fill_between(dates, strategy_returns, 0, alpha=0.3, color='#00ff88')
-ax2.set_xlabel('Date', fontsize=12, color='white')
-ax2.set_ylabel('Cumulative Return (%)', fontsize=12, color='white')
-ax2.set_title('Cumulative Returns Over Time', fontsize=14, fontweight='bold', color='white')
+# Plot portfolio value comparison on ax2
+ax2.plot(dates, portfolio_values, label=f'{symbol} Strategy', linewidth=2, color='#00ff88')
+ax2.plot(dates, spy_values, label='SPY Buy & Hold', linewidth=2, color='#ff6b6b', linestyle='--')
+ax2.axhline(y=initial_cash, color='gray', linestyle=':', alpha=0.5, label='Initial Capital')
+ax2.set_ylabel('Portfolio Value ($)', fontsize=12, color='white')
+ax2.set_title(f'{symbol} Strategy vs SPY Buy & Hold', fontsize=14, fontweight='bold', color='white')
 ax2.legend(loc='upper left', fontsize=10)
 ax2.grid(True, alpha=0.2)
 ax2.tick_params(colors='white')
-ax2.set_facecolor('#2a2a2a')
+
+# Format y-axis as currency
+ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+
+# Subplot 3: Cumulative returns %
+ax3 = fig.add_subplot(gs[2])
+ax3.set_facecolor('#2a2a2a')
+strategy_returns = [(v / initial_cash - 1) * 100 for v in portfolio_values]
+spy_returns = [(v / initial_cash - 1) * 100 for v in spy_values]
+
+ax3.plot(dates, strategy_returns, label=f'{symbol} Strategy', linewidth=2, color='#00ff88')
+ax3.plot(dates, spy_returns, label='SPY Buy & Hold', linewidth=2, color='#ff6b6b', linestyle='--')
+ax3.axhline(y=0, color='gray', linestyle=':', alpha=0.5)
+ax3.fill_between(dates, strategy_returns, 0, alpha=0.3, color='#00ff88')
+ax3.set_xlabel('Date', fontsize=12, color='white')
+ax3.set_ylabel('Cumulative Return (%)', fontsize=12, color='white')
+ax3.set_title('Cumulative Returns Over Time', fontsize=14, fontweight='bold', color='white')
+ax3.legend(loc='upper left', fontsize=10)
+ax3.grid(True, alpha=0.2)
+ax3.tick_params(colors='white')
 
 # Add final return annotations
 final_strategy_return = strategy_returns[-1]
 final_spy_return = spy_returns[-1]
-ax2.annotate(f'{final_strategy_return:.1f}%',
+ax3.annotate(f'{final_strategy_return:.1f}%',
              xy=(dates[-1], final_strategy_return),
              xytext=(10, 0), textcoords='offset points',
              fontsize=10, color='#00ff88', fontweight='bold')
-ax2.annotate(f'{final_spy_return:.1f}%',
+ax3.annotate(f'{final_spy_return:.1f}%',
              xy=(dates[-1], final_spy_return),
              xytext=(10, 0), textcoords='offset points',
              fontsize=10, color='#ff6b6b', fontweight='bold')
 
 plt.tight_layout()
-plt.savefig(f"{symbol}_performance_comparison.png", dpi=150, bbox_inches='tight', facecolor='#1a1a1a')
-print(f"✓ Saved performance comparison to {symbol}_performance_comparison.png")
+plt.savefig(f"{symbol}_backtest.png", dpi=150, bbox_inches='tight', facecolor='#1a1a1a')
+print(f"✓ Saved complete backtest chart to {symbol}_backtest.png")
 
 exit(0)
