@@ -1,0 +1,17 @@
+{
+  "NFLX": {
+    "entry_price": 39.06,
+    "entry_date": "2025-12-11T00:00:00",
+    "stop_loss": 84.38200225830079
+  },
+  "AMZN": {
+    "entry_price": 201.12,
+    "entry_date": "2025-5-16T00:00:00",
+    "stop_loss": 227.55899963378906
+  },
+  "SOFI": {
+    "entry_price": 26.87,
+    "entry_date": "2025-01-06T00:00:00",
+    "stop_loss": 24.183
+  }
+}

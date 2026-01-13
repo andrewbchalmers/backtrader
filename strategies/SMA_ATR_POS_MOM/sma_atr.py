@@ -17,6 +17,8 @@ class Strategy(bt.Strategy):
         atr_len=10,
         atr_mult=Decimal("3.0"),
         stop_loss_pct=Decimal("0.1"),
+        # Trend filter
+        trend_len=200,  # 200 MA for trend filter
         verbose=True,
     )
 
@@ -28,6 +30,11 @@ class Strategy(bt.Strategy):
         self.slow = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.slow_len)
         self.atr = bt.indicators.ATR(self.data, period=self.p.atr_len)
         self.crossover = bt.indicators.CrossOver(self.fast, self.slow)
+
+        # 200 MA trend filter
+        self.trend_ma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.p.trend_len)
+        # Calculate slope of 200 MA (positive = rising, negative = falling)
+        self.trend_slope = self.trend_ma - self.trend_ma(-1)
 
         # Track open orders & stops
         self.order = None
@@ -55,6 +62,12 @@ class Strategy(bt.Strategy):
         # Entry: fast SMA crosses above slow SMA
         # --------------------------
         if self.crossover > 0:
+            # Check 200 MA trend filter - only buy if 200 MA is rising (not negative slope)
+            if self.trend_slope[0] < 0:
+                if self.p.verbose:
+                    print(f"  ENTRY BLOCKED: 200 MA is declining (slope={self.trend_slope[0]:.4f})")
+                return
+
             cash = self.broker.getcash()
             size = int((cash * 0.98) / self.data.close[0])
 
@@ -63,6 +76,8 @@ class Strategy(bt.Strategy):
                 self.exiting = False
                 self.stop_price = None
                 self.sl_price = None
+                if self.p.verbose:
+                    print(f"  200 MA Filter: PASSED (slope={self.trend_slope[0]:.4f})")
             else:
                 if self.p.verbose:
                     print(f"  SIZE IS 0 OR NEGATIVE, NOT BUYING")

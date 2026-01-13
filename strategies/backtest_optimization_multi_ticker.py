@@ -255,20 +255,20 @@ def save_results(df_results, filename='optimization_results.csv'):
 if __name__ == "__main__":
     # Define parameter grid to test
     param_grid = {
-        'fast_len': [7, 10, 14, 20],
-        'slow_len': [15, 18, 26, 50, 100],
-        'atr_len': [7, 10, 14, 20],
-        'atr_mult': [Decimal("2.0"), Decimal("3.0"), Decimal("3.5"), Decimal("4.0")],
-        'stop_loss_pct': [Decimal("0.05"), Decimal("0.1"), Decimal("0.15")]
+        'fast_len': [7, 14, 20],
+        'slow_len': [15, 18, 26, 50, 70, 100],
+        'atr_len': [10, 14],
+        'atr_mult': [Decimal("3.0"), Decimal("3.5"), Decimal("4.0")],
+        'stop_loss_pct': [Decimal("0.05"), Decimal("0.08"), Decimal("0.1"), Decimal("0.15")]
     }
 
     # Run optimization across multiple stocks
-    csv_file = "optimization_set.csv"
+    csv_file = "sp500_2025.csv"
 
     results = optimize_strategy_multi_stock(
         csv_file=csv_file,
         param_grid=param_grid,
-        period="2y",
+        period="1y",
         initial_cash=10_000
     )
 

@@ -19,16 +19,16 @@ from decimal import Decimal
 # CONFIGURATION - MODIFY THESE PARAMETERS
 # ============================================================================
 STRATEGY_PARAMS = {
-    'fast_len': 20,
-    'slow_len': 15,
-    'atr_len': 14,
-    'atr_mult': Decimal("4.0"),
-    'stop_loss_pct': Decimal("0.05"),
+    'fast_len': 7,
+    'slow_len': 50,
+    'atr_len': 10,
+    'atr_mult': Decimal("3.0"),
+    'stop_loss_pct': Decimal("0.1"),
     'verbose': False
 }
 
-CSV_FILE = '../sp500_2025.csv'
-PERIOD = "2y"
+CSV_FILE = '../nasdaq_2025.csv'
+PERIOD = "1y"
 INITIAL_CASH = 10_000
 PLOT_BEST = True
 # ============================================================================
