@@ -30,7 +30,7 @@ STRATEGY_PARAMS = {
     'atr_len': 10,
     'atr_mult': 3.0,
     'stop_loss_pct': 0.1,
-    'exit_lookback_bars': 5,  # Check last 5 days for missed stops
+    'exit_live_bars': 5,  # Check last 5 days for missed stops
     'verbose': False
 }
 

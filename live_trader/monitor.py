@@ -362,19 +362,34 @@ class LiveTradingMonitor:
 
         symbol = parts[1].upper()
 
-        # Get data for chart (need more for indicators)
-        df = self.get_live_data(symbol, period="3mo")  # Get 3 months for indicator calculation
+        # Chart generator has its own warmup calculation
+        chart_days = 30
+        warmup_needed = self.chart_gen.warmup_days
+        total_days_needed = warmup_needed + chart_days
 
-        if df is None or len(df) < 30:
+        # Convert trading days to calendar days with buffer
+        calendar_days = int(total_days_needed * 1.6)
+
+        # Get data (yfinance period must be enough)
+        if calendar_days <= 90:
+            period = "3mo"
+        elif calendar_days <= 180:
+            period = "6mo"
+        else:
+            period = "1y"
+
+        df = self.get_live_data(symbol, period=period)
+
+        if df is None or len(df) < warmup_needed:
             self.notifier.send_notification(
                 f"❌ {symbol}",
-                "Unable to fetch sufficient data for this symbol"
+                f"Unable to fetch sufficient data (need {warmup_needed} days for indicators)"
             )
             return
 
         # Generate chart
-        print(f"📊 Generating chart for {symbol}...")
-        chart_buffer = self.chart_gen.generate_chart(symbol, df, days=30)
+        print(f"📊 Generating chart for {symbol} (warmup: {warmup_needed} days, display: {chart_days} days)...")
+        chart_buffer = self.chart_gen.generate_chart(symbol, df, days=chart_days)
 
         # Check if we're currently holding it
         position = self.position_manager.get(symbol)
@@ -407,7 +422,7 @@ class LiveTradingMonitor:
                 idx = -(i + 1)
                 current_df = df.iloc[:len(df) + idx + 1]
 
-                if len(current_df) < 200:
+                if len(current_df) < warmup_needed:
                     continue
 
                 signal = self.strategy.get_entry_signal(current_df, self.params)

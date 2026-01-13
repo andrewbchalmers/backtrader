@@ -19,6 +19,27 @@ class ChartGenerator:
     def __init__(self, strategy_loader, strategy_params):
         self.strategy = strategy_loader
         self.params = strategy_params
+        self.warmup_days = self._calculate_warmup()
+
+    def _calculate_warmup(self):
+        """Calculate warmup days needed from strategy parameters"""
+        max_period = 0
+
+        lookback_params = [
+            'trend_len', 'slow_len', 'fast_len', 'atr_len',
+            'ma_period', 'sma_period', 'ema_period', 'rsi_period',
+            'bb_period', 'macd_slow', 'lookback', 'period', 'length'
+        ]
+
+        for param_name, param_value in self.params.items():
+            if any(key in param_name.lower() for key in lookback_params):
+                if isinstance(param_value, (int, float)):
+                    max_period = max(max_period, int(param_value))
+
+        # Add 50% buffer for indicator stabilization
+        warmup = int(max_period * 1.5) if max_period > 0 else 50
+        print(f"ℹ️  Chart warmup calculated: {warmup} days (from max period: {max_period})")
+        return warmup
 
     def generate_chart(self, symbol, df, days=30):
         """
@@ -26,22 +47,26 @@ class ChartGenerator:
 
         Args:
             symbol: Stock ticker
-            df: DataFrame with OHLC data
-            days: Number of days to show
+            df: DataFrame with OHLC data (must include warmup period)
+            days: Number of days to show in chart
 
         Returns:
             BytesIO: PNG image buffer
         """
-        # Get last N days
+        # Get last N days for display
         df_chart = df.tail(days).copy()
 
         if len(df_chart) == 0:
             return None
 
-        # Calculate indicators for the chart period (need more data for calculation)
-        lookback = max(self.params.get('trend_len', 200),
-                       self.params.get('slow_len', 50))
-        df_calc = df.tail(days + lookback).copy()
+        # Calculate indicators using full data (includes warmup)
+        # Need enough data for longest indicator period
+        df_calc = df.tail(days + self.warmup_days).copy()
+
+        if len(df_calc) < self.warmup_days:
+            print(f"⚠️  Insufficient data for indicators: {len(df_calc)} < {self.warmup_days}")
+            return None
+
         indicators = self.strategy._calculate_indicators(df_calc, self.params)
 
         # Get the indicators for just the chart period
@@ -62,19 +87,16 @@ class ChartGenerator:
             if signal['signal']:
                 buy_signals.append((df_chart.index[i], df_chart['Close'].iloc[i]))
 
-        # Create figure with 2 subplots
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10),
-                                       gridspec_kw={'height_ratios': [3, 1]},
-                                       facecolor='#1e1e1e')
+        # Create figure with single plot (no ATR)
+        fig, ax1 = plt.subplots(1, 1, figsize=(14, 8), facecolor='#1e1e1e')
 
         # Style
-        for ax in [ax1, ax2]:
-            ax.set_facecolor('#1e1e1e')
-            ax.tick_params(colors='white', which='both')
-            ax.spines['bottom'].set_color('#404040')
-            ax.spines['top'].set_color('#404040')
-            ax.spines['left'].set_color('#404040')
-            ax.spines['right'].set_color('#404040')
+        ax1.set_facecolor('#1e1e1e')
+        ax1.tick_params(colors='white', which='both')
+        ax1.spines['bottom'].set_color('#404040')
+        ax1.spines['top'].set_color('#404040')
+        ax1.spines['left'].set_color('#404040')
+        ax1.spines['right'].set_color('#404040')
 
         # --- Main chart: Price and SMAs ---
         ax1.plot(df_chart.index, df_chart['Close'],
@@ -110,23 +132,14 @@ class ChartGenerator:
         ax1.set_title(f'{symbol} - Last {days} Days',
                       color='white', fontsize=16, fontweight='bold', pad=20)
         ax1.set_ylabel('Price ($)', color='white', fontsize=12)
+        ax1.set_xlabel('Date', color='white', fontsize=12)
         ax1.legend(loc='upper left', framealpha=0.9, facecolor='#2a2a2a',
                    edgecolor='#404040', labelcolor='white')
         ax1.grid(True, alpha=0.2, color='#404040')
         ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
 
-        # --- ATR subplot ---
-        if not atr.empty:
-            ax2.plot(df_chart.index, atr, color='#ff6b6b', linewidth=2)
-            ax2.fill_between(df_chart.index, 0, atr, alpha=0.3, color='#ff6b6b')
-            ax2.set_ylabel('ATR', color='white', fontsize=12)
-            ax2.set_xlabel('Date', color='white', fontsize=12)
-            ax2.grid(True, alpha=0.2, color='#404040')
-            ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
-
         # Format x-axis
         plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
-        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
 
         plt.tight_layout()
 
