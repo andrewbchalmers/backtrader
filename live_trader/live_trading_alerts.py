@@ -22,7 +22,7 @@ TEST_END_DATE = "2024-12-31"
 TEST_SPEED = 0  # Days per second (0 = instant, 1 = 1 day/sec, 10 = 10 days/sec)
 
 # Strategy configuration
-STRATEGY_MODULE = "../strategies/SMA_ATR/sma_atr"
+STRATEGY_MODULE = "../strategies/AROON_FILTER_ATR/aroon_atr"
 STRATEGY_CLASS = "Strategy"
 STRATEGY_PARAMS = {
     'fast_len': 7,

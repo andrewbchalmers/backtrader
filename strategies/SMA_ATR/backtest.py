@@ -96,7 +96,7 @@ def CalculateLookback(strategy_class, strategy_params=None):
 
 
 # 1️⃣ Download data with lookback
-symbol = "SOFI"
+symbol = "LMT"
 
 # Define strategy parameters
 strategy_params = {

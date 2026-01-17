@@ -1,6 +1,11 @@
-sma,10
-ema,20
+sma,10,ema,20
+sma,10,sma,50
+ema,12,ema,26
+sma,5,ema,10
+ema,9,ema,21
+sma,7,sma,50
 ema,5
-bb,17,3
-atr,10,3
-atr,5,3
+ema,10
+ema,15
+sma,10
+sma,15

@@ -1,0 +1,40 @@
+# Entry Filter Indicators
+# Format: indicator,param1,[param2,...],filter_type
+# Filter types: above, below, rising, high
+
+ema,50,above          # Must be in uptrend
+atr,14,2,high         # AND high volatility
+rsi,14,high
+
+# entry_indicators_filters.csv
+atr,14,2,low
+atr,14,2,high         # High volatility required
+ema,100,above         # Above intermediate trend
+adx,14,high           # Strong trend forming
+bb,20,2,below
+
+# === TREND FILTERS ===
+# Only trade when price is above long-term trend
+#ema,200,above
+#ema,100,above
+#sma,200,above
+#sma,100,above
+
+# === VOLATILITY FILTERS ===
+# Only trade when volatility is elevated (reduces sideways noise)
+#atr,14,3,high
+#atr,10,2,high
+
+# === MOMENTUM FILTERS ===
+# Only trade when momentum is bullish
+#rsi,14,high
+#rsi,21,high
+
+# === TREND STRENGTH FILTERS ===
+# Only trade when there's a strong trend (not sideways)
+#adx,14,high
+
+# === VOLATILITY BAND FILTERS ===
+# Only trade when price is in certain band positions
+#bb,20,2,above
+#keltner,20,2,above

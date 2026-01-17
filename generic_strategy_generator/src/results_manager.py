@@ -11,7 +11,7 @@ from datetime import datetime
 
 class ResultsManager:
     """Manage strategy results and generate reports"""
-    
+
     def __init__(self, config):
         """
         Initialize results manager
@@ -21,23 +21,23 @@ class ResultsManager:
         """
         self.config = config
         self.output_config = config.get('output', {})
-        
+
         self.db_path = self.output_config.get('database', 'results/strategies.db')
         self.csv_path = self.output_config.get('top_strategies_csv', 'results/top_strategies.csv')
         self.reports_dir = self.output_config.get('reports_dir', 'results/reports')
-        
+
         # Ensure directories exist
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         os.makedirs(self.reports_dir, exist_ok=True)
-        
+
         # Initialize database
         self._init_database()
-    
+
     def _init_database(self):
         """Initialize SQLite database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         # Create strategies table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS strategies (
@@ -65,7 +65,7 @@ class ResultsManager:
                 timestamp TEXT
             )
         ''')
-        
+
         # Create stock results table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS stock_results (
@@ -80,10 +80,10 @@ class ResultsManager:
                 FOREIGN KEY (strategy_id) REFERENCES strategies (strategy_id)
             )
         ''')
-        
+
         conn.commit()
         conn.close()
-    
+
     def save_strategy(self, strategy_config, metrics, score=None):
         """
         Save a strategy to the database
@@ -95,9 +95,9 @@ class ResultsManager:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         timestamp = datetime.now().isoformat()
-        
+
         cursor.execute('''
             INSERT INTO strategies (
                 strategy_id, description,
@@ -132,10 +132,10 @@ class ResultsManager:
             metrics['avg_win_loss_ratio'],
             timestamp
         ))
-        
+
         conn.commit()
         conn.close()
-    
+
     def save_stock_results(self, strategy_id, stock_results):
         """
         Save individual stock results
@@ -146,9 +146,9 @@ class ResultsManager:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         timestamp = datetime.now().isoformat()
-        
+
         for result in stock_results:
             cursor.execute('''
                 INSERT INTO stock_results (
@@ -164,10 +164,10 @@ class ResultsManager:
                 result['drawdown'].get('max', {}).get('drawdown', 0),
                 timestamp
             ))
-        
+
         conn.commit()
         conn.close()
-    
+
     def export_top_strategies(self, ranked_strategies):
         """
         Export top strategies to CSV
@@ -176,7 +176,7 @@ class ResultsManager:
             ranked_strategies: List of (strategy_config, metrics, score) tuples
         """
         data = []
-        
+
         for strategy_config, metrics, score in ranked_strategies:
             row = {
                 'rank': len(data) + 1,
@@ -202,11 +202,11 @@ class ResultsManager:
                 'exit_type': strategy_config['exit_type'],
             }
             data.append(row)
-        
+
         df = pd.DataFrame(data)
         df.to_csv(self.csv_path, index=False)
         print(f"Exported top strategies to {self.csv_path}")
-    
+
     def generate_summary_report(self, ranked_strategies):
         """
         Generate a summary report
@@ -224,11 +224,11 @@ class ResultsManager:
         lines.append(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         lines.append(f"Total Strategies Analyzed: {len(ranked_strategies)}")
         lines.append("")
-        
+
         if ranked_strategies:
             lines.append("TOP 10 STRATEGIES:")
             lines.append("-" * 80)
-            
+
             for i, (strategy_config, metrics, score) in enumerate(ranked_strategies[:10]):
                 lines.append(f"\nRank #{i+1} (Score: {score:.2f})")
                 lines.append(f"  Description: {strategy_config['description']}")
@@ -238,15 +238,16 @@ class ResultsManager:
                 lines.append(f"  Profit Factor: {metrics['profit_factor']:.2f}")
                 lines.append(f"  Win Rate: {metrics['win_rate']*100:.2f}%")
                 lines.append(f"  Total Trades: {metrics['total_trades']}")
-        
+                lines.append(f"  Stocks Traded: {metrics.get('stocks_traded', 0)}/{metrics.get('stocks_tested', 0)}")
+
         lines.append("\n" + "=" * 80)
-        
+
         return "\n".join(lines)
-    
+
     def load_all_strategies(self):
         """
         Load all strategies from database
-        
+
         Returns:
             Pandas DataFrame
         """
@@ -254,27 +255,27 @@ class ResultsManager:
         df = pd.read_sql_query("SELECT * FROM strategies ORDER BY score DESC", conn)
         conn.close()
         return df
-    
+
     def load_strategy_by_id(self, strategy_id):
         """
         Load a specific strategy by ID
-        
+
         Args:
             strategy_id: Strategy ID
-            
+
         Returns:
             Dictionary with strategy data
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT * FROM strategies WHERE strategy_id = ?", (strategy_id,))
         row = cursor.fetchone()
-        
+
         if row:
             columns = [description[0] for description in cursor.description]
             strategy = dict(zip(columns, row))
-            
+
             # Load stock results
             cursor.execute("SELECT * FROM stock_results WHERE strategy_id = ?", (strategy_id,))
             stock_rows = cursor.fetchall()
@@ -282,10 +283,10 @@ class ResultsManager:
             strategy['stock_results'] = [dict(zip(stock_columns, r)) for r in stock_rows]
         else:
             strategy = None
-        
+
         conn.close()
         return strategy
-    
+
     def clear_database(self):
         """Clear all data from database"""
         conn = sqlite3.connect(self.db_path)

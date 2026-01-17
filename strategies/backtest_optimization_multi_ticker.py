@@ -1,12 +1,12 @@
 # source bt/bin/activate
-# cd strategies/SMA_ATR/
-# python optimize.py
+# cd strategies/AROON_ATR/
+# python optimize_aroon_atr.py
 
 import matplotlib
 matplotlib.use('Agg')
 import backtrader as bt
 import yfinance as yf
-from SMA_ATR.sma_atr import Strategy
+from AROON_FILTER_ATR.aroon_atr import Strategy
 import pandas as pd
 from itertools import product
 from decimal import Decimal
@@ -67,8 +67,24 @@ def backtest_with_params(symbol, params, df_cache, period="2y", initial_cash=10_
         if total_trades > 0:
             wins = trades.get('won', {}).get('total', 0)
             win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+
+            # Additional trade metrics
+            avg_win = trades.get('won', {}).get('pnl', {}).get('average', 0)
+            avg_loss = abs(trades.get('lost', {}).get('pnl', {}).get('average', 0))
+            rr_ratio = (avg_win / avg_loss) if avg_loss > 0 else 0
+
+            total_win_pnl = trades.get('won', {}).get('pnl', {}).get('total', 0)
+            total_loss_pnl = abs(trades.get('lost', {}).get('pnl', {}).get('total', 0))
+            profit_factor = (total_win_pnl / total_loss_pnl) if total_loss_pnl > 0 else 0
+
+            avg_trade_pnl = trades.get('pnl', {}).get('net', {}).get('average', 0)
+            expectancy = (win_rate/100 * avg_win) - ((100-win_rate)/100 * avg_loss)
         else:
             win_rate = 0
+            rr_ratio = 0
+            profit_factor = 0
+            avg_trade_pnl = 0
+            expectancy = 0
 
         return {
             'return_pct': return_pct,
@@ -76,6 +92,10 @@ def backtest_with_params(symbol, params, df_cache, period="2y", initial_cash=10_
             'max_drawdown': dd.get('max', {}).get('drawdown', 0),
             'total_trades': total_trades,
             'win_rate': win_rate,
+            'rr_ratio': rr_ratio,
+            'profit_factor': profit_factor,
+            'avg_trade_pnl': avg_trade_pnl,
+            'expectancy': expectancy,
         }
     except Exception as e:
         print(f"\n❌ Error in backtest for {symbol} with params {params}: {e}")
@@ -107,7 +127,7 @@ def optimize_strategy_multi_stock(csv_file, param_grid, period="2y", initial_cas
                 symbols.append(row[0].strip())
 
     print(f"\n{'='*70}")
-    print(f"MULTI-STOCK PARAMETER OPTIMIZATION")
+    print(f"MULTI-STOCK PARAMETER OPTIMIZATION - AROON/ATR STRATEGY")
     print(f"{'='*70}\n")
     print(f"Symbols to test: {len(symbols)}")
     print(f"Symbols: {', '.join(symbols[:10])}{'...' if len(symbols) > 10 else ''}")
@@ -170,25 +190,45 @@ def optimize_strategy_multi_stock(csv_file, param_grid, period="2y", initial_cas
             total_trades = sum(r['total_trades'] for r in stock_results)
             avg_win_rate = sum(r['win_rate'] for r in stock_results) / len(stock_results)
 
+            # New metrics
+            avg_rr_ratio = sum(r['rr_ratio'] for r in stock_results) / len(stock_results)
+            avg_profit_factor = sum(r['profit_factor'] for r in stock_results) / len(stock_results)
+            avg_trade_pnl = sum(r['avg_trade_pnl'] for r in stock_results) / len(stock_results)
+            avg_expectancy = sum(r['expectancy'] for r in stock_results) / len(stock_results)
+
             # Count winning stocks (positive return)
             winning_stocks = sum(1 for r in stock_results if r['return_pct'] > 0)
             stock_win_rate = (winning_stocks / len(stock_results)) * 100
 
+            # Calculate composite score
+            # Only calculate if all components are valid (positive sharpe, positive return, drawdown > 0)
+            if avg_sharpe > 0 and avg_return > 0 and avg_drawdown > 0:
+                composite_score = (avg_return * avg_sharpe * (stock_win_rate / 100)) / avg_drawdown
+            else:
+                composite_score = 0  # Invalid strategy gets 0 score
+
             # Store aggregated result
             aggregated = {
-                'fast_len': params.get('fast_len'),
-                'slow_len': params.get('slow_len'),
-                'atr_len': params.get('atr_len'),
-                'atr_mult': params.get('atr_mult'),
+                'aroon_len': params.get('aroon_len'),
+                'atr_entry_len': params.get('atr_entry_len'),
+                'atr_filter_mult': params.get('atr_filter_mult'),
+                'atr_exit_len': params.get('atr_exit_len'),
+                'atr_exit_mult': params.get('atr_exit_mult'),
                 'stop_loss_pct': params.get('stop_loss_pct'),
+                'take_profit_pct': params.get('take_profit_pct'),
                 'avg_return_pct': avg_return,
                 'avg_sharpe': avg_sharpe,
                 'avg_max_drawdown': avg_drawdown,
                 'total_trades': total_trades,
                 'avg_win_rate': avg_win_rate,
+                'avg_rr_ratio': avg_rr_ratio,
+                'avg_profit_factor': avg_profit_factor,
+                'avg_trade_pnl': avg_trade_pnl,
+                'avg_expectancy': avg_expectancy,
                 'stock_win_rate': stock_win_rate,
                 'stocks_tested': len(stock_results),
-                'winning_stocks': winning_stocks
+                'winning_stocks': winning_stocks,
+                'composite_score': composite_score
             }
 
             results.append(aggregated)
@@ -211,29 +251,25 @@ def print_optimization_results(df_results, metric='avg_return_pct', top_n=5):
     for i, (idx, row) in enumerate(df_sorted.head(top_n).iterrows(), 1):
         print(f"#{i} {'─'*66}")
         print(f"Parameters:")
-        print(f"  Fast SMA:      {int(row['fast_len'])}")
-        print(f"  Slow SMA:      {int(row['slow_len'])}")
-        print(f"  ATR Length:    {int(row['atr_len'])}")
-        print(f"  ATR Mult:      {row['atr_mult']:.1f}")
-        print(f"  Stop Loss %:   {row['stop_loss_pct']*100:.1f}%")
+        print(f"  AROON Length:       {int(row['aroon_len'])}")
+        print(f"  ATR Entry Length:   {int(row['atr_entry_len'])}")
+        print(f"  ATR Filter Mult:    {float(row['atr_filter_mult']):.1f}")
+        print(f"  ATR Exit Length:    {int(row['atr_exit_len'])}")
+        print(f"  ATR Exit Mult:      {float(row['atr_exit_mult']):.1f}")
+        print(f"  Stop Loss %:        {float(row['stop_loss_pct'])*100:.1f}%")
+        print(f"  Take Profit %:      {float(row['take_profit_pct'])*100:.1f}%")
         print(f"\nAggregate Performance (across {int(row['stocks_tested'])} stocks):")
         print(f"  Avg Return:        {row['avg_return_pct']:7.2f}%")
         print(f"  Avg Sharpe:        {row['avg_sharpe']:7.3f}")
         print(f"  Avg Max Drawdown:  {row['avg_max_drawdown']:7.2f}%")
         print(f"  Total Trades:      {int(row['total_trades'])}")
         print(f"  Avg Trade Win %:   {row['avg_win_rate']:7.1f}%")
-
-        # Only print new metrics if they exist
-        if 'avg_rr_ratio' in row:
-            print(f"  Avg RR Ratio:      {row['avg_rr_ratio']:7.2f}")
-        if 'avg_expectancy' in row:
-            print(f"  Avg Expectancy:    ${row['avg_expectancy']:7.2f}")
-        if 'avg_profit_factor' in row:
-            print(f"  Avg Profit Factor: {row['avg_profit_factor']:7.2f}")
-        if 'avg_trade_pnl' in row:
-            print(f"  Avg Trade P&L:     ${row['avg_trade_pnl']:7.2f}")
-
+        print(f"  Avg RR Ratio:      {row['avg_rr_ratio']:7.2f}")
+        print(f"  Avg Expectancy:    ${row['avg_expectancy']:7.2f}")
+        print(f"  Avg Profit Factor: {row['avg_profit_factor']:7.2f}")
+        print(f"  Avg Trade P&L:     ${row['avg_trade_pnl']:7.2f}")
         print(f"  Stock Win Rate:    {row['stock_win_rate']:7.1f}% ({int(row['winning_stocks'])}/{int(row['stocks_tested'])} stocks)")
+        print(f"  Composite Score:   {row['composite_score']:7.4f}")
         print()
 
     print(f"{'─'*70}")
@@ -253,17 +289,20 @@ def save_results(df_results, filename='optimization_results.csv'):
 
 
 if __name__ == "__main__":
-    # Define parameter grid to test
+    # Define parameter grid to test for AROON/ATR strategy
     param_grid = {
-        'fast_len': [7, 14, 20],
-        'slow_len': [15, 18, 26, 50, 70, 100],
-        'atr_len': [10, 14],
-        'atr_mult': [Decimal("3.0"), Decimal("3.5"), Decimal("4.0")],
-        'stop_loss_pct': [Decimal("0.05"), Decimal("0.08"), Decimal("0.1"), Decimal("0.15")]
+        'aroon_len': [14, 20, 25, 30],
+        'atr_entry_len': [10, 14],
+        'atr_filter_mult': [Decimal("1.5"), Decimal("2.0")],
+        'atr_exit_len': [5, 10, 14],
+        'atr_exit_mult': [Decimal("2"), Decimal("2.5"), Decimal("3.0"), Decimal("3.5")],
+        'stop_loss_pct': [Decimal("0.05")],
+        'take_profit_pct': [Decimal("0.13")],
+        'use_take_profit': [True, False]
     }
 
     # Run optimization across multiple stocks
-    csv_file = "sp500_2025.csv"
+    csv_file = "optimization_set.csv"  # Change this to your CSV file
 
     results = optimize_strategy_multi_stock(
         csv_file=csv_file,
@@ -273,7 +312,17 @@ if __name__ == "__main__":
     )
 
     if results is not None and not results.empty:
-        # Print top 5 by average return
+        # Print top 5 by composite score (MAIN RANKING)
+        print(f"\n{'='*70}")
+        print("🎯 PRIMARY RANKING: Top 5 by Composite Score")
+        print("   Formula: (Return × Sharpe × StockWinRate) / MaxDrawdown")
+        print(f"{'='*70}\n")
+        print_optimization_results(results, metric='composite_score', top_n=5)
+
+        # Also show top 5 by average return
+        print(f"\n{'='*70}")
+        print("BONUS: Top 5 by Average Return")
+        print(f"{'='*70}\n")
         print_optimization_results(results, metric='avg_return_pct', top_n=5)
 
         # Also show top 5 by average Sharpe ratio
@@ -283,4 +332,4 @@ if __name__ == "__main__":
         print_optimization_results(results, metric='avg_sharpe', top_n=5)
 
         # Save all results
-        save_results(results, filename='multi_stock_optimization_results.csv')
+        save_results(results, filename='aroon_atr_optimization_results.csv')

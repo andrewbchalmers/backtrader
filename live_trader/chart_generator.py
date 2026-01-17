@@ -59,25 +59,7 @@ class ChartGenerator:
         if len(df_chart) == 0:
             return None
 
-        # Add current price as today's point if market is open or recently closed
-        current_price = df['Close'].iloc[-1]
-        last_date = df_chart.index[-1]
-        today = pd.Timestamp.now().normalize()
-
-        # If last data is from today or we can append today's price
-        if last_date.date() < today.date():
-            # Last close was yesterday, add today's current price
-            df_chart.loc[today] = {
-                'Open': current_price,
-                'High': current_price,
-                'Low': current_price,
-                'Close': current_price,
-                'Volume': 0
-            }
-            print(f"  Added current price ${current_price:.2f} as today's point")
-
         # Calculate indicators using full data (includes warmup)
-        # Need enough data for longest indicator period
         df_calc = df.tail(days + self.warmup_days).copy()
 
         if len(df_calc) < self.warmup_days:

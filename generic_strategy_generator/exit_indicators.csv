@@ -1,6 +1,7 @@
-sma,10
-ema,20
-ema,5
-bb,17,3
 atr,10,3
 atr,5,3
+sma,10,ema,20
+sma,5,sma,10
+ema,12,ema,26
+ema,5,ema,20
+sma,20,sma,50

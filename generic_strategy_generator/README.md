@@ -95,14 +95,70 @@ Format: `indicator_name,param1,param2,...`
 
 ### Supported Indicators
 
-- **SMA**: Simple Moving Average (period)
-- **EMA**: Exponential Moving Average (period)
+**40+ Technical Indicators Now Supported!** See [INDICATOR_REFERENCE.md](INDICATOR_REFERENCE.md) for complete details.
+
+#### Moving Averages (8 types)
+- **SMA, EMA, WMA**: Simple, Exponential, Weighted Moving Averages
+- **DEMA, TEMA**: Double/Triple Exponential (reduced lag)
+- **KAMA**: Kaufman Adaptive (adapts to volatility)
+- **HMA**: Hull Moving Average (smooth & fast)
+- **ZLEMA**: Zero Lag EMA
+
+#### Volatility Indicators (5 types)
 - **BB**: Bollinger Bands (period, deviation)
-- **ATR**: Average True Range (period, multiplier)
+- **ATR, NATR**: Average True Range, Normalized ATR
+- **Keltner**: Keltner Channels
+- **Donchian**: Donchian Channels (breakout systems)
+
+#### Momentum Oscillators (9 types)
 - **RSI**: Relative Strength Index (period)
+- **Stochastic, StochRSI**: Stochastic Oscillators
+- **CCI**: Commodity Channel Index
+- **Williams**: Williams %R
+- **ROC, Momentum**: Rate of Change, Momentum
+- **TSI**: True Strength Index
+- **Ultimate**: Ultimate Oscillator
+
+#### Trend Indicators (6 types)
 - **MACD**: Moving Average Convergence Divergence (fast, slow, signal)
-- **Stochastic**: Stochastic Oscillator (period, dfast, dslow)
-- **CCI**: Commodity Channel Index (period)
+- **ADX, DMI**: Average Directional Index, Directional Movement
+- **Aroon**: Aroon Indicator (period)
+- **PSAR**: Parabolic SAR (af, afmax)
+- **SuperTrend**: SuperTrend (period, multiplier)
+
+#### Volume Indicators (5 types)
+- **OBV**: On Balance Volume
+- **VWAP**: Volume Weighted Average Price
+- **MFI**: Money Flow Index (period)
+- **ADL**: Accumulation/Distribution Line
+- **CMF**: Chaikin Money Flow (period)
+
+#### Support/Resistance & Price Action (4 types)
+- **Pivot**: Pivot Points
+- **HIGH, LOW**: Highest/Lowest over period
+- **AVGPRICE**: Average of OHLC
+
+**Quick Reference:**
+```csv
+# Moving Averages
+sma,20 | ema,12 | wma,10 | dema,20 | tema,20 | kama,30 | hma,20 | zlema,20
+
+# Volatility
+bb,20,2 | atr,14,2 | natr,14 | keltner,20,2 | donchian,20
+
+# Momentum
+rsi,14 | stoch,14,3,3 | stochrsi,14,3,3 | cci,20 | williams,14
+roc,12 | momentum,12 | tsi,25,13 | ultimate,7,14,28
+
+# Trend
+macd,12,26,9 | adx,14 | dmi,14 | aroon,25 | psar,0.02,0.20
+
+# Volume
+obv,1 | vwap,1 | mfi,14 | adl,1 | cmf,20
+
+# Price Action
+high,20 | low,20 | avgprice,1 | pivot,1
+```
 
 ## Strategy Types
 

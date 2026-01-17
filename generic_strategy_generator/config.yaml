@@ -3,8 +3,8 @@
 # Data Settings
 data:
   source: "yahoo"  # yahoo, csv, database
-  start_date: "2020-01-01"
-  end_date: "2024-12-31"
+  start_date: "2024-01-01"
+  end_date: "2026-01-01"
   data_dir: "data/historical"
 
 # Backtest Settings
@@ -13,7 +13,7 @@ backtest:
   commission: 0.001  # 0.1%
   slippage: 0.0005   # 0.05%
   position_size: 0.95  # Use 95% of capital per trade
-  
+
 # Strategy Generation
 strategy:
   # Entry condition types: crossover, threshold, breakout
@@ -23,13 +23,26 @@ strategy:
   # Maximum combinations to test (0 = unlimited)
   max_combinations: 0
 
+  # Risk management variations
+  risk_management:
+    # Test different risk management combinations
+    # "none" = exit indicator only
+    # "stop_loss" = exit indicator + stop loss
+    # "take_profit" = exit indicator + take profit
+    # "both" = exit indicator + stop loss + take profit
+    variations: ["none", "stop_loss", "take_profit", "both"]
+    # Stop loss percentages to test
+    stop_loss_pcts: [0.05, 0.1]  # 2%, 5%
+    # Take profit percentages to test
+    take_profit_pcts: [0.08, 0.1, 0.13]  # 4%, 8%
+
 # Performance Filters (minimum requirements)
 filters:
   min_trades: 10
-  max_drawdown: 0.30  # 30%
-  min_sharpe: 0.5
-  min_profit_factor: 1.2
-  min_win_rate: 0.35
+  max_drawdown: 0.50  # 50% - relaxed
+  min_sharpe: 0.0  # Allow negative - just to see results
+  min_profit_factor: 0.8  # Relaxed
+  min_win_rate: 0.3  # Relaxed to 20%
 
 # Optimization Settings
 optimization:
@@ -41,10 +54,10 @@ optimization:
     profit_factor: 0.15
     win_rate: 0.10
     recovery_factor: 0.10
-  
+
   # Top N strategies to export
-  top_n: 50
-  
+  top_n: 100
+
   # Enable multi-objective optimization (Pareto frontier)
   pareto_optimization: true
 
