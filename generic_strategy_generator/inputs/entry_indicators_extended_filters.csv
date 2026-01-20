@@ -1,0 +1,104 @@
+# =============================================================================
+# ENTRY FILTERS - Organized by Strategy Type / Stock Classification
+# =============================================================================
+# Filters constrain when entries can occur (all filters must pass)
+# Format: indicator,param1,[param2,...],filter_type
+# Filter types: above, below, rising, high, low
+# =============================================================================
+
+# =============================================================================
+# TREND CONFIRMATION FILTERS
+# Best for: --strategy-type trend_following
+# Only enter when price is in an established uptrend
+# =============================================================================
+
+# Long-term trend filters (price must be above these MAs)
+#ema,50,above          # Above 50 EMA = intermediate uptrend
+#ema,100,above        # Above 100 EMA = stronger trend confirmation
+#ema,200,above        # Above 200 EMA = major uptrend (very selective)
+#sma,50,above
+#sma,100,above
+#sma,200,above
+
+# =============================================================================
+# TREND STRENGTH FILTERS
+# Best for: --strategy-type trend_following, momentum
+# Only enter when there's a strong directional move (not sideways)
+# =============================================================================
+
+#adx,14,high           # ADX > threshold = strong trend forming
+#adx,20,high
+
+# =============================================================================
+# VOLATILITY FILTERS
+# Best for: --strategy-type breakout, volatility_based
+# Control entries based on current volatility regime
+# =============================================================================
+
+# High volatility required (for breakout/momentum strategies)
+#atr,14,2,high         # ATR must be elevated for entry
+#atr,10,2,high
+
+# Low volatility required (for mean reversion, avoid wild swings)
+#atr,14,2,low         # Only enter in calm conditions
+
+# =============================================================================
+# MOMENTUM FILTERS
+# Best for: --strategy-type momentum, trend_following
+# Only enter when momentum is bullish
+# =============================================================================
+
+#rsi,14,high           # RSI showing strength (not oversold)
+#rsi,21,high
+#macd,12,26,9,above   # MACD above signal line
+
+# =============================================================================
+# MEAN REVERSION FILTERS
+# Best for: --strategy-type mean_reversion
+# Only enter when price is at extremes (oversold conditions)
+# =============================================================================
+
+rsi,14,low           # RSI oversold
+bb,20,2,below        # Price at/below lower Bollinger Band
+williams,14,low      # Williams %R oversold
+
+# =============================================================================
+# BREAKOUT FILTERS
+# Best for: --strategy-type breakout
+# Only enter when price is breaking out of range
+# =============================================================================
+
+bb,20,2,above        # Price above upper Bollinger Band
+keltner,20,2,above   # Price above Keltner Channel
+donchian,20,above    # Price at Donchian high
+
+# =============================================================================
+# VOLUME FILTERS
+# Confirm entries with volume
+# =============================================================================
+
+#obv,1,rising         # On-Balance Volume rising
+#cmf,20,high          # Chaikin Money Flow positive
+#mfi,14,high          # Money Flow showing buying pressure
+
+# =============================================================================
+# RECOMMENDED FILTER COMBINATIONS
+# =============================================================================
+#
+# TREND FOLLOWING setup:
+#   ema,50,above + adx,14,high
+#   (Only trade uptrends with strong momentum)
+#
+# MEAN REVERSION setup:
+#   atr,14,2,low + rsi,14,low
+#   (Only trade calm conditions when oversold)
+#
+# BREAKOUT setup:
+#   atr,14,2,high + adx,14,high
+#   (Only trade high volatility with trend strength)
+#
+# CONSERVATIVE setup:
+#   ema,200,above + adx,14,high + atr,14,2,high
+#   (Major uptrend + strong trend + volatility)
+#
+# =============================================================================

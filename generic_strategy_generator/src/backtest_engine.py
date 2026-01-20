@@ -309,6 +309,40 @@ class DataLoader:
             return []
 
     @staticmethod
+    def load_stock_data_raw(symbol, data_dir='data/historical'):
+        """
+        Load raw DataFrame for a stock (used for classification).
+
+        Args:
+            symbol: Stock ticker symbol
+            data_dir: Directory containing CSV files
+
+        Returns:
+            DataFrame with OHLCV data or None if not found
+        """
+        csv_path = os.path.join(data_dir, f"{symbol}.csv")
+
+        if not os.path.exists(csv_path):
+            return None
+
+        try:
+            # Try loading with MultiIndex (yfinance format)
+            df = pd.read_csv(csv_path, header=[0, 1], index_col=0, parse_dates=True)
+            df.columns = df.columns.get_level_values(0)
+        except Exception:
+            # Fall back to simple format
+            try:
+                df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
+            except Exception as e:
+                print(f"Error loading {symbol}: {e}")
+                return None
+
+        # Normalize column names
+        df.columns = [col.lower() for col in df.columns]
+
+        return df
+
+    @staticmethod
     def download_historical_data(symbols, start_date, end_date, output_dir='data/historical'):
         """
         Download and save historical data for multiple stocks

@@ -1,0 +1,4439 @@
+{
+  "ABBV": {
+    "symbol": "ABBV",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.57119536870302,
+    "avg_atr_pct": 2.1513168000948593,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 183.28102810924273,
+    "avg_daily_return_magnitude": 1.0657704693832406,
+    "avg_dollar_volume": 1083.6425946604845,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "LULU": {
+    "symbol": "LULU",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.512650285039616,
+    "avg_atr_pct": 3.442628477657231,
+    "breakout_frequency": 0.17012448132780084,
+    "avg_price": 300.09472106082507,
+    "avg_daily_return_magnitude": 1.8005572024257686,
+    "avg_dollar_volume": 753.3812374391047,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "ROK": {
+    "symbol": "ROK",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.735744155069895,
+    "avg_atr_pct": 2.590071103593726,
+    "breakout_frequency": 0.0954356846473029,
+    "avg_price": 294.35815463123095,
+    "avg_daily_return_magnitude": 1.3375803903908547,
+    "avg_dollar_volume": 263.71216090619515,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "BKSY": {
+    "symbol": "BKSY",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 24.61483051460178,
+    "avg_atr_pct": 8.434084368679086,
+    "breakout_frequency": 0.15352697095435686,
+    "avg_price": 12.527270898401024,
+    "avg_daily_return_magnitude": 4.328051750795851,
+    "avg_dollar_volume": 16.30773899925925,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "IYW": {
+    "symbol": "IYW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.403262915135418,
+    "avg_atr_pct": 1.9039435945415697,
+    "breakout_frequency": 0.15352697095435686,
+    "avg_price": 157.97278702876483,
+    "avg_daily_return_magnitude": 1.0884619839923007,
+    "avg_dollar_volume": 138.3300059163295,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "CCO.TO": {
+    "symbol": "CCO.TO",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 27.24407964461213,
+    "avg_atr_pct": 4.031746975091628,
+    "breakout_frequency": 0.12836438923395446,
+    "avg_price": 79.72368815973786,
+    "avg_daily_return_magnitude": 2.131963208003734,
+    "avg_dollar_volume": 97.81067096972912,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "PGR": {
+    "symbol": "PGR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.875056548961787,
+    "avg_atr_pct": 2.0329519882913876,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 219.52485036660002,
+    "avg_daily_return_magnitude": 1.0342725522951322,
+    "avg_dollar_volume": 632.0389636017727,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AVGO": {
+    "symbol": "AVGO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.730918037521853,
+    "avg_atr_pct": 3.990199255860953,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 211.70350350611713,
+    "avg_daily_return_magnitude": 2.2552879340437575,
+    "avg_dollar_volume": 5938.1742401426845,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SPOT": {
+    "symbol": "SPOT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.078833147425108,
+    "avg_atr_pct": 3.4969863289328833,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 478.22061652681265,
+    "avg_daily_return_magnitude": 1.7700973799168092,
+    "avg_dollar_volume": 983.3571729742376,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SOFI": {
+    "symbol": "SOFI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.61786489339528,
+    "avg_atr_pct": 5.231344960542827,
+    "breakout_frequency": 0.1016597510373444,
+    "avg_price": 14.361663338672592,
+    "avg_daily_return_magnitude": 2.8625777266302546,
+    "avg_dollar_volume": 857.1401229033544,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NFLX": {
+    "symbol": "NFLX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.854118793581883,
+    "avg_atr_pct": 2.6769053902407016,
+    "breakout_frequency": 0.16390041493775934,
+    "avg_price": 88.34528292317789,
+    "avg_daily_return_magnitude": 1.4024395052498526,
+    "avg_dollar_volume": 3339.071913957035,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "IONQ": {
+    "symbol": "IONQ",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.5111065368569,
+    "avg_atr_pct": 8.489170293431085,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 27.643565760190743,
+    "avg_daily_return_magnitude": 4.673518152235425,
+    "avg_dollar_volume": 642.7364069019669,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "META": {
+    "symbol": "META",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.73196538067293,
+    "avg_atr_pct": 2.909090719895357,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 587.219009642582,
+    "avg_daily_return_magnitude": 1.5377097735099334,
+    "avg_dollar_volume": 8723.387091796214,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AMAT": {
+    "symbol": "AMAT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.573578794348933,
+    "avg_atr_pct": 3.4252011175223003,
+    "breakout_frequency": 0.14730290456431536,
+    "avg_price": 190.04245931313807,
+    "avg_daily_return_magnitude": 1.9558337049575742,
+    "avg_dollar_volume": 1293.2378441601938,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "TTWO": {
+    "symbol": "TTWO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.099099891898007,
+    "avg_atr_pct": 2.3278320980695626,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 193.02559750013617,
+    "avg_daily_return_magnitude": 1.1566804158579047,
+    "avg_dollar_volume": 334.73846003439246,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "RGTI": {
+    "symbol": "RGTI",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.394086905193063,
+    "avg_atr_pct": 11.252535398636548,
+    "breakout_frequency": 0.1078838174273859,
+    "avg_price": 9.931914338790088,
+    "avg_daily_return_magnitude": 6.275316913647034,
+    "avg_dollar_volume": 763.7865470161029,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "LMT": {
+    "symbol": "LMT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.393129635038825,
+    "avg_atr_pct": 1.841310201825187,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 467.1184824909347,
+    "avg_daily_return_magnitude": 0.9021798553761945,
+    "avg_dollar_volume": 609.6019488555179,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "SCHD": {
+    "symbol": "SCHD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.453574904204896,
+    "avg_atr_pct": 1.1371409225765028,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 25.911214820892212,
+    "avg_daily_return_magnitude": 0.6202358870412789,
+    "avg_dollar_volume": 356.5842364133094,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "COST": {
+    "symbol": "COST",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.139737066354808,
+    "avg_atr_pct": 1.8156377797491923,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 886.3106031683811,
+    "avg_daily_return_magnitude": 0.9207539791070636,
+    "avg_dollar_volume": 1898.0343157787308,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AI": {
+    "symbol": "AI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.169202633260376,
+    "avg_atr_pct": 5.524183006077964,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 24.74476095024808,
+    "avg_daily_return_magnitude": 2.773556440288042,
+    "avg_dollar_volume": 158.81738000946672,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ADBE": {
+    "symbol": "ADBE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.403630911884285,
+    "avg_atr_pct": 2.6269720627775,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 451.407070874218,
+    "avg_daily_return_magnitude": 1.3543024892710458,
+    "avg_dollar_volume": 1593.5706976604447,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "MSFT": {
+    "symbol": "MSFT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.410021905327984,
+    "avg_atr_pct": 1.8948123203026104,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 439.16027145081785,
+    "avg_daily_return_magnitude": 0.9753365733418541,
+    "avg_dollar_volume": 9357.337298700382,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "QCOM": {
+    "symbol": "QCOM",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.74030192030702,
+    "avg_atr_pct": 3.0298188118133473,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 161.90753654084833,
+    "avg_daily_return_magnitude": 1.6503298461389544,
+    "avg_dollar_volume": 1429.6533585697887,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AMZN": {
+    "symbol": "AMZN",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.934988455223323,
+    "avg_atr_pct": 2.571498818721115,
+    "breakout_frequency": 0.1078838174273859,
+    "avg_price": 201.08492048043178,
+    "avg_daily_return_magnitude": 1.4090187345431,
+    "avg_dollar_volume": 8555.395871713175,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "PLTR": {
+    "symbol": "PLTR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.01925733589225,
+    "avg_atr_pct": 5.063898435341221,
+    "breakout_frequency": 0.16182572614107885,
+    "avg_price": 85.47712153552538,
+    "avg_daily_return_magnitude": 2.7677399761020958,
+    "avg_dollar_volume": 6062.676073316827,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "AMD": {
+    "symbol": "AMD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.30490674295044,
+    "avg_atr_pct": 4.376740868491237,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 155.09009951709277,
+    "avg_daily_return_magnitude": 2.361910397326255,
+    "avg_dollar_volume": 8103.34020759654,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "TSLA": {
+    "symbol": "TSLA",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.526380230410815,
+    "avg_atr_pct": 5.0569249776793885,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 293.5411555073651,
+    "avg_daily_return_magnitude": 2.8930938710651914,
+    "avg_dollar_volume": 27879.16757262771,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GOOG": {
+    "symbol": "GOOG",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.972440849830747,
+    "avg_atr_pct": 2.4983495205010358,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 187.8847755036981,
+    "avg_daily_return_magnitude": 1.365202521586389,
+    "avg_dollar_volume": 4074.6535809968227,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "AAPL": {
+    "symbol": "AAPL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.702311581757577,
+    "avg_atr_pct": 2.2414388734409556,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 218.757739671198,
+    "avg_daily_return_magnitude": 1.156510034188601,
+    "avg_dollar_volume": 11988.105448331557,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BBD-B.TO": {
+    "symbol": "BBD-B.TO",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 29.445315153121943,
+    "avg_atr_pct": 3.778789953673639,
+    "breakout_frequency": 0.15113871635610765,
+    "avg_price": 109.71387665219619,
+    "avg_daily_return_magnitude": 2.1269404991085357,
+    "avg_dollar_volume": 51.722372401525796,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "NVDA": {
+    "symbol": "NVDA",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.592308955405638,
+    "avg_atr_pct": 4.118392724403158,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 130.73980768363313,
+    "avg_daily_return_magnitude": 2.332981446002031,
+    "avg_dollar_volume": 35180.20660758,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "XOM": {
+    "symbol": "XOM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.523399924669295,
+    "avg_atr_pct": 1.965464328078159,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 108.51829369229624,
+    "avg_daily_return_magnitude": 1.0182823350029668,
+    "avg_dollar_volume": 1747.446773150282,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CVX": {
+    "symbol": "CVX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.230303608183807,
+    "avg_atr_pct": 1.9160425255838152,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 145.5311933114709,
+    "avg_daily_return_magnitude": 0.9919212757362901,
+    "avg_dollar_volume": 1202.4707272811586,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "COP": {
+    "symbol": "COP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.81075155568323,
+    "avg_atr_pct": 2.3982299613912366,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 99.80593527075779,
+    "avg_daily_return_magnitude": 1.2796502201154079,
+    "avg_dollar_volume": 675.13646895698,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "EOG": {
+    "symbol": "EOG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.162152508166958,
+    "avg_atr_pct": 2.290493349684363,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 116.20750021459573,
+    "avg_daily_return_magnitude": 1.1666373135340398,
+    "avg_dollar_volume": 390.5920029875189,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SLB": {
+    "symbol": "SLB",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.95878485507011,
+    "avg_atr_pct": 2.7548488118349432,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 40.12191935079506,
+    "avg_daily_return_magnitude": 1.4060901552815637,
+    "avg_dollar_volume": 534.2234449488096,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "UNH": {
+    "symbol": "UNH",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.802190251923864,
+    "avg_atr_pct": 2.7672543932523728,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 446.29127231917056,
+    "avg_daily_return_magnitude": 1.4630985202148126,
+    "avg_dollar_volume": 2978.083774907377,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "LLY": {
+    "symbol": "LLY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.888823533234902,
+    "avg_atr_pct": 2.856347880228094,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 813.5950414649993,
+    "avg_daily_return_magnitude": 1.5291626719579507,
+    "avg_dollar_volume": 2887.194782246016,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "JNJ": {
+    "symbol": "JNJ",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.021906562207626,
+    "avg_atr_pct": 1.560715195411648,
+    "breakout_frequency": 0.15352697095435686,
+    "avg_price": 158.1194714550003,
+    "avg_daily_return_magnitude": 0.7767073272807279,
+    "avg_dollar_volume": 1268.290328872778,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "JPM": {
+    "symbol": "JPM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.72307938875504,
+    "avg_atr_pct": 2.0062683395235688,
+    "breakout_frequency": 0.1825726141078838,
+    "avg_price": 237.3542102038623,
+    "avg_daily_return_magnitude": 1.0309598028201532,
+    "avg_dollar_volume": 2161.9586846419406,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "V": {
+    "symbol": "V",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.88009025317035,
+    "avg_atr_pct": 1.6932012001263113,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 309.69922340058713,
+    "avg_daily_return_magnitude": 0.8618791309695223,
+    "avg_dollar_volume": 2045.2421644060903,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MA": {
+    "symbol": "MA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.59485161844183,
+    "avg_atr_pct": 1.7092638581963495,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 512.6486047995518,
+    "avg_daily_return_magnitude": 0.8584549145010835,
+    "avg_dollar_volume": 1340.8612519265891,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BLK": {
+    "symbol": "BLK",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.729304152269425,
+    "avg_atr_pct": 2.0026444519362094,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 931.9585033887886,
+    "avg_daily_return_magnitude": 1.0280928881350095,
+    "avg_dollar_volume": 603.2324627909261,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "GS": {
+    "symbol": "GS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.332423033503567,
+    "avg_atr_pct": 2.384312123608515,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 567.0383481941375,
+    "avg_daily_return_magnitude": 1.2402077065447619,
+    "avg_dollar_volume": 1260.5421455561177,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PG": {
+    "symbol": "PG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.588484207951655,
+    "avg_atr_pct": 1.5244401615399081,
+    "breakout_frequency": 0.0954356846473029,
+    "avg_price": 157.96856333819994,
+    "avg_daily_return_magnitude": 0.7808544690005738,
+    "avg_dollar_volume": 1176.5804322825306,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "KO": {
+    "symbol": "KO",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.491380963496127,
+    "avg_atr_pct": 1.4352407179714184,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 64.58428453544222,
+    "avg_daily_return_magnitude": 0.7187036837811683,
+    "avg_dollar_volume": 994.5850521957018,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "mean_reversion",
+      "volatility_based",
+      "breakout"
+    ]
+  },
+  "WMT": {
+    "symbol": "WMT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.157830175789066,
+    "avg_atr_pct": 1.7611773465016312,
+    "breakout_frequency": 0.16597510373443983,
+    "avg_price": 83.89783018803692,
+    "avg_daily_return_magnitude": 0.9427878931747646,
+    "avg_dollar_volume": 1497.998725513666,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "PEP": {
+    "symbol": "PEP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.549532669738298,
+    "avg_atr_pct": 1.7332902522545472,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 150.0460843697962,
+    "avg_daily_return_magnitude": 0.8973808121757006,
+    "avg_dollar_volume": 1014.1847729791831,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NEE": {
+    "symbol": "NEE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.106804604934677,
+    "avg_atr_pct": 2.3485918617008923,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 70.66726914819968,
+    "avg_daily_return_magnitude": 1.2425325220402164,
+    "avg_dollar_volume": 766.2942131302085,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DUK": {
+    "symbol": "DUK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.356987166527016,
+    "avg_atr_pct": 1.5891568255280097,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 108.19096727105251,
+    "avg_daily_return_magnitude": 0.8235555707259977,
+    "avg_dollar_volume": 351.07175880058406,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AMT": {
+    "symbol": "AMT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.879092868098148,
+    "avg_atr_pct": 2.2414577945315126,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 194.59786646869554,
+    "avg_daily_return_magnitude": 1.1305412467196403,
+    "avg_dollar_volume": 495.9662851561558,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PLD": {
+    "symbol": "PLD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.387695512921496,
+    "avg_atr_pct": 2.3075326198891637,
+    "breakout_frequency": 0.08921161825726141,
+    "avg_price": 112.67838351185104,
+    "avg_daily_return_magnitude": 1.1749266976284864,
+    "avg_dollar_volume": 433.9429134531439,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ASML": {
+    "symbol": "ASML",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.040073781741317,
+    "avg_atr_pct": 3.0400880829254,
+    "breakout_frequency": 0.15767634854771784,
+    "avg_price": 835.4506204916662,
+    "avg_daily_return_magnitude": 1.8746752686694188,
+    "avg_dollar_volume": 1250.2993336604145,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "TSM": {
+    "symbol": "TSM",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.99440246370923,
+    "avg_atr_pct": 3.303654406721832,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 192.8486135110437,
+    "avg_daily_return_magnitude": 1.9027107860003172,
+    "avg_dollar_volume": 2726.387671195423,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MU": {
+    "symbol": "MU",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.462223668085286,
+    "avg_atr_pct": 4.492144112475876,
+    "breakout_frequency": 0.15560165975103735,
+    "avg_price": 121.28410892562562,
+    "avg_daily_return_magnitude": 2.654890464953954,
+    "avg_dollar_volume": 2851.8824326872714,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "KLAC": {
+    "symbol": "KLAC",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.83855311308305,
+    "avg_atr_pct": 3.4151215713379024,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 798.2313667692512,
+    "avg_daily_return_magnitude": 1.9183593989731433,
+    "avg_dollar_volume": 815.6387353134338,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "BA": {
+    "symbol": "BA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.801783713406664,
+    "avg_atr_pct": 2.97770290078819,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 188.18693241560126,
+    "avg_daily_return_magnitude": 1.570779101198188,
+    "avg_dollar_volume": 1633.9556191212628,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "RTX": {
+    "symbol": "RTX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.61632820008184,
+    "avg_atr_pct": 1.8454884776014127,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 125.30546325136466,
+    "avg_daily_return_magnitude": 0.9361605318021067,
+    "avg_dollar_volume": 684.1747058869198,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "NOC": {
+    "symbol": "NOC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.884854319047204,
+    "avg_atr_pct": 1.9104775705001165,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 495.51179996809634,
+    "avg_daily_return_magnitude": 0.9473229934126852,
+    "avg_dollar_volume": 425.44787408011996,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "GD": {
+    "symbol": "GD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.621723338119217,
+    "avg_atr_pct": 1.6892452285484785,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 285.9828822527274,
+    "avg_daily_return_magnitude": 0.838570456661336,
+    "avg_dollar_volume": 349.38369308207535,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "HII": {
+    "symbol": "HII",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.35965185227593,
+    "avg_atr_pct": 2.503848486144461,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 245.5259750487795,
+    "avg_daily_return_magnitude": 1.2679575728329973,
+    "avg_dollar_volume": 110.25311966156978,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "TDG": {
+    "symbol": "TDG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.614435726387814,
+    "avg_atr_pct": 2.2705408991764764,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 1220.0209399219527,
+    "avg_daily_return_magnitude": 1.1488721471556982,
+    "avg_dollar_volume": 327.3016369565561,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CAT": {
+    "symbol": "CAT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.115390079525962,
+    "avg_atr_pct": 2.4361018592423065,
+    "breakout_frequency": 0.15145228215767634,
+    "avg_price": 380.1322443380774,
+    "avg_daily_return_magnitude": 1.2962809867816651,
+    "avg_dollar_volume": 1002.8445027640902,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "DE": {
+    "symbol": "DE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.613551396851314,
+    "avg_atr_pct": 2.2490417367821185,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 429.9425049436045,
+    "avg_daily_return_magnitude": 1.1568695072786375,
+    "avg_dollar_volume": 598.5471274384943,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "HON": {
+    "symbol": "HON",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.59068289715787,
+    "avg_atr_pct": 1.82014225620787,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 194.63892823481464,
+    "avg_daily_return_magnitude": 0.930029295512574,
+    "avg_dollar_volume": 750.698755534099,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MMM": {
+    "symbol": "MMM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.40040990306163,
+    "avg_atr_pct": 2.29866664064527,
+    "breakout_frequency": 0.1078838174273859,
+    "avg_price": 128.0686518452557,
+    "avg_daily_return_magnitude": 1.2184518164744391,
+    "avg_dollar_volume": 493.56474022357474,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GE": {
+    "symbol": "GE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.496554685921556,
+    "avg_atr_pct": 2.5672043202097052,
+    "breakout_frequency": 0.17219917012448133,
+    "avg_price": 201.46849731810065,
+    "avg_daily_return_magnitude": 1.3466724252432383,
+    "avg_dollar_volume": 1103.0855614806155,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "EMR": {
+    "symbol": "EMR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.89817886371336,
+    "avg_atr_pct": 2.244597014890031,
+    "breakout_frequency": 0.15145228215767634,
+    "avg_price": 116.50266387453117,
+    "avg_daily_return_magnitude": 1.185599543992669,
+    "avg_dollar_volume": 334.4477518645693,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "ITW": {
+    "symbol": "ITW",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.750194078211585,
+    "avg_atr_pct": 1.726253532411793,
+    "breakout_frequency": 0.1037344398340249,
+    "avg_price": 246.49451343186823,
+    "avg_daily_return_magnitude": 0.8754470515927731,
+    "avg_dollar_volume": 260.2601461605665,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "ETN": {
+    "symbol": "ETN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.684667359007616,
+    "avg_atr_pct": 2.784960808670535,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 321.2505155160608,
+    "avg_daily_return_magnitude": 1.4262209652200604,
+    "avg_dollar_volume": 783.7156444655278,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PH": {
+    "symbol": "PH",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.51863954732357,
+    "avg_atr_pct": 2.279580900995571,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 634.8533153153986,
+    "avg_daily_return_magnitude": 1.1654545193342536,
+    "avg_dollar_volume": 419.60713910249507,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CMI": {
+    "symbol": "CMI",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.125530256692997,
+    "avg_atr_pct": 2.354283305356927,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 332.3402172559761,
+    "avg_daily_return_magnitude": 1.2495677310487903,
+    "avg_dollar_volume": 355.90932855122173,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "UNP": {
+    "symbol": "UNP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.062103027266367,
+    "avg_atr_pct": 1.82059872411631,
+    "breakout_frequency": 0.10995850622406639,
+    "avg_price": 228.76277914465186,
+    "avg_daily_return_magnitude": 0.938901531490269,
+    "avg_dollar_volume": 661.1742764430072,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CSX": {
+    "symbol": "CSX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.052707232378346,
+    "avg_atr_pct": 2.0097880345597936,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 33.29263400271594,
+    "avg_daily_return_magnitude": 1.0105079753293258,
+    "avg_dollar_volume": 455.85600170449794,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NSC": {
+    "symbol": "NSC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.14319254531403,
+    "avg_atr_pct": 2.0866089155646708,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 247.79071285050227,
+    "avg_daily_return_magnitude": 1.078029477473753,
+    "avg_dollar_volume": 347.8937595086998,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "FDX": {
+    "symbol": "FDX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.07342213477672,
+    "avg_atr_pct": 2.353198474355452,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 250.5752338850166,
+    "avg_daily_return_magnitude": 1.2287116026118643,
+    "avg_dollar_volume": 464.80565687088983,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "UPS": {
+    "symbol": "UPS",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.44316737861495,
+    "avg_atr_pct": 2.2216216450202926,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 111.99961906220334,
+    "avg_daily_return_magnitude": 1.20652275338296,
+    "avg_dollar_volume": 587.5611492440669,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "DAL": {
+    "symbol": "DAL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.4310505873124,
+    "avg_atr_pct": 3.421822584121693,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 51.78708737589923,
+    "avg_daily_return_magnitude": 1.8357873685140256,
+    "avg_dollar_volume": 476.9135601574354,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "UAL": {
+    "symbol": "UAL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.086795704591502,
+    "avg_atr_pct": 4.078424409290208,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 73.73440234879574,
+    "avg_daily_return_magnitude": 2.2055790985169517,
+    "avg_dollar_volume": 530.733469520733,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "LUV": {
+    "symbol": "LUV",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.09006324833782,
+    "avg_atr_pct": 3.2688050120087855,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 30.300158090325464,
+    "avg_daily_return_magnitude": 1.6860980303910538,
+    "avg_dollar_volume": 297.86708159540945,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "FCX": {
+    "symbol": "FCX",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.56494588724582,
+    "avg_atr_pct": 3.447113084776795,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 42.330636313237044,
+    "avg_daily_return_magnitude": 1.8693131572655295,
+    "avg_dollar_volume": 608.4271679122081,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "NEM": {
+    "symbol": "NEM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.84186091179745,
+    "avg_atr_pct": 3.0494133155138927,
+    "breakout_frequency": 0.17012448132780084,
+    "avg_price": 52.90905528429495,
+    "avg_daily_return_magnitude": 1.7361506612866449,
+    "avg_dollar_volume": 571.7253253166849,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "BHP": {
+    "symbol": "BHP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 18.207420315186777,
+    "avg_atr_pct": 2.027712291262408,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 53.128880838948895,
+    "avg_daily_return_magnitude": 1.2426700604656347,
+    "avg_dollar_volume": 143.7999793570963,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "RIO": {
+    "symbol": "RIO",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.974998832078235,
+    "avg_atr_pct": 1.8716752478022518,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 61.4051165865712,
+    "avg_daily_return_magnitude": 1.1165436712989054,
+    "avg_dollar_volume": 184.10915409503343,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "NUE": {
+    "symbol": "NUE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.58290872971187,
+    "avg_atr_pct": 2.9329510711266544,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 145.8471050642401,
+    "avg_daily_return_magnitude": 1.5206181196217943,
+    "avg_dollar_volume": 264.86982987707523,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CLF": {
+    "symbol": "CLF",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.34676863399609,
+    "avg_atr_pct": 5.07676561520545,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 13.007310760923591,
+    "avg_daily_return_magnitude": 2.676069965195193,
+    "avg_dollar_volume": 204.00437094412607,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "APD": {
+    "symbol": "APD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.68251974761373,
+    "avg_atr_pct": 2.114306763651234,
+    "breakout_frequency": 0.15560165975103735,
+    "avg_price": 268.4837076559485,
+    "avg_daily_return_magnitude": 1.1158357991519667,
+    "avg_dollar_volume": 380.9011629878983,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "LIN": {
+    "symbol": "LIN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.957014587098673,
+    "avg_atr_pct": 1.5517808543098304,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 443.1456827718423,
+    "avg_daily_return_magnitude": 0.752215785467277,
+    "avg_dollar_volume": 901.046031383177,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ECL": {
+    "symbol": "ECL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.85418762605061,
+    "avg_atr_pct": 1.6625138019146022,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 245.14820250856923,
+    "avg_daily_return_magnitude": 0.866658665960679,
+    "avg_dollar_volume": 299.29224510054877,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DD": {
+    "symbol": "DD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.506096125232403,
+    "avg_atr_pct": 2.2477288971289693,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 31.869384887208977,
+    "avg_daily_return_magnitude": 1.218299856320073,
+    "avg_dollar_volume": 199.4021474794021,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AMGN": {
+    "symbol": "AMGN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.297021983923752,
+    "avg_atr_pct": 2.2812259838343785,
+    "breakout_frequency": 0.0995850622406639,
+    "avg_price": 290.45039352477784,
+    "avg_daily_return_magnitude": 1.1473977771360793,
+    "avg_dollar_volume": 784.8960177884136,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GILD": {
+    "symbol": "GILD",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.433230099027913,
+    "avg_atr_pct": 2.28397319580692,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 91.71324882659304,
+    "avg_daily_return_magnitude": 1.1694904753670057,
+    "avg_dollar_volume": 685.6744857137309,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "BIIB": {
+    "symbol": "BIIB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.21031928280481,
+    "avg_atr_pct": 2.7756032739318757,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 174.44521945786192,
+    "avg_daily_return_magnitude": 1.3615605869426786,
+    "avg_dollar_volume": 243.27687020308505,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "VRTX": {
+    "symbol": "VRTX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.52449890284605,
+    "avg_atr_pct": 2.3706715589611522,
+    "breakout_frequency": 0.0975103734439834,
+    "avg_price": 447.02300818697864,
+    "avg_daily_return_magnitude": 1.184694408060922,
+    "avg_dollar_volume": 624.2436000785008,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "REGN": {
+    "symbol": "REGN",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.88596509354742,
+    "avg_atr_pct": 2.7381446290517975,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 792.3478653744397,
+    "avg_daily_return_magnitude": 1.374508455975011,
+    "avg_dollar_volume": 598.2671748742152,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "MRNA": {
+    "symbol": "MRNA",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.480464292880352,
+    "avg_atr_pct": 5.712389145796143,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 60.44228075415015,
+    "avg_daily_return_magnitude": 2.899893146784868,
+    "avg_dollar_volume": 371.3518548393759,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BMY": {
+    "symbol": "BMY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.42395159609246,
+    "avg_atr_pct": 2.4391481720481436,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 47.34742359146179,
+    "avg_daily_return_magnitude": 1.260938343785957,
+    "avg_dollar_volume": 657.9138890439463,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PFE": {
+    "symbol": "PFE",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 18.579871338355556,
+    "avg_atr_pct": 2.178585320758209,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 24.691170635451357,
+    "avg_daily_return_magnitude": 1.1413850583023954,
+    "avg_dollar_volume": 1102.6802078001222,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "MRK": {
+    "symbol": "MRK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.073035548005812,
+    "avg_atr_pct": 2.227331663813107,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 98.87398506255738,
+    "avg_daily_return_magnitude": 1.1144555642572218,
+    "avg_dollar_volume": 1139.694840847119,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AZN": {
+    "symbol": "AZN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.886868983480642,
+    "avg_atr_pct": 1.7580857401178112,
+    "breakout_frequency": 0.15145228215767634,
+    "avg_price": 73.6543784502493,
+    "avg_daily_return_magnitude": 1.0342440556522907,
+    "avg_dollar_volume": 380.10453646977567,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  },
+  "NVO": {
+    "symbol": "NVO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.315362920205985,
+    "avg_atr_pct": 3.0067929913089917,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 91.84159053939273,
+    "avg_daily_return_magnitude": 1.8393707074063526,
+    "avg_dollar_volume": 675.8150063529635,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "HCA": {
+    "symbol": "HCA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.99577393438226,
+    "avg_atr_pct": 2.437595756479081,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 358.0008679880089,
+    "avg_daily_return_magnitude": 1.1787918524392813,
+    "avg_dollar_volume": 477.93136912529326,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "ELV": {
+    "symbol": "ELV",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.593058864883336,
+    "avg_atr_pct": 2.545457026825653,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 419.9038935809496,
+    "avg_daily_return_magnitude": 1.260568000483817,
+    "avg_dollar_volume": 623.206963246404,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CI": {
+    "symbol": "CI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.350727671651267,
+    "avg_atr_pct": 2.3513757559826622,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 310.54145931532656,
+    "avg_daily_return_magnitude": 1.1529459438081382,
+    "avg_dollar_volume": 529.5483589679064,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ISRG": {
+    "symbol": "ISRG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.21945225763666,
+    "avg_atr_pct": 2.4831019741649847,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 481.3843823923058,
+    "avg_daily_return_magnitude": 1.2716473914063886,
+    "avg_dollar_volume": 841.8290225249393,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MDT": {
+    "symbol": "MDT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.497465049295133,
+    "avg_atr_pct": 1.8037704242737802,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 85.3712153035806,
+    "avg_daily_return_magnitude": 0.8998639196694573,
+    "avg_dollar_volume": 582.7782847198959,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ABT": {
+    "symbol": "ABT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.142378404320244,
+    "avg_atr_pct": 1.8895784677546519,
+    "breakout_frequency": 0.1016597510373444,
+    "avg_price": 117.88955117031873,
+    "avg_daily_return_magnitude": 0.9074154522472903,
+    "avg_dollar_volume": 716.4148021961987,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SYK": {
+    "symbol": "SYK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.160033526299216,
+    "avg_atr_pct": 1.9160665574534668,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 358.39835871358315,
+    "avg_daily_return_magnitude": 0.9299419997891426,
+    "avg_dollar_volume": 486.7241406434139,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DHR": {
+    "symbol": "DHR",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.453273938137166,
+    "avg_atr_pct": 2.368725264767454,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 228.36154341982655,
+    "avg_daily_return_magnitude": 1.2170874569831247,
+    "avg_dollar_volume": 769.2560191272872,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "TMO": {
+    "symbol": "TMO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.33863614073348,
+    "avg_atr_pct": 2.3223109539524835,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 531.5161247709358,
+    "avg_daily_return_magnitude": 1.170591202261295,
+    "avg_dollar_volume": 980.450049957859,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BSX": {
+    "symbol": "BSX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.988556246528944,
+    "avg_atr_pct": 1.9261343097266117,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 88.5058765031427,
+    "avg_daily_return_magnitude": 0.91036771054222,
+    "avg_dollar_volume": 632.4924849310644,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "HD": {
+    "symbol": "HD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.451718206765754,
+    "avg_atr_pct": 2.002406706066121,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 364.6216101171486,
+    "avg_daily_return_magnitude": 1.052683557287105,
+    "avg_dollar_volume": 1279.9720999395,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "LOW": {
+    "symbol": "LOW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.835081995077502,
+    "avg_atr_pct": 2.1105924590326506,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 236.1002825246864,
+    "avg_daily_return_magnitude": 1.1062880316287278,
+    "avg_dollar_volume": 611.8618488285688,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NKE": {
+    "symbol": "NKE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.90086203308357,
+    "avg_atr_pct": 2.6723014332341655,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 76.17568807867893,
+    "avg_daily_return_magnitude": 1.4722276471394675,
+    "avg_dollar_volume": 1031.885588148099,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SBUX": {
+    "symbol": "SBUX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.70101872196527,
+    "avg_atr_pct": 2.513916333895524,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 87.69787670606635,
+    "avg_daily_return_magnitude": 1.3652835265384262,
+    "avg_dollar_volume": 908.7549751038313,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MCD": {
+    "symbol": "MCD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.99839208790422,
+    "avg_atr_pct": 1.6737499949253731,
+    "breakout_frequency": 0.08921161825726141,
+    "avg_price": 286.60812687968826,
+    "avg_daily_return_magnitude": 0.8400071671397732,
+    "avg_dollar_volume": 979.3989221707986,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "YUM": {
+    "symbol": "YUM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.895179655226872,
+    "avg_atr_pct": 1.812704065359894,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 137.91346290861944,
+    "avg_daily_return_magnitude": 0.9306056393707403,
+    "avg_dollar_volume": 276.25959992669704,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "DPZ": {
+    "symbol": "DPZ",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.37844986789748,
+    "avg_atr_pct": 2.472039783396314,
+    "breakout_frequency": 0.09336099585062241,
+    "avg_price": 443.5639568799995,
+    "avg_daily_return_magnitude": 1.2273077572148017,
+    "avg_dollar_volume": 270.89497580432663,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CMG": {
+    "symbol": "CMG",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.3727928349921,
+    "avg_atr_pct": 2.7204638807402297,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 51.88615985125659,
+    "avg_daily_return_magnitude": 1.4487917632671932,
+    "avg_dollar_volume": 747.5659416442286,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "TJX": {
+    "symbol": "TJX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.77988214148047,
+    "avg_atr_pct": 1.6215565268593486,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 118.85420555327518,
+    "avg_daily_return_magnitude": 0.825880971960512,
+    "avg_dollar_volume": 620.8947942144888,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ROST": {
+    "symbol": "ROST",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.209523735721856,
+    "avg_atr_pct": 2.054519518822004,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 144.07139675550727,
+    "avg_daily_return_magnitude": 1.0194914539004567,
+    "avg_dollar_volume": 377.35666776454366,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DG": {
+    "symbol": "DG",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.42798924964592,
+    "avg_atr_pct": 3.0636348785594536,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 105.44113388669443,
+    "avg_daily_return_magnitude": 1.5911915889273387,
+    "avg_dollar_volume": 348.40762726661563,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DLTR": {
+    "symbol": "DLTR",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.664056954446536,
+    "avg_atr_pct": 3.409344635788678,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 98.43256965576415,
+    "avg_daily_return_magnitude": 1.7533347691224097,
+    "avg_dollar_volume": 354.9354069658287,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "DIS": {
+    "symbol": "DIS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.82877184073711,
+    "avg_atr_pct": 2.117713730160397,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 104.70839338568577,
+    "avg_daily_return_magnitude": 1.1121922428821505,
+    "avg_dollar_volume": 1058.0446381065126,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "CMCSA": {
+    "symbol": "CMCSA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.30752702210629,
+    "avg_atr_pct": 2.2182816848680265,
+    "breakout_frequency": 0.0975103734439834,
+    "avg_price": 33.1149549142298,
+    "avg_daily_return_magnitude": 1.1362439535736086,
+    "avg_dollar_volume": 800.0231946506656,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "WBD": {
+    "symbol": "WBD",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.661763677718042,
+    "avg_atr_pct": 4.35197401138729,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 11.47601593443122,
+    "avg_daily_return_magnitude": 2.3179481672943316,
+    "avg_dollar_volume": 492.8475268320425,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "RBLX": {
+    "symbol": "RBLX",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.773133374066322,
+    "avg_atr_pct": 4.100624219242397,
+    "breakout_frequency": 0.15352697095435686,
+    "avg_price": 67.72850584508889,
+    "avg_daily_return_magnitude": 2.0990061760166876,
+    "avg_dollar_volume": 546.539029640667,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "EA": {
+    "symbol": "EA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.955164201597114,
+    "avg_atr_pct": 1.8279603791334305,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 151.8647653040183,
+    "avg_daily_return_magnitude": 0.9417431750187791,
+    "avg_dollar_volume": 405.7778870686793,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "T": {
+    "symbol": "T",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.98713029764632,
+    "avg_atr_pct": 1.9414421660196373,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 21.849683949671892,
+    "avg_daily_return_magnitude": 0.979915189861239,
+    "avg_dollar_volume": 821.9648310589045,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "VZ": {
+    "symbol": "VZ",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.95990623298762,
+    "avg_atr_pct": 1.7947424110403363,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 38.66392685787611,
+    "avg_daily_return_magnitude": 0.9366056872951816,
+    "avg_dollar_volume": 794.6086070538524,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "TMUS": {
+    "symbol": "TMUS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.785837669153278,
+    "avg_atr_pct": 1.9390444042133614,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 208.57420966159776,
+    "avg_daily_return_magnitude": 0.9710892312930358,
+    "avg_dollar_volume": 912.8233959269095,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "CRWD": {
+    "symbol": "CRWD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.217216837441743,
+    "avg_atr_pct": 3.9541679687055193,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 379.5454279683026,
+    "avg_daily_return_magnitude": 2.081362282760865,
+    "avg_dollar_volume": 1472.526445069031,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PANW": {
+    "symbol": "PANW",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.7195997833978,
+    "avg_atr_pct": 3.0845608272155847,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 178.64374499681935,
+    "avg_daily_return_magnitude": 1.6294443379189656,
+    "avg_dollar_volume": 1179.2483691566986,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ZS": {
+    "symbol": "ZS",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.99358402636184,
+    "avg_atr_pct": 3.491068202741085,
+    "breakout_frequency": 0.15560165975103735,
+    "avg_price": 224.4222013009972,
+    "avg_daily_return_magnitude": 1.802843312348933,
+    "avg_dollar_volume": 448.31295721757743,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "FTNT": {
+    "symbol": "FTNT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.06474029923696,
+    "avg_atr_pct": 2.946850327514122,
+    "breakout_frequency": 0.09336099585062241,
+    "avg_price": 82.46980091870068,
+    "avg_daily_return_magnitude": 1.539258341250669,
+    "avg_dollar_volume": 442.323343895267,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NET": {
+    "symbol": "NET",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.770746638949042,
+    "avg_atr_pct": 4.157262389502477,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 130.60183278117998,
+    "avg_daily_return_magnitude": 2.169997046493638,
+    "avg_dollar_volume": 407.54769922467113,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DDOG": {
+    "symbol": "DDOG",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.858878941118107,
+    "avg_atr_pct": 3.5934914019088127,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 129.3188247376704,
+    "avg_daily_return_magnitude": 1.8664933898745057,
+    "avg_dollar_volume": 610.8881815828513,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SNOW": {
+    "symbol": "SNOW",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.209838539612875,
+    "avg_atr_pct": 3.8622551604615656,
+    "breakout_frequency": 0.14937759336099585,
+    "avg_price": 176.8337049446258,
+    "avg_daily_return_magnitude": 2.0204429424802695,
+    "avg_dollar_volume": 1028.5015849695517,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NOW": {
+    "symbol": "NOW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.26982194617785,
+    "avg_atr_pct": 2.895958656465996,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 175.63273693555854,
+    "avg_daily_return_magnitude": 1.5747379783459616,
+    "avg_dollar_volume": 1283.043045904702,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CRM": {
+    "symbol": "CRM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.616226544373145,
+    "avg_atr_pct": 2.7251552835916333,
+    "breakout_frequency": 0.0954356846473029,
+    "avg_price": 274.09930687406626,
+    "avg_daily_return_magnitude": 1.4440480811135277,
+    "avg_dollar_volume": 1909.7492477765877,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ORCL": {
+    "symbol": "ORCL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.39573811567441,
+    "avg_atr_pct": 3.220988095891145,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 171.12958318398768,
+    "avg_daily_return_magnitude": 1.8593308116530753,
+    "avg_dollar_volume": 2500.5420586727396,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "PYPL": {
+    "symbol": "PYPL",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.698120487386273,
+    "avg_atr_pct": 2.959374308394696,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 69.56540549228866,
+    "avg_daily_return_magnitude": 1.6160027255011111,
+    "avg_dollar_volume": 869.963165220316,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "COIN": {
+    "symbol": "COIN",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.82302501052864,
+    "avg_atr_pct": 6.58134383205379,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 247.6776497373543,
+    "avg_daily_return_magnitude": 3.646696218333952,
+    "avg_dollar_volume": 2752.440396352716,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "HOOD": {
+    "symbol": "HOOD",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.321408451278483,
+    "avg_atr_pct": 5.807900803758644,
+    "breakout_frequency": 0.15975103734439833,
+    "avg_price": 54.439750899356675,
+    "avg_daily_return_magnitude": 3.1522403632824783,
+    "avg_dollar_volume": 1806.425948558072,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "AFRM": {
+    "symbol": "AFRM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.68413167861604,
+    "avg_atr_pct": 6.317442266676154,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 52.55489040085994,
+    "avg_daily_return_magnitude": 3.4224358711678966,
+    "avg_dollar_volume": 410.1594309118331,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "NU": {
+    "symbol": "NU",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.984029693693586,
+    "avg_atr_pct": 3.6117830035800105,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 12.831772897347985,
+    "avg_daily_return_magnitude": 1.8929358989336955,
+    "avg_dollar_volume": 545.0306741527047,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SPG": {
+    "symbol": "SPG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.0716918376014,
+    "avg_atr_pct": 2.0289415272656566,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 156.43506370027703,
+    "avg_daily_return_magnitude": 1.0411864323131732,
+    "avg_dollar_volume": 237.190934297703,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "O": {
+    "symbol": "O",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.305212794699077,
+    "avg_atr_pct": 1.6388828318091868,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 53.555152224354536,
+    "avg_daily_return_magnitude": 0.8355087703909199,
+    "avg_dollar_volume": 299.52663454013236,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "EQIX": {
+    "symbol": "EQIX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.353400461199758,
+    "avg_atr_pct": 2.267334172152082,
+    "breakout_frequency": 0.1078838174273859,
+    "avg_price": 812.5143917737254,
+    "avg_daily_return_magnitude": 1.128099738369842,
+    "avg_dollar_volume": 449.01465536958614,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DLR": {
+    "symbol": "DLR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.1124922959772,
+    "avg_atr_pct": 2.413590723555879,
+    "breakout_frequency": 0.0995850622406639,
+    "avg_price": 154.82034402064593,
+    "avg_daily_return_magnitude": 1.2176248762659996,
+    "avg_dollar_volume": 295.85067413674767,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "WELL": {
+    "symbol": "WELL",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 30.98217340277807,
+    "avg_atr_pct": 1.9316542454426242,
+    "breakout_frequency": 0.15975103734439833,
+    "avg_price": 133.07919206657257,
+    "avg_daily_return_magnitude": 0.9668982493962489,
+    "avg_dollar_volume": 391.71976559779864,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "VTR": {
+    "symbol": "VTR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 31.598331133018327,
+    "avg_atr_pct": 1.9420331029206819,
+    "breakout_frequency": 0.15767634854771784,
+    "avg_price": 58.97756768792749,
+    "avg_daily_return_magnitude": 0.9705580238527122,
+    "avg_dollar_volume": 164.186364651335,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "PSA": {
+    "symbol": "PSA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.854704733195103,
+    "avg_atr_pct": 2.0668619552286374,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 285.03114957163535,
+    "avg_daily_return_magnitude": 1.0764268022189176,
+    "avg_dollar_volume": 225.3412640223347,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "EXR": {
+    "symbol": "EXR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.361161114778515,
+    "avg_atr_pct": 2.255889113541697,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 143.1950740282279,
+    "avg_daily_return_magnitude": 1.1745582913940253,
+    "avg_dollar_volume": 156.14006977606542,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SO": {
+    "symbol": "SO",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 28.08915700790941,
+    "avg_atr_pct": 1.620392008612055,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 82.32548068529107,
+    "avg_daily_return_magnitude": 0.8397105783003065,
+    "avg_dollar_volume": 399.58274394130177,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "D": {
+    "symbol": "D",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.14302647161939,
+    "avg_atr_pct": 2.024299850957646,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 52.42406428667653,
+    "avg_daily_return_magnitude": 1.0331726664560104,
+    "avg_dollar_volume": 257.2611822672301,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "AEP": {
+    "symbol": "AEP",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.20464060784568,
+    "avg_atr_pct": 1.7453161256840684,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 96.493080959852,
+    "avg_daily_return_magnitude": 0.889466357907738,
+    "avg_dollar_volume": 318.91602898626746,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "XEL": {
+    "symbol": "XEL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.6908311368751,
+    "avg_atr_pct": 1.9024087040666016,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 63.69698311703139,
+    "avg_daily_return_magnitude": 0.9254029439683709,
+    "avg_dollar_volume": 262.6332038416441,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "EXC": {
+    "symbol": "EXC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 27.592886578627713,
+    "avg_atr_pct": 1.785787742229915,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 39.25365801351479,
+    "avg_daily_return_magnitude": 0.8733766984831094,
+    "avg_dollar_volume": 272.8821170427075,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "SRE": {
+    "symbol": "SRE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.578379173410195,
+    "avg_atr_pct": 2.023326907906113,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 77.16487993947064,
+    "avg_daily_return_magnitude": 1.0183088508733311,
+    "avg_dollar_volume": 276.61169453784214,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "WEC": {
+    "symbol": "WEC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.235255547883572,
+    "avg_atr_pct": 1.627945150164312,
+    "breakout_frequency": 0.14730290456431536,
+    "avg_price": 93.92005314010073,
+    "avg_daily_return_magnitude": 0.8172168667491542,
+    "avg_dollar_volume": 200.17577427966964,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ES": {
+    "symbol": "ES",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.222575379067745,
+    "avg_atr_pct": 2.14887854005571,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 59.75662745137613,
+    "avg_daily_return_magnitude": 1.1218159813887563,
+    "avg_dollar_volume": 152.17456771971715,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BABA": {
+    "symbol": "BABA",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.878002891092972,
+    "avg_atr_pct": 3.1851705732357436,
+    "breakout_frequency": 0.15975103734439833,
+    "avg_price": 105.40838518180695,
+    "avg_daily_return_magnitude": 1.9656466858260362,
+    "avg_dollar_volume": 1964.3704922837294,
+    "strategy_affinity": [
+      "momentum",
+      "breakout",
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "JD": {
+    "symbol": "JD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.7540765984169,
+    "avg_atr_pct": 3.5455887947301323,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 31.57804006599335,
+    "avg_daily_return_magnitude": 2.135235007991007,
+    "avg_dollar_volume": 438.59907605775214,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "PDD": {
+    "symbol": "PDD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.72742511940886,
+    "avg_atr_pct": 3.9158349875401597,
+    "breakout_frequency": 0.12033195020746888,
+    "avg_price": 121.0077091384219,
+    "avg_daily_return_magnitude": 1.9707422000045691,
+    "avg_dollar_volume": 1163.6569285790265,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BIDU": {
+    "symbol": "BIDU",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.08107725679561,
+    "avg_atr_pct": 3.368620265867885,
+    "breakout_frequency": 0.14937759336099585,
+    "avg_price": 98.28786863653784,
+    "avg_daily_return_magnitude": 2.05297802433526,
+    "avg_dollar_volume": 402.1818652385073,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "NIO": {
+    "symbol": "NIO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.70246055094253,
+    "avg_atr_pct": 5.821778490641555,
+    "breakout_frequency": 0.1037344398340249,
+    "avg_price": 5.020756974163284,
+    "avg_daily_return_magnitude": 3.2171297888889847,
+    "avg_dollar_volume": 298.6833277603486,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "XPEV": {
+    "symbol": "XPEV",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.059231067273398,
+    "avg_atr_pct": 5.588667412572905,
+    "breakout_frequency": 0.11825726141078838,
+    "avg_price": 14.690577730239625,
+    "avg_daily_return_magnitude": 3.4168689413711695,
+    "avg_dollar_volume": 167.34211625055877,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "LI": {
+    "symbol": "LI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.562256975526804,
+    "avg_atr_pct": 4.3637990556061705,
+    "breakout_frequency": 0.17012448132780084,
+    "avg_price": 24.964681306208274,
+    "avg_daily_return_magnitude": 2.6465856434227337,
+    "avg_dollar_volume": 166.49914812013694,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "TM": {
+    "symbol": "TM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 21.989066233132036,
+    "avg_atr_pct": 1.8610746844259094,
+    "breakout_frequency": 0.15975103734439833,
+    "avg_price": 191.63529405935827,
+    "avg_daily_return_magnitude": 1.297920158010964,
+    "avg_dollar_volume": 66.62287290156695,
+    "strategy_affinity": [
+      "breakout",
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "HMC": {
+    "symbol": "HMC",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 21.713613833750806,
+    "avg_atr_pct": 1.8848675159164636,
+    "breakout_frequency": 0.14937759336099585,
+    "avg_price": 30.31156504961599,
+    "avg_daily_return_magnitude": 1.280272886140511,
+    "avg_dollar_volume": 30.461898448069444,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "SNY": {
+    "symbol": "SNY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.586374427361985,
+    "avg_atr_pct": 1.8416023743010463,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 48.8003183949991,
+    "avg_daily_return_magnitude": 1.1215872260699504,
+    "avg_dollar_volume": 115.71630895470244,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "SAP": {
+    "symbol": "SAP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.837868490711493,
+    "avg_atr_pct": 1.9252027844510773,
+    "breakout_frequency": 0.17427385892116182,
+    "avg_price": 237.2397891952697,
+    "avg_daily_return_magnitude": 1.2066648863231113,
+    "avg_dollar_volume": 274.65485562300057,
+    "strategy_affinity": [
+      "breakout",
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "SE": {
+    "symbol": "SE",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.38488097160472,
+    "avg_atr_pct": 3.776549700874188,
+    "breakout_frequency": 0.14730290456431536,
+    "avg_price": 110.33362564907605,
+    "avg_daily_return_magnitude": 1.9567003752955445,
+    "avg_dollar_volume": 508.41448510629414,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GRAB": {
+    "symbol": "GRAB",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.741212340980464,
+    "avg_atr_pct": 3.708086128839247,
+    "breakout_frequency": 0.08713692946058091,
+    "avg_price": 4.359800798009592,
+    "avg_daily_return_magnitude": 1.8162892461342102,
+    "avg_dollar_volume": 154.96605798773533,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MELI": {
+    "symbol": "MELI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.027964615675632,
+    "avg_atr_pct": 3.159918741215417,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 1984.7619145002022,
+    "avg_daily_return_magnitude": 1.6705650823477933,
+    "avg_dollar_volume": 794.9645181065047,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ADM": {
+    "symbol": "ADM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.897897780387595,
+    "avg_atr_pct": 2.4846643285279297,
+    "breakout_frequency": 0.08298755186721991,
+    "avg_price": 54.29472852608122,
+    "avg_daily_return_magnitude": 1.2375272356914828,
+    "avg_dollar_volume": 210.74743583714232,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "BG": {
+    "symbol": "BG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.27364811725563,
+    "avg_atr_pct": 2.546875608922758,
+    "breakout_frequency": 0.10995850622406639,
+    "avg_price": 86.4536730853685,
+    "avg_daily_return_magnitude": 1.2731297425236245,
+    "avg_dollar_volume": 143.45981423844722,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MOS": {
+    "symbol": "MOS",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.406901467584426,
+    "avg_atr_pct": 3.145709316547502,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 28.49805488434446,
+    "avg_daily_return_magnitude": 1.6359132293576064,
+    "avg_dollar_volume": 142.06047022784833,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CF": {
+    "symbol": "CF",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.864403378201978,
+    "avg_atr_pct": 2.664869520149521,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 80.80525365578701,
+    "avg_daily_return_magnitude": 1.3770776558602236,
+    "avg_dollar_volume": 188.9223864058141,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CTVA": {
+    "symbol": "CTVA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.04386831912506,
+    "avg_atr_pct": 2.129871956892053,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 60.163738372316395,
+    "avg_daily_return_magnitude": 1.1008200597064113,
+    "avg_dollar_volume": 221.2324669353265,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GME": {
+    "symbol": "GME",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.833877150431764,
+    "avg_atr_pct": 6.592018777876131,
+    "breakout_frequency": 0.1016597510373444,
+    "avg_price": 22.758246980340356,
+    "avg_daily_return_magnitude": 3.4640017957003746,
+    "avg_dollar_volume": 374.394169361271,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AMC": {
+    "symbol": "AMC",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 24.998525126034384,
+    "avg_atr_pct": 6.222547806745168,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 3.6822510050587445,
+    "avg_daily_return_magnitude": 3.040171858003666,
+    "avg_dollar_volume": 80.52819636472381,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MARA": {
+    "symbol": "MARA",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 18.629385585170404,
+    "avg_atr_pct": 8.579451952161715,
+    "breakout_frequency": 0.11410788381742738,
+    "avg_price": 17.627868507962777,
+    "avg_daily_return_magnitude": 4.282248750637643,
+    "avg_dollar_volume": 947.5949160084496,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "RIOT": {
+    "symbol": "RIOT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.41430284981136,
+    "avg_atr_pct": 8.136244200138611,
+    "breakout_frequency": 0.10995850622406639,
+    "avg_price": 11.57742032396841,
+    "avg_daily_return_magnitude": 4.229495529598751,
+    "avg_dollar_volume": 335.4108642721807,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MSTR": {
+    "symbol": "MSTR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.820649747128652,
+    "avg_atr_pct": 7.594505127029654,
+    "breakout_frequency": 0.15560165975103735,
+    "avg_price": 245.33937869128954,
+    "avg_daily_return_magnitude": 4.356935597032656,
+    "avg_dollar_volume": 4253.69195278536,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "SMCI": {
+    "symbol": "SMCI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.5023506952148,
+    "avg_atr_pct": 8.143253035811295,
+    "breakout_frequency": 0.10995850622406639,
+    "avg_price": 52.655836667672574,
+    "avg_daily_return_magnitude": 4.383035665827651,
+    "avg_dollar_volume": 3596.2573900291086,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ARM": {
+    "symbol": "ARM",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.025312122558287,
+    "avg_atr_pct": 5.5916061124168985,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 133.67272902104958,
+    "avg_daily_return_magnitude": 3.0779226359040064,
+    "avg_dollar_volume": 1006.7801869748347,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "UBER": {
+    "symbol": "UBER",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.28774063417528,
+    "avg_atr_pct": 3.32690963174438,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 77.70527903492233,
+    "avg_daily_return_magnitude": 1.7097877314329613,
+    "avg_dollar_volume": 1523.6374404250096,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "LYFT": {
+    "symbol": "LYFT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.498084389665014,
+    "avg_atr_pct": 4.971729486407159,
+    "breakout_frequency": 0.1016597510373444,
+    "avg_price": 15.38337651666892,
+    "avg_daily_return_magnitude": 2.617434569268256,
+    "avg_dollar_volume": 258.61108773256296,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "DASH": {
+    "symbol": "DASH",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.956355465227528,
+    "avg_atr_pct": 3.403731549612184,
+    "breakout_frequency": 0.15767634854771784,
+    "avg_price": 174.96930264476762,
+    "avg_daily_return_magnitude": 1.7644415005504026,
+    "avg_dollar_volume": 724.8829870795535,
+    "strategy_affinity": [
+      "breakout",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "ABNB": {
+    "symbol": "ABNB",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.96513597371822,
+    "avg_atr_pct": 2.8911335160432166,
+    "breakout_frequency": 0.0995850622406639,
+    "avg_price": 135.30314759334246,
+    "avg_daily_return_magnitude": 1.5153275840534663,
+    "avg_dollar_volume": 646.1157967142614,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "ED": {
+    "symbol": "ED",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.53795646980702,
+    "avg_atr_pct": 1.725311393145904,
+    "breakout_frequency": 0.12863070539419086,
+    "avg_price": 94.781203250961,
+    "avg_daily_return_magnitude": 0.881434150900983,
+    "avg_dollar_volume": 211.5839102139857,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AWK": {
+    "symbol": "AWK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.067511231891217,
+    "avg_atr_pct": 2.034159141440004,
+    "breakout_frequency": 0.0954356846473029,
+    "avg_price": 131.53461790654762,
+    "avg_daily_return_magnitude": 1.0532030641208545,
+    "avg_dollar_volume": 176.50950330189707,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "AEE": {
+    "symbol": "AEE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.76220931355272,
+    "avg_atr_pct": 1.6861294925734327,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 86.1399149191807,
+    "avg_daily_return_magnitude": 0.8159138632973297,
+    "avg_dollar_volume": 140.5868952122601,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CMS": {
+    "symbol": "CMS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.289549423721084,
+    "avg_atr_pct": 1.6455882740130663,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 65.46819456639993,
+    "avg_daily_return_magnitude": 0.8178489947518516,
+    "avg_dollar_volume": 153.1065052444625,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PPL": {
+    "symbol": "PPL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.071958901805584,
+    "avg_atr_pct": 1.636891592363411,
+    "breakout_frequency": 0.13900414937759337,
+    "avg_price": 31.36029141642658,
+    "avg_daily_return_magnitude": 0.8291052231438133,
+    "avg_dollar_volume": 165.2585738225808,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "ATO": {
+    "symbol": "ATO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.083564395454815,
+    "avg_atr_pct": 1.5942587933395542,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 139.30433546879377,
+    "avg_daily_return_magnitude": 0.7640330635408804,
+    "avg_dollar_volume": 128.17089112819048,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NI": {
+    "symbol": "NI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.269068154592603,
+    "avg_atr_pct": 1.7443994056137513,
+    "breakout_frequency": 0.12655601659751037,
+    "avg_price": 34.68591142555632,
+    "avg_daily_return_magnitude": 0.8650376453791644,
+    "avg_dollar_volume": 144.40139149230865,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "EVRG": {
+    "symbol": "EVRG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.261264834843,
+    "avg_atr_pct": 1.5935405898844865,
+    "breakout_frequency": 0.14107883817427386,
+    "avg_price": 60.74815140682388,
+    "avg_daily_return_magnitude": 0.7929704008847571,
+    "avg_dollar_volume": 130.08174722547568,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "LNT": {
+    "symbol": "LNT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.197828574432542,
+    "avg_atr_pct": 1.659761059685157,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 57.17431930906744,
+    "avg_daily_return_magnitude": 0.8318284898905284,
+    "avg_dollar_volume": 102.63437970616238,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PNW": {
+    "symbol": "PNW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 24.579962297446855,
+    "avg_atr_pct": 1.704329305175232,
+    "breakout_frequency": 0.13278008298755187,
+    "avg_price": 81.9976848283137,
+    "avg_daily_return_magnitude": 0.8621204758236141,
+    "avg_dollar_volume": 94.88610873855347,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "GIS": {
+    "symbol": "GIS",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.315227195219546,
+    "avg_atr_pct": 2.0092791060837127,
+    "breakout_frequency": 0.0954356846473029,
+    "avg_price": 57.11033827945056,
+    "avg_daily_return_magnitude": 1.001752673231552,
+    "avg_dollar_volume": 272.49101421042974,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "K": {
+    "symbol": "K",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 34.308751558067186,
+    "avg_atr_pct": 0.9094627909122007,
+    "breakout_frequency": 0.11752136752136752,
+    "avg_price": 71.77619131275866,
+    "avg_daily_return_magnitude": 0.501530547721942,
+    "avg_dollar_volume": 214.98534236492765,
+    "strategy_affinity": [
+      "trend_following"
+    ]
+  },
+  "CPB": {
+    "symbol": "CPB",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.54257004700084,
+    "avg_atr_pct": 2.2687453983090187,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 37.680100224407546,
+    "avg_daily_return_magnitude": 1.175200945843799,
+    "avg_dollar_volume": 133.628748465394,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "SJM": {
+    "symbol": "SJM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 18.984360635473,
+    "avg_atr_pct": 2.2758361136840333,
+    "breakout_frequency": 0.08091286307053942,
+    "avg_price": 108.34201721556158,
+    "avg_daily_return_magnitude": 1.1775137523103787,
+    "avg_dollar_volume": 153.13921400666254,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CAG": {
+    "symbol": "CAG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.70662757891005,
+    "avg_atr_pct": 2.1952268417634637,
+    "breakout_frequency": 0.1037344398340249,
+    "avg_price": 23.844346669565635,
+    "avg_daily_return_magnitude": 1.1077357015932305,
+    "avg_dollar_volume": 153.81405185760673,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "HRL": {
+    "symbol": "HRL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 25.160788348341615,
+    "avg_atr_pct": 2.028777675168059,
+    "breakout_frequency": 0.0995850622406639,
+    "avg_price": 28.42816879454837,
+    "avg_daily_return_magnitude": 1.0702607892582534,
+    "avg_dollar_volume": 88.23864321228498,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "MKC": {
+    "symbol": "MKC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.132745561497906,
+    "avg_atr_pct": 2.0792868521874572,
+    "breakout_frequency": 0.1078838174273859,
+    "avg_price": 71.29413584978931,
+    "avg_daily_return_magnitude": 1.0690397658523576,
+    "avg_dollar_volume": 152.98420687214445,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CLX": {
+    "symbol": "CLX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.874342635554036,
+    "avg_atr_pct": 1.965029716586729,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 134.76324152851484,
+    "avg_daily_return_magnitude": 1.0213545910106552,
+    "avg_dollar_volume": 198.74054541057572,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CL": {
+    "symbol": "CL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.951216790821245,
+    "avg_atr_pct": 1.6760338426351038,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 87.93029402166724,
+    "avg_daily_return_magnitude": 0.870477209510588,
+    "avg_dollar_volume": 432.48712329696264,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "KMB": {
+    "symbol": "KMB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.027095269856893,
+    "avg_atr_pct": 1.7467272584587055,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 125.04996795958257,
+    "avg_daily_return_magnitude": 0.8739492210624272,
+    "avg_dollar_volume": 317.4424887865378,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "CHD": {
+    "symbol": "CHD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.53841044048416,
+    "avg_atr_pct": 1.825382468673089,
+    "breakout_frequency": 0.0995850622406639,
+    "avg_price": 98.52495544555178,
+    "avg_daily_return_magnitude": 0.9021333352834834,
+    "avg_dollar_volume": 171.58431305492599,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "HSY": {
+    "symbol": "HSY",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.14838869768352,
+    "avg_atr_pct": 2.3925296932036715,
+    "breakout_frequency": 0.12240663900414937,
+    "avg_price": 176.08023277981823,
+    "avg_daily_return_magnitude": 1.203863995492698,
+    "avg_dollar_volume": 310.9426873971734,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "CVS": {
+    "symbol": "CVS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.506285781191,
+    "avg_atr_pct": 2.767949579049418,
+    "breakout_frequency": 0.13070539419087138,
+    "avg_price": 63.36238271401698,
+    "avg_daily_return_magnitude": 1.4127176522570497,
+    "avg_dollar_volume": 634.4208629307386,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "NNN": {
+    "symbol": "NNN",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 21.583081201676347,
+    "avg_atr_pct": 1.7127531484711593,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 40.24221852671103,
+    "avg_daily_return_magnitude": 0.8996436291603204,
+    "avg_dollar_volume": 49.653323971126,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "WPC": {
+    "symbol": "WPC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 23.62692291614375,
+    "avg_atr_pct": 1.9049790634768766,
+    "breakout_frequency": 0.1016597510373444,
+    "avg_price": 57.01347649714861,
+    "avg_daily_return_magnitude": 0.9439974022535338,
+    "avg_dollar_volume": 69.6750491448771,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "STAG": {
+    "symbol": "STAG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 20.162044128985503,
+    "avg_atr_pct": 1.9751909489301644,
+    "breakout_frequency": 0.10580912863070539,
+    "avg_price": 35.045923650977144,
+    "avg_daily_return_magnitude": 1.0279023261222808,
+    "avg_dollar_volume": 44.05066295971396,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "ADC": {
+    "symbol": "ADC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "medium",
+    "avg_adx": 24.096597764264608,
+    "avg_atr_pct": 1.7067468083481008,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 66.78223208697193,
+    "avg_daily_return_magnitude": 0.8527712833330816,
+    "avg_dollar_volume": 70.14450671258449,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BND": {
+    "symbol": "BND",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.695174057648714,
+    "avg_atr_pct": 0.4038714467032223,
+    "breakout_frequency": 0.14730290456431536,
+    "avg_price": 70.27236301680485,
+    "avg_daily_return_magnitude": 0.24534024907919888,
+    "avg_dollar_volume": 478.5117485029441,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "AGG": {
+    "symbol": "AGG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.496451392304696,
+    "avg_atr_pct": 0.40568149738159265,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 94.6723934340762,
+    "avg_daily_return_magnitude": 0.24792748956286068,
+    "avg_dollar_volume": 797.4018619891892,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "LQD": {
+    "symbol": "LQD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.030691510586255,
+    "avg_atr_pct": 0.5587632180505376,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 104.09858211198176,
+    "avg_daily_return_magnitude": 0.33393535616037257,
+    "avg_dollar_volume": 2869.3746803709637,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "TLT": {
+    "symbol": "TLT",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 19.950474925358407,
+    "avg_atr_pct": 1.0684407522180577,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 86.92487778986593,
+    "avg_daily_return_magnitude": 0.6526031765016699,
+    "avg_dollar_volume": 3336.37881848443,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "IEF": {
+    "symbol": "IEF",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.947819924136795,
+    "avg_atr_pct": 0.4937971724033687,
+    "breakout_frequency": 0.13692946058091288,
+    "avg_price": 91.34405634602703,
+    "avg_daily_return_magnitude": 0.3084734369690437,
+    "avg_dollar_volume": 734.0260765780536,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "SHY": {
+    "symbol": "SHY",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 33.609295060685476,
+    "avg_atr_pct": 0.12063354290290505,
+    "breakout_frequency": 0.17427385892116182,
+    "avg_price": 79.10490449396262,
+    "avg_daily_return_magnitude": 0.0765169367192569,
+    "avg_dollar_volume": 314.6228894437858,
+    "strategy_affinity": [
+      "trend_following",
+      "breakout"
+    ]
+  },
+  "HYG": {
+    "symbol": "HYG",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 22.457961921032258,
+    "avg_atr_pct": 0.37449503237878784,
+    "breakout_frequency": 0.17842323651452283,
+    "avg_price": 74.41810525840972,
+    "avg_daily_return_magnitude": 0.21957080092069464,
+    "avg_dollar_volume": 2836.4061985159246,
+    "strategy_affinity": [
+      "breakout"
+    ]
+  },
+  "VCIT": {
+    "symbol": "VCIT",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.020867096473598,
+    "avg_atr_pct": 0.42686962061622424,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 77.85577079499386,
+    "avg_daily_return_magnitude": 0.25256566303638844,
+    "avg_dollar_volume": 633.0432696821829,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "mean_reversion",
+      "volatility_based",
+      "breakout"
+    ]
+  },
+  "SPLV": {
+    "symbol": "SPLV",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.684033400113528,
+    "avg_atr_pct": 0.9618966208071605,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 68.5286402835314,
+    "avg_daily_return_magnitude": 0.5288945003654277,
+    "avg_dollar_volume": 155.59355025028822,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "USMV": {
+    "symbol": "USMV",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "low_beta",
+    "liquidity_level": "high",
+    "avg_adx": 21.241512836512374,
+    "avg_atr_pct": 0.8732275957582003,
+    "breakout_frequency": 0.13485477178423236,
+    "avg_price": 87.9239439945297,
+    "avg_daily_return_magnitude": 0.48237494531328057,
+    "avg_dollar_volume": 198.71433894267898,
+    "strategy_affinity": [
+      "mean_reversion"
+    ]
+  },
+  "IBM": {
+    "symbol": "IBM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 29.228129518415006,
+    "avg_atr_pct": 2.184380152114827,
+    "breakout_frequency": 0.14315352697095435,
+    "avg_price": 224.594856444583,
+    "avg_daily_return_magnitude": 1.1315033741073215,
+    "avg_dollar_volume": 1015.5912231131778,
+    "strategy_affinity": [
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "INTC": {
+    "symbol": "INTC",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "high_beta",
+    "liquidity_level": "high",
+    "avg_adx": 24.65323481428227,
+    "avg_atr_pct": 4.414327220269303,
+    "breakout_frequency": 0.11203319502074689,
+    "avg_price": 28.555937159108925,
+    "avg_daily_return_magnitude": 2.4298499368783815,
+    "avg_dollar_volume": 2213.0704715687966,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "F": {
+    "symbol": "F",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "low",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 20.889972174542976,
+    "avg_atr_pct": 2.7304636252241394,
+    "breakout_frequency": 0.10995850622406639,
+    "avg_price": 10.6889677028732,
+    "avg_daily_return_magnitude": 1.493657368959393,
+    "avg_dollar_volume": 767.1523000104663,
+    "strategy_affinity": [
+      "mean_reversion",
+      "volatility_based"
+    ]
+  },
+  "GM": {
+    "symbol": "GM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.863784983133296,
+    "avg_atr_pct": 2.769381559282433,
+    "breakout_frequency": 0.12448132780082988,
+    "avg_price": 50.31417880875181,
+    "avg_daily_return_magnitude": 1.440243022213485,
+    "avg_dollar_volume": 612.3325374911205,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "KHC": {
+    "symbol": "KHC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 23.55150174874392,
+    "avg_atr_pct": 1.9948195493387522,
+    "breakout_frequency": 0.11618257261410789,
+    "avg_price": 29.23039774115817,
+    "avg_daily_return_magnitude": 1.0472492252794587,
+    "avg_dollar_volume": 307.38819017385777,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "PM": {
+    "symbol": "PM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "high",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 30.802151767026693,
+    "avg_atr_pct": 1.8653095504484247,
+    "breakout_frequency": 0.15767634854771784,
+    "avg_price": 128.8369047309298,
+    "avg_daily_return_magnitude": 0.9973462013762505,
+    "avg_dollar_volume": 746.1146523525086,
+    "strategy_affinity": [
+      "breakout",
+      "trend_following",
+      "momentum",
+      "volatility_based"
+    ]
+  },
+  "MO": {
+    "symbol": "MO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "mixed",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 25.71947978674827,
+    "avg_atr_pct": 1.60392027494056,
+    "breakout_frequency": 0.14522821576763487,
+    "avg_price": 49.68055831483636,
+    "avg_daily_return_magnitude": 0.838085003964634,
+    "avg_dollar_volume": 451.3689444369799,
+    "strategy_affinity": [
+      "volatility_based"
+    ]
+  },
+  "BTI": {
+    "symbol": "BTI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "breakout_propensity": "breakout_prone",
+    "price_tier": "mid",
+    "movement_intensity": "medium_beta",
+    "liquidity_level": "high",
+    "avg_adx": 26.090811631423023,
+    "avg_atr_pct": 1.5086584135732832,
+    "breakout_frequency": 0.21369294605809128,
+    "avg_price": 38.145051454642854,
+    "avg_daily_return_magnitude": 0.898643256725009,
+    "avg_dollar_volume": 183.9751325058956,
+    "strategy_affinity": [
+      "breakout",
+      "volatility_based"
+    ]
+  }
+}

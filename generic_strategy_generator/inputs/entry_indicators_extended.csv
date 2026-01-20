@@ -1,0 +1,156 @@
+# =============================================================================
+# ENTRY INDICATORS - Organized by Strategy Type / Stock Classification
+# =============================================================================
+# Use with --strategy-type and --stock-behavior flags for focused testing
+# Uncomment indicators you want to test
+# =============================================================================
+
+# =============================================================================
+# TREND FOLLOWING INDICATORS
+# Best for: --stock-behavior trending
+# Use with: --strategy-type trend_following
+# These work on stocks with ADX > 25, sustained directional movement
+# =============================================================================
+
+# Moving Average Crossovers (price crosses above MA = bullish)
+#sma,20
+#sma,50
+#ema,10
+#ema,20
+#ema,50
+#wma,10
+#wma,20
+#dema,20
+#tema,20
+#kama,30
+#hma,20
+#zlema,20
+
+# Dual Moving Average Crossovers (fast crosses above slow)
+#sma,10,sma,20
+sma,20,sma,50
+#ema,10,ema,20
+#ema,12,ema,26
+ema,5,ema,20
+
+# Trend Direction Indicators
+aroon,25
+adx,14
+#adx,20
+#dmi,14
+#psar,0.02,0.20
+
+# MACD (trend + momentum hybrid)
+macd,12,26,9
+#macd,5,35,5
+
+# Hurst Exponent (H > 0.5 = trending, use for trend confirmation)
+#hurst,100
+#hurst,200
+
+# =============================================================================
+# MEAN REVERSION INDICATORS
+# Best for: --stock-behavior mean_reverting
+# Use with: --strategy-type mean_reversion
+# These work on stocks with ADX < 20, oscillating around a mean
+# =============================================================================
+
+# RSI (oversold < 30 = buy signal)
+rsi,14
+#rsi,7
+#rsi,21
+
+# Stochastic (oversold crossover = buy signal)
+#stoch,14,3,3
+#stoch,5,3,3
+#stochrsi,14,3,3
+
+# Williams %R (oversold = buy signal)
+#williams,14
+#williams,7
+
+# CCI (oversold = buy signal)
+#cci,20
+#cci,14
+
+# Bollinger Bands - Mean Reversion Mode (price at lower band = buy)
+#bb,10,2
+#bb,20,3
+
+# Money Flow Index (oversold = buy signal)
+mfi,14
+
+# Z-Score (price below -2 std devs = buy signal for mean reversion)
+#zscore,20
+#zscore,50
+
+# Hurst Exponent (H < 0.5 = mean-reverting, confirms mean reversion setups)
+#hurst,100
+#hurst,200
+
+# =============================================================================
+# BREAKOUT INDICATORS
+# Best for: --stock-behavior breakout_prone
+# Use with: --strategy-type breakout
+# These work on stocks with high breakout frequency (>15%)
+# =============================================================================
+
+# Bollinger Bands - Breakout Mode (price breaks upper band = momentum buy)
+bb,20,2
+
+# Donchian Channels (price breaks above N-period high)
+#donchian,20
+#donchian,10
+#donchian,50
+
+# Keltner Channels (price breaks above channel)
+#keltner,20,2
+#keltner,20,1.5
+keltner,10,2
+
+# Price Action Breakouts
+#high,20
+#high,50
+#low,20
+
+# =============================================================================
+# MOMENTUM INDICATORS
+# Best for: --stock-behavior high_beta or trending
+# Use with: --strategy-type momentum
+# These work on stocks with high movement intensity (>2% daily moves)
+# =============================================================================
+
+# Rate of Change
+#roc,12
+#roc,21
+
+# Momentum
+#momentum,12
+#momentum,20
+
+# TSI (True Strength Index)
+#tsi,25,13
+
+# Ultimate Oscillator
+#ultimate,7,14,28
+
+# =============================================================================
+# VOLATILITY-BASED INDICATORS
+# Best for: --stock-behavior high_volatility
+# Use with: --strategy-type volatility_based
+# These work on stocks with ATR% > 3%
+# =============================================================================
+
+# ATR-based entries (high volatility = opportunity)
+#atr,14
+#natr,14
+
+# =============================================================================
+# VOLUME INDICATORS
+# Work across multiple stock types, confirm other signals
+# =============================================================================
+
+#obv,1
+#adl,1
+#cmf,20
+#vwap,1

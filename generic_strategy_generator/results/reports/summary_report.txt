@@ -1,110 +1,110 @@
 ================================================================================
 STRATEGY OPTIMIZATION SUMMARY
 ================================================================================
-Date: 2026-01-15 18:27:19
-Total Strategies Analyzed: 50
+Date: 2026-01-18 18:49:58
+Total Strategies Analyzed: 100
 
 TOP 10 STRATEGIES:
 --------------------------------------------------------------------------------
 
-Rank #1 (Score: 44.84)
-  Description: Entry: CROSSOVER on AROON(20) when price > SMA(100) | Exit: TRAILING_STOP on ATR(10,3) + SL 2% + TP 10%
-  Total Return: 8.50%
-  Sharpe Ratio: 3.389
-  Max Drawdown: 39.58%
-  Profit Factor: 1.49
-  Win Rate: 32.73%
-  Total Trades: 330
-  Stocks Traded: 37/50
+Rank #1 (Score: 60.00)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: TRAILING_STOP on ATR(14,3) + TP 10%
+  Total Return: 7.64%
+  Sharpe Ratio: 0.838
+  Max Drawdown: 9.10%
+  Profit Factor: 13.49
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #2 (Score: 44.80)
-  Description: Entry: CROSSOVER on AROON(20) when price > EMA(100) | Exit: TRAILING_STOP on ATR(10,3) + SL 2% + TP 10%
-  Total Return: 8.35%
-  Sharpe Ratio: 3.140
-  Max Drawdown: 39.58%
-  Profit Factor: 1.48
-  Win Rate: 32.93%
-  Total Trades: 328
-  Stocks Traded: 37/50
+Rank #2 (Score: 60.00)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: TRAILING_STOP on ATR(14,3) + SL 10% + TP 10%
+  Total Return: 7.64%
+  Sharpe Ratio: 0.838
+  Max Drawdown: 9.10%
+  Profit Factor: 13.49
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #3 (Score: 43.69)
-  Description: Entry: CROSSOVER on AROON(20) when price > SMA(100) | Exit: STOP_LOSS on ATR(10,3) + SL 2% + TP 13%
-  Total Return: 20.56%
-  Sharpe Ratio: 2.177
-  Max Drawdown: 46.85%
-  Profit Factor: 1.85
-  Win Rate: 50.95%
-  Total Trades: 210
-  Stocks Traded: 37/50
+Rank #3 (Score: 59.98)
+  Description: Entry: THRESHOLD on RSI(14) | Exit: THRESHOLD on RSI(14) + SL 10% + TP 8%
+  Total Return: 11.10%
+  Sharpe Ratio: 217.293
+  Max Drawdown: 30.23%
+  Profit Factor: 2.93
+  Win Rate: 68.97%
+  Total Trades: 145
+  Stocks Traded: 54/54
 
-Rank #4 (Score: 43.69)
-  Description: Entry: CROSSOVER on AROON(20) when price > SMA(100) | Exit: STOP_LOSS on ATR(10,3) + SL 5% + TP 13%
-  Total Return: 20.56%
-  Sharpe Ratio: 2.177
-  Max Drawdown: 46.85%
-  Profit Factor: 1.85
-  Win Rate: 50.95%
-  Total Trades: 210
-  Stocks Traded: 37/50
+Rank #4 (Score: 59.94)
+  Description: Entry: THRESHOLD on RSI(14) | Exit: CROSSOVER on RSI(14) + SL 10% + TP 8%
+  Total Return: 9.34%
+  Sharpe Ratio: 219.984
+  Max Drawdown: 30.23%
+  Profit Factor: 2.97
+  Win Rate: 69.80%
+  Total Trades: 149
+  Stocks Traded: 54/54
 
-Rank #5 (Score: 43.68)
-  Description: Entry: CROSSOVER on AROON(20) when price > SMA(100) | Exit: STOP_LOSS on ATR(10,3) + SL 10% + TP 13%
-  Total Return: 20.54%
-  Sharpe Ratio: 2.176
-  Max Drawdown: 46.85%
-  Profit Factor: 1.85
-  Win Rate: 50.95%
-  Total Trades: 210
-  Stocks Traded: 37/50
+Rank #5 (Score: 59.84)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + TP 8%
+  Total Return: 8.17%
+  Sharpe Ratio: 0.778
+  Max Drawdown: 9.10%
+  Profit Factor: 14.36
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #6 (Score: 43.68)
-  Description: Entry: CROSSOVER on AROON(20) when price > SMA(100) | Exit: STOP_LOSS on ATR(10,3) + TP 13%
-  Total Return: 20.54%
-  Sharpe Ratio: 2.176
-  Max Drawdown: 46.85%
-  Profit Factor: 1.85
-  Win Rate: 50.95%
-  Total Trades: 210
-  Stocks Traded: 37/50
+Rank #6 (Score: 59.84)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + SL 5% + TP 8%
+  Total Return: 8.17%
+  Sharpe Ratio: 0.778
+  Max Drawdown: 9.10%
+  Profit Factor: 14.36
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #7 (Score: 43.11)
-  Description: Entry: CROSSOVER on AROON(20) when ATR(10,2) high | Exit: STOP_LOSS on ATR(14,3) + SL 2% + TP 13%
-  Total Return: 27.61%
-  Sharpe Ratio: 1.146
-  Max Drawdown: 42.77%
-  Profit Factor: 2.05
-  Win Rate: 56.28%
-  Total Trades: 231
-  Stocks Traded: 39/50
+Rank #7 (Score: 59.84)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + SL 10% + TP 8%
+  Total Return: 8.17%
+  Sharpe Ratio: 0.778
+  Max Drawdown: 9.10%
+  Profit Factor: 14.36
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #8 (Score: 43.04)
-  Description: Entry: CROSSOVER on AROON(20) when ATR(10,2) high | Exit: STOP_LOSS on ATR(14,3) + SL 5% + TP 13%
-  Total Return: 27.55%
-  Sharpe Ratio: 1.145
-  Max Drawdown: 42.77%
-  Profit Factor: 2.05
-  Win Rate: 56.03%
-  Total Trades: 232
-  Stocks Traded: 39/50
+Rank #8 (Score: 59.80)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: THRESHOLD on RSI(14) + TP 8%
+  Total Return: 8.43%
+  Sharpe Ratio: 0.755
+  Max Drawdown: 9.10%
+  Profit Factor: inf
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #9 (Score: 42.74)
-  Description: Entry: CROSSOVER on AROON(20) when ATR(10,2) high | Exit: STOP_LOSS on ATR(14,3) + TP 13%
-  Total Return: 27.37%
-  Sharpe Ratio: 1.095
-  Max Drawdown: 42.77%
-  Profit Factor: 2.05
-  Win Rate: 56.09%
-  Total Trades: 230
-  Stocks Traded: 39/50
+Rank #9 (Score: 59.80)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: THRESHOLD on RSI(14) + SL 10% + TP 8%
+  Total Return: 8.43%
+  Sharpe Ratio: 0.755
+  Max Drawdown: 9.10%
+  Profit Factor: inf
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
-Rank #10 (Score: 42.72)
-  Description: Entry: CROSSOVER on AROON(20) when ATR(10,2) high | Exit: STOP_LOSS on ATR(14,3) + SL 10% + TP 13%
-  Total Return: 27.34%
-  Sharpe Ratio: 1.094
-  Max Drawdown: 42.77%
-  Profit Factor: 2.04
-  Win Rate: 56.09%
-  Total Trades: 230
-  Stocks Traded: 39/50
+Rank #10 (Score: 59.80)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on RSI(14) + TP 8%
+  Total Return: 8.43%
+  Sharpe Ratio: 0.755
+  Max Drawdown: 9.10%
+  Profit Factor: inf
+  Win Rate: 90.00%
+  Total Trades: 10
+  Stocks Traded: 10/54
 
 ================================================================================

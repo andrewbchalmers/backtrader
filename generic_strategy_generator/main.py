@@ -16,7 +16,7 @@ from src.strategy_optimizer import StrategyOptimizer
 from src.results_manager import ResultsManager
 
 
-def load_config(config_path='config.yaml'):
+def load_config(config_path='inputs/config.yaml'):
     """Load configuration from YAML file"""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -39,7 +39,9 @@ def run_single_strategy(strategy_config, symbols, config):
     from src.strategy_generator import create_strategy_class
     from src.backtest_engine import BacktestEngine
     from src.performance_analyzer import PerformanceAnalyzer
+    import gc
 
+    engine = None
     try:
         # Create strategy class
         strategy_class = create_strategy_class(strategy_config)
@@ -57,7 +59,9 @@ def run_single_strategy(strategy_config, symbols, config):
         analyzer = PerformanceAnalyzer(results)
         metrics = analyzer.calculate_metrics()
 
-        return (strategy_config, metrics, results)
+        # Only return metrics, not full results (saves memory)
+        # Full results can be very large with trade details
+        return (strategy_config, metrics, None)
 
     except Exception as e:
         import traceback
@@ -66,20 +70,40 @@ def run_single_strategy(strategy_config, symbols, config):
         print(error_msg)
         return (strategy_config, None, None)
 
+    finally:
+        # Explicit cleanup to prevent memory buildup
+        if engine is not None:
+            engine.clear_cache()
+            del engine
+        gc.collect()
+
 
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Generic Strategy Generator')
-    parser.add_argument('--config', default='config.yaml', help='Path to config file')
-    parser.add_argument('--stocks', default='stocks.csv', help='Path to stocks CSV')
-    parser.add_argument('--entry', default='entry_indicators_extended.csv', help='Path to entry indicators CSV')
-    parser.add_argument('--exit', default='exit_indicators_extended.csv', help='Path to exit indicators CSV')
+    parser.add_argument('--config', default='inputs/config.yaml', help='Path to config file')
+    parser.add_argument('--stocks', default='inputs/stocks.csv', help='Path to stocks CSV')
+    parser.add_argument('--entry', default='inputs/entry_indicators_extended.csv', help='Path to entry indicators CSV')
+    parser.add_argument('--exit', default='inputs/exit_indicators_extended.csv', help='Path to exit indicators CSV')
     parser.add_argument('--entry-filters', default=None, help='Path to entry filters CSV (default: <entry>_filters.csv)')
     parser.add_argument('--exit-filters', default=None, help='Path to exit filters CSV (default: <exit>_filters.csv)')
     parser.add_argument('--top-n', type=int, default=None, help='Number of top strategies to export')
     parser.add_argument('--parallel', type=int, default=None, help='Number of parallel workers')
     parser.add_argument('--clear-db', action='store_true', help='Clear database before running')
     parser.add_argument('--download-data', action='store_true', help='Download historical data first')
+    parser.add_argument('--classify', action='store_true', help='Classify stocks before testing')
+    parser.add_argument('--match-strategies', action='store_true', help='Match strategies to stock pools based on classification')
+    parser.add_argument('--classification-cache', default='data/classifications/cache.json',
+                        help='Path to classification cache file')
+    parser.add_argument('--stock-behavior', type=str, default=None,
+                        choices=['trending', 'mean_reverting', 'breakout_prone', 'range_bound',
+                                 'high_volatility', 'low_volatility', 'low_price', 'high_price', 'high_beta', 'low_beta'],
+                        help='Filter stocks to only those with this behavior')
+    parser.add_argument('--strategy-type', type=str, default=None,
+                        choices=['trend_following', 'mean_reversion', 'breakout', 'momentum', 'volatility_based'],
+                        help='Generate only strategies of this type')
+    parser.add_argument('--classify-only', action='store_true',
+                        help='Only run classification, do not generate or test strategies')
     args = parser.parse_args()
 
     print("=" * 80)
@@ -105,6 +129,80 @@ def main():
         DataLoader.download_historical_data(symbols, start_date, end_date)
         print("✓ Data download complete")
         print()
+
+    # Stock Classification Step
+    classifications = None
+    strategy_matcher = None
+
+    if args.classify or args.match_strategies:
+        from src.stock_classifier import StockClassifier, StrategyMatcher, print_classification_summary
+
+        print("=" * 80)
+        print("STOCK CLASSIFICATION")
+        print("=" * 80)
+
+        classifier = StockClassifier(config)
+
+        # Check for cached classifications
+        if os.path.exists(args.classification_cache):
+            print(f"Loading cached classifications from {args.classification_cache}...")
+            classifications = classifier.load_from_cache(args.classification_cache)
+            print(f"✓ Loaded {len(classifications)} cached classifications")
+        else:
+            print("Classifying stocks based on historical behavior...")
+            print("(This analyzes ADX, ATR, breakout frequency, price, volume, etc.)")
+            print()
+
+            # Classify stocks with progress
+            data_dir = config.get('data', {}).get('data_dir', 'data/historical')
+
+            def progress_callback(current, total, symbol):
+                print(f"  [{current}/{total}] Classifying {symbol}...", end='\r')
+
+            classifications = classifier.classify_all(
+                symbols,
+                data_loader=None,  # Will load from CSV
+                progress_callback=progress_callback
+            )
+            print()  # Clear the progress line
+
+            if classifications:
+                # Save to cache
+                os.makedirs(os.path.dirname(args.classification_cache), exist_ok=True)
+                classifier.save_to_cache(classifications, args.classification_cache)
+                print(f"✓ Classified {len(classifications)} stocks")
+                print(f"✓ Saved classifications to {args.classification_cache}")
+            else:
+                print("Warning: No stocks were classified. Check if historical data exists.")
+
+        # Print classification summary
+        if classifications:
+            print_classification_summary(classifications)
+
+        # Filter stocks by behavior if specified
+        if args.stock_behavior and classifications:
+            from src.stock_classifier import filter_stocks_by_behavior
+            filtered_symbols = filter_stocks_by_behavior(classifications, args.stock_behavior)
+            print(f"\n✓ Filtered to {len(filtered_symbols)} stocks with behavior: {args.stock_behavior}")
+            if filtered_symbols:
+                print(f"  Stocks: {', '.join(filtered_symbols[:20])}{'...' if len(filtered_symbols) > 20 else ''}")
+                symbols = filtered_symbols  # Replace symbols with filtered list
+            else:
+                print("  Warning: No stocks match this behavior filter!")
+
+        # Initialize strategy matcher if matching is enabled
+        if args.match_strategies:
+            strategy_matcher = StrategyMatcher(config)
+            print("✓ Strategy-stock matching enabled")
+
+        print()
+
+    # Early exit if classify-only mode
+    if args.classify_only:
+        print("=" * 80)
+        print("CLASSIFICATION COMPLETE (--classify-only mode)")
+        print("=" * 80)
+        return
 
     # Load indicators (now handles both single and dual in same file)
     entry_indicators, entry_dual_from_main = parse_indicator_csv(args.entry)
@@ -164,6 +262,14 @@ def main():
     )
     strategies = generator.generate_strategies()
     print(f"✓ Generated {len(strategies)} strategy combinations")
+
+    # Filter strategies by type if specified
+    if args.strategy_type:
+        from src.stock_classifier import filter_strategies_by_type
+        original_count = len(strategies)
+        strategies = filter_strategies_by_type(strategies, args.strategy_type)
+        print(f"✓ Filtered to {len(strategies)} {args.strategy_type} strategies (from {original_count})")
+
     print()
 
     # Initialize components
@@ -207,16 +313,29 @@ def main():
 
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
         # Submit all tasks
-        futures = {
-            executor.submit(run_single_strategy, strategy, symbols, config): strategy
-            for strategy in strategies
-        }
+        # If strategy matching is enabled, filter stocks for each strategy
+        futures = {}
+        for strategy in strategies:
+            if strategy_matcher and classifications:
+                # Get stocks that match this strategy's characteristics
+                matched_symbols = strategy_matcher.get_matching_stocks(strategy, classifications)
+                if not matched_symbols:
+                    matched_symbols = symbols  # Fallback to all if no matches
+            else:
+                matched_symbols = symbols
+
+            futures[executor.submit(run_single_strategy, strategy, matched_symbols, config)] = strategy
 
         # Process results as they complete
+        import gc
+        gc_interval = 50  # Run garbage collection every N strategies
+
         with tqdm(total=len(strategies), desc="Testing strategies",
                   bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]') as pbar:
+            completed_count = 0
             for future in as_completed(futures):
                 strategy_config, metrics, stock_results = future.result()
+                completed_count += 1
 
                 if metrics is not None:
                     strategy_results.append((strategy_config, metrics))
@@ -226,6 +345,10 @@ def main():
                         results_manager.save_strategy(strategy_config, metrics)
                         if stock_results:
                             results_manager.save_stock_results(strategy_config['id'], stock_results)
+
+                # Periodic garbage collection to prevent memory buildup
+                if completed_count % gc_interval == 0:
+                    gc.collect()
 
                 pbar.update(1)
 

@@ -7,6 +7,49 @@ data:
   end_date: "2026-01-01"
   data_dir: "data/historical"
 
+# Stock Classification Settings
+# Classifies stocks by behavior (trending, mean-reverting, volatile, etc.)
+# to match them with appropriate strategy types
+classification:
+  # Enable classification (use --classify flag to run)
+  enabled: true
+
+  # Lookback period for calculating metrics (trading days)
+  lookback_days: 252  # 1 year
+
+  # Whether to strictly match strategies to stock pools
+  # If false, unmatched strategies will still run on all stocks
+  # Set to true for focused testing (recommended when using --stock-behavior)
+  strict_matching: true
+
+  # Classification thresholds
+  thresholds:
+    # Trend behavior (ADX-based)
+    # Balanced settings: allows meaningful "mixed" category for stocks
+    # that exhibit both trending and mean-reverting behavior
+    adx_trending: 27        # ADX > 27 = trending
+    adx_mean_reverting: 22  # ADX < 22 = mean reverting
+
+    # Volatility (ATR as % of price)
+    atr_pct_high: 3.0       # ATR% > 3% = high volatility
+    atr_pct_low: 1.5        # ATR% < 1.5% = low volatility
+
+    # Breakout propensity (% of days with Donchian breakouts)
+    breakout_freq_high: 0.15  # > 15% = breakout prone
+    breakout_freq_low: 0.05   # < 5% = range bound
+
+    # Price tiers
+    price_low: 20           # < $20 = low price stock
+    price_high: 100         # > $100 = high price stock
+
+    # Movement intensity (avg daily return magnitude %)
+    movement_high: 2.0      # > 2% = high beta-like
+    movement_low: 0.8       # < 0.8% = low beta-like
+
+    # Liquidity (avg daily dollar volume in millions)
+    liquidity_high: 100     # > $100M = high liquidity
+    liquidity_low: 10       # < $10M = low liquidity
+
 # Backtest Settings
 backtest:
   initial_capital: 100000

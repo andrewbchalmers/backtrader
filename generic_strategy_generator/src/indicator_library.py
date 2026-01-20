@@ -68,6 +68,10 @@ class IndicatorFactory:
             return IndicatorFactory._create_roc(data, *params)
         elif indicator_name == 'momentum':
             return IndicatorFactory._create_momentum(data, *params)
+        elif indicator_name == 'zscore':
+            return IndicatorFactory._create_zscore(data, *params)
+        elif indicator_name == 'hurst':
+            return IndicatorFactory._create_hurst(data, *params)
         elif indicator_name == 'tsi':
             return IndicatorFactory._create_tsi(data, *params)
         elif indicator_name == 'ultimate':
@@ -280,6 +284,85 @@ class IndicatorFactory:
     def _create_momentum(data, period=12):
         """Momentum"""
         return bt.indicators.Momentum(data.close, period=int(period))
+
+    @staticmethod
+    def _create_zscore(data, period=20):
+        """Z-Score - measures how many standard deviations price is from its mean
+
+        Z-Score = (Price - SMA) / StdDev
+
+        Useful for mean reversion strategies:
+        - Z-Score > 2: Price is 2+ std devs above mean (potentially overbought)
+        - Z-Score < -2: Price is 2+ std devs below mean (potentially oversold)
+        """
+        sma = bt.indicators.SimpleMovingAverage(data.close, period=int(period))
+        stddev = bt.indicators.StandardDeviation(data.close, period=int(period))
+        zscore = (data.close - sma) / (stddev + 0.000001)  # Avoid division by zero
+        return zscore
+
+    @staticmethod
+    def _create_hurst(data, period=100):
+        """Hurst Exponent - measures persistence/anti-persistence of a time series
+
+        Uses R/S (Rescaled Range) analysis:
+        - H > 0.5: Trending/persistent series (momentum strategies work)
+        - H = 0.5: Random walk (no predictable pattern)
+        - H < 0.5: Mean-reverting/anti-persistent (mean reversion strategies work)
+
+        Typical usage:
+        - H > 0.6: Strong trend, use trend-following
+        - H < 0.4: Strong mean reversion
+        """
+        import math
+
+        class HurstExponent(bt.Indicator):
+            lines = ('hurst',)
+            params = (('period', 100),)
+
+            def __init__(self):
+                self.addminperiod(self.p.period)
+
+            def next(self):
+                # Get the price series for the period
+                prices = [self.data[i] for i in range(-self.p.period + 1, 1)]
+
+                # Calculate returns
+                returns = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+
+                if len(returns) < 2:
+                    self.lines.hurst[0] = 0.5
+                    return
+
+                # Calculate mean of returns
+                mean_ret = sum(returns) / len(returns)
+
+                # Calculate cumulative deviation from mean
+                cumdev = []
+                running_sum = 0
+                for r in returns:
+                    running_sum += (r - mean_ret)
+                    cumdev.append(running_sum)
+
+                # Range of cumulative deviations
+                R = max(cumdev) - min(cumdev)
+
+                # Standard deviation of returns
+                variance = sum((r - mean_ret) ** 2 for r in returns) / len(returns)
+                S = math.sqrt(variance) if variance > 0 else 0.000001
+
+                # R/S ratio
+                if S > 0.000001 and R > 0:
+                    RS = R / S
+                    # Hurst exponent: H = log(R/S) / log(n)
+                    n = len(returns)
+                    if RS > 0 and n > 1:
+                        self.lines.hurst[0] = math.log(RS) / math.log(n)
+                    else:
+                        self.lines.hurst[0] = 0.5
+                else:
+                    self.lines.hurst[0] = 0.5
+
+        return HurstExponent(data.close, period=int(period))
 
     @staticmethod
     def _create_tsi(data, period1=25, period2=13):
@@ -532,6 +615,18 @@ def parse_indicator_csv(csv_path):
             if not row or row[0].startswith('#'):
                 continue
 
+            # Strip inline comments from all cells (e.g., "3  # comment" -> "3")
+            cleaned_row = []
+            for cell in row:
+                if '#' in cell:
+                    cell = cell.split('#')[0]
+                cleaned_row.append(cell.strip())
+            row = cleaned_row
+
+            # Skip if row is now empty after comment stripping
+            if not row or not row[0]:
+                continue
+
             # Strategy: Collect all params after first value until we hit another non-numeric
             indicator_name = row[0].strip()
             params = []
@@ -589,6 +684,18 @@ def parse_dual_indicator_csv(csv_path):
         reader = csv.reader(f)
         for line_num, row in enumerate(reader, 1):
             if not row or row[0].strip().startswith('#'):
+                continue
+
+            # Strip inline comments from all cells (e.g., "3  # comment" -> "3")
+            cleaned_row = []
+            for cell in row:
+                if '#' in cell:
+                    cell = cell.split('#')[0]
+                cleaned_row.append(cell.strip())
+            row = cleaned_row
+
+            # Skip if row is now empty after comment stripping
+            if not row or not row[0]:
                 continue
 
             # Expected format: ind1, param1, [param2, ...], ind2, param1, [param2, ...]
@@ -673,7 +780,13 @@ def parse_filter_csv(csv_path):
             # Format: indicator, param1, [param2, ...], filter_type
             # Last column is always the filter type
             indicator_name = row[0].strip()
-            filter_type = row[-1].strip().lower()
+
+            # Strip inline comments from filter_type (e.g., "above  # comment" -> "above")
+            filter_type_raw = row[-1].strip()
+            if '#' in filter_type_raw:
+                filter_type = filter_type_raw.split('#')[0].strip().lower()
+            else:
+                filter_type = filter_type_raw.lower()
 
             # Everything in between is parameters
             params = [p.strip() for p in row[1:-1] if p.strip()]

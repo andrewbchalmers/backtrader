@@ -125,13 +125,24 @@ class PerformanceAnalyzer:
         return np.mean(drawdowns) if drawdowns else 0.0
 
     def _calculate_sharpe_ratio(self):
-        """Calculate average Sharpe ratio"""
-        sharpes = []
-        for r in self.results:
-            sharpe = r.get('sharpe', {}).get('sharperatio', None)
-            if sharpe is not None and not np.isnan(sharpe):
-                sharpes.append(sharpe)
-        return np.mean(sharpes) if sharpes else 0.0
+        """Calculate portfolio-level Sharpe ratio from stock returns"""
+        # Get returns from stocks that actually traded
+        returns = [r['return_pct'] for r in self.results if r.get('total_trades', 0) > 0]
+
+        if len(returns) < 2:
+            return 0.0
+
+        mean_return = np.mean(returns)
+        std_return = np.std(returns, ddof=1)  # Use sample std dev
+
+        if std_return == 0:
+            return 0.0
+
+        # Sharpe = (return - risk_free_rate) / volatility
+        # Note: returns are already in percentage terms for the backtest period
+        sharpe = (mean_return - self.risk_free_rate) / std_return
+
+        return sharpe
 
     def _calculate_sortino_ratio(self):
         """Calculate Sortino ratio (return / downside deviation)"""

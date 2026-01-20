@@ -1,0 +1,127 @@
+# =============================================================================
+# EXIT INDICATORS - Organized by Strategy Type / Stock Classification
+# =============================================================================
+# Match exit style to your entry strategy type for best results
+# Uncomment indicators you want to test
+# =============================================================================
+
+# =============================================================================
+# VOLATILITY-BASED EXITS (ATR Trailing Stops)
+# Best for: ALL stock types, especially high_volatility
+# Use with: Any strategy type - these are adaptive to market conditions
+# ATR stops adjust to volatility, giving room in volatile stocks
+# Format: atr,period,multiplier (e.g., atr,14,3 = 3x ATR trailing stop)
+# =============================================================================
+
+atr,14,3              # Standard ATR trailing stop (proven performer)
+#atr,14,2              # Tighter stop for lower volatility
+#atr,10,3              # Faster-reacting ATR stop
+#atr,10,2
+#atr,5,3              # Very responsive, for scalping
+#atr,5,4              # Tight but with more room
+#natr,14              # Normalized ATR (percentage-based)
+
+# =============================================================================
+# TREND FOLLOWING EXITS
+# Best for: --stock-behavior trending
+# Use with: --strategy-type trend_following
+# Exit when trend weakens or reverses
+# =============================================================================
+
+# Moving Average Crossovers (price crosses below MA = exit)
+#sma,20
+#sma,50
+#ema,20
+#ema,50
+
+# Dual MA Exits (fast crosses below slow = exit)
+#ema,5,ema,20          # Fast EMA cross exit
+#ema,10,ema,20
+#ema,12,ema,26
+#sma,10,sma,20
+#sma,20,sma,50
+
+# Trend Indicator Exits
+#aroon,20
+#aroon,25
+#adx,14               # Exit when trend weakens (ADX falling)
+#dmi,14               # Exit when -DI crosses above +DI
+#psar,0.02,0.20       # Parabolic SAR reversal
+
+# MACD Exit (signal line crossover)
+#macd,12,26,9
+
+# =============================================================================
+# MEAN REVERSION EXITS
+# Best for: --stock-behavior mean_reverting
+# Use with: --strategy-type mean_reversion
+# Exit when price returns to mean or becomes overbought
+# =============================================================================
+
+# RSI Exits (overbought > 70 = take profit)
+rsi,14
+#rsi,7                # Faster RSI for quicker exits
+#rsi,21
+
+# Stochastic Exits (overbought crossover = exit)
+#stoch,14,3,3
+#stochrsi,14,3,3
+#stochrsi,20,3,3
+#stochrsi,25,3,3
+
+# Williams %R (overbought = exit)
+#williams,14
+
+# CCI (overbought = exit)
+#cci,20
+
+# Money Flow (overbought = exit)
+#mfi,14
+
+# =============================================================================
+# BREAKOUT / BAND EXITS
+# Best for: --stock-behavior breakout_prone
+# Use with: --strategy-type breakout
+# Exit when price falls back into range or hits opposite band
+# =============================================================================
+
+# Bollinger Band Exits (price touches middle/lower band = exit)
+bb,20,2
+#bb,20,3
+
+# Keltner Channel Exits
+#keltner,20,2
+
+# Donchian Exits (price breaks below N-period low)
+#donchian,20
+#donchian,10
+
+# Price Action Exits
+#high,20              # Exit if new high not made
+#low,20               # Exit on new low
+
+# =============================================================================
+# VOLUME-BASED EXITS
+# Confirm exit signals with volume analysis
+# =============================================================================
+
+#cmf,20               # Chaikin Money Flow reversal
+#mfi,14               # Money Flow Index overbought
+
+# =============================================================================
+# RECOMMENDED COMBINATIONS BY STRATEGY TYPE
+# =============================================================================
+#
+# TREND FOLLOWING on trending stocks:
+#   Entry: ema,20 or aroon,25 or macd,12,26,9
+#   Exit:  atr,14,3 (trailing) or ema,5,ema,20 (crossover)
+#
+# MEAN REVERSION on mean_reverting stocks:
+#   Entry: rsi,14 or bb,10,2 or williams,14
+#   Exit:  rsi,14 (overbought) or bb,20,2 (middle band)
+#
+# BREAKOUT on breakout_prone stocks:
+#   Entry: donchian,20 or keltner,20,2 or bb,20,2
+#   Exit:  atr,14,3 (trailing) or donchian,20 (opposite break)
+#
+# =============================================================================
