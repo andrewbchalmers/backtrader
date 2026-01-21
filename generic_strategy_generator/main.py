@@ -144,11 +144,26 @@ def main():
         classifier = StockClassifier(config)
 
         # Check for cached classifications
+        cache_valid = False
         if os.path.exists(args.classification_cache):
             print(f"Loading cached classifications from {args.classification_cache}...")
             classifications = classifier.load_from_cache(args.classification_cache)
-            print(f"✓ Loaded {len(classifications)} cached classifications")
-        else:
+
+            # Validate cache - check if all current symbols are classified
+            cached_symbols = set(classifications.keys())
+            current_symbols = set(symbols)
+            missing_from_cache = current_symbols - cached_symbols
+
+            if missing_from_cache:
+                print(f"Cache is stale: {len(missing_from_cache)} stocks not in cache")
+                print(f"  (e.g., {list(missing_from_cache)[:5]})")
+                print("Regenerating classifications...")
+                classifications = None
+            else:
+                cache_valid = True
+                print(f"✓ Loaded {len(classifications)} cached classifications (cache is current)")
+
+        if not cache_valid:
             print("Classifying stocks based on historical behavior...")
             print("(This analyzes ADX, ATR, breakout frequency, price, volume, etc.)")
             print()

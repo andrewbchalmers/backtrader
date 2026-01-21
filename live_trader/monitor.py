@@ -21,6 +21,7 @@ class LiveTradingMonitor:
         self.position_manager = PositionManager()
         self.warmup_days = warmup_days
         self.buy_alerts_sent = {}  # Track when buy alerts were sent: {symbol: date}
+        self.market_open_notified_date = None  # Track when market open notification was sent
 
         # Clear any pending_exit flags from previous sessions
         self._clear_pending_exit_flags()
@@ -49,11 +50,17 @@ class LiveTradingMonitor:
             self.position_manager._save()
             print(f"ℹ️  Cleared {cleared} pending exit flag(s) from previous session")
 
-    def get_live_data(self, symbol, period="1y"):
-        """Fetch live data for a symbol"""
+    def get_live_data(self, symbol, period="1y", interval="1d"):
+        """Fetch live data for a symbol
+
+        Args:
+            symbol: Stock ticker
+            period: Data period (e.g., "1y", "6mo", "60d")
+            interval: Bar interval (e.g., "1d", "1h", "15m")
+        """
         try:
             ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period, interval="1d")
+            df = ticker.history(period=period, interval=interval)
 
             if df.empty:
                 return None
@@ -62,7 +69,7 @@ class LiveTradingMonitor:
             return df
 
         except Exception as e:
-            print(f"❌ Error fetching {symbol}: {e}")
+            print(f"❌ Error fetching {symbol} ({interval}): {e}")
             return None
 
     def get_historical_data(self, symbol, start_date, end_date):
@@ -335,6 +342,35 @@ class LiveTradingMonitor:
 
         return is_open
 
+    def send_market_open_notification(self):
+        """Send notification when market opens (once per day)"""
+        from datetime import datetime
+        import pytz
+
+        eastern = pytz.timezone('US/Eastern')
+        now_et = datetime.now(eastern)
+        today = now_et.date()
+
+        # Only send once per day
+        if self.market_open_notified_date == today:
+            return
+
+        # Get position summary for the notification
+        summary = self.position_manager.get_summary()
+        position_count = summary['count']
+
+        title = "🔔 Market Open"
+        message = (
+            f"The stock market is now open.\n"
+            f"Time: {now_et.strftime('%I:%M %p')} ET\n"
+            f"Watching: {len(self.watchlist)} symbols\n"
+            f"Active positions: {position_count}"
+        )
+
+        self.notifier.send_notification(title, message)
+        self.market_open_notified_date = today
+        print(f"📢 Market open notification sent")
+
     def run(self, scan_interval=15):
         """Main loop - scan continuously during market hours"""
         print(f"\n🚀 Live Trading Monitor Started")
@@ -347,6 +383,9 @@ class LiveTradingMonitor:
             while True:
                 try:
                     if self.is_market_hours():
+                        # Send market open notification (once per day)
+                        self.send_market_open_notification()
+
                         self.scan_for_opportunities()
                         print(f"\n💤 Next scan in {scan_interval} minutes...")
                         time.sleep(scan_interval * 60)
@@ -366,7 +405,7 @@ class LiveTradingMonitor:
 
     def handle_last_signal_query(self, reply):
         """
-        Handle 'LAST SYMBOL' query - shows last signal for a stock with chart
+        Handle 'LAST SYMBOL' query - shows last signal for a stock with both 30-day and 3-month charts
 
         Args:
             reply: The reply string like "LAST NVDA"
@@ -382,36 +421,62 @@ class LiveTradingMonitor:
 
         symbol = parts[1].upper()
 
-        # Chart generator has its own warmup calculation
-        chart_days = 30
+        # Chart configurations with different intervals
+        # 30-day chart: hourly bars for more detail
+        # 3-month chart: daily bars for broader view
+        chart_configs = [
+            {
+                'period': '60d',      # Fetch 60 days of hourly data
+                'interval': '1h',
+                'bars': 30 * 7,       # ~30 days * ~7 trading hours
+                'title': '30 Day (Hourly)'
+            },
+            {
+                'period': '2y',       # Fetch 2 years of daily data
+                'interval': '1d',
+                'bars': 90,           # 90 trading days
+                'title': '3 Month (Daily)'
+            }
+        ]
+
         warmup_needed = self.chart_gen.warmup_days
-        total_days_needed = warmup_needed + chart_days
+        print(f"📊 Fetching multi-timeframe data for {symbol}...")
 
-        # Convert trading days to calendar days with buffer
-        calendar_days = int(total_days_needed * 1.6)
+        # Fetch data for each timeframe
+        chart_data_list = []
+        df_daily = None  # Keep daily data for signal checking
 
-        # Get data (yfinance period must be enough)
-        if calendar_days <= 90:
-            period = "3mo"
-        elif calendar_days <= 180:
-            period = "6mo"
-        else:
-            period = "1y"
+        for config in chart_configs:
+            print(f"   Fetching {config['interval']} data (period: {config['period']})...")
+            df = self.get_live_data(symbol, period=config['period'], interval=config['interval'])
 
-        df = self.get_live_data(symbol, period=period)
+            if df is not None and len(df) > 0:
+                print(f"   Got {len(df)} bars of {config['interval']} data")
+                chart_data_list.append({
+                    'df': df,
+                    'bars': config['bars'],
+                    'title': config['title'],
+                    'interval': config['interval']
+                })
 
-        if df is None or len(df) < warmup_needed:
+                # Keep daily data for status message calculations
+                if config['interval'] == '1d':
+                    df_daily = df
+            else:
+                print(f"   ⚠️ Failed to fetch {config['interval']} data")
+
+        if not chart_data_list:
             self.notifier.send_notification(
                 f"❌ {symbol}",
-                f"Unable to fetch sufficient data (need {warmup_needed} days for indicators)"
+                f"Unable to fetch data for any timeframe"
             )
             return
 
-        # Generate chart
-        print(f"📊 Generating chart for {symbol} (warmup: {warmup_needed} days, display: {chart_days} days)...")
-        chart_buffer = self.chart_gen.generate_chart(symbol, df, days=chart_days)
+        # Use daily data for status calculations, fall back to first available
+        df = df_daily if df_daily is not None else chart_data_list[0]['df']
+        print(f"📊 Using {len(df)} bars for status calculations")
 
-        # Check if we're currently holding it
+        # Build the status message
         position = self.position_manager.get(symbol)
         if position:
             entry_date = position['entry_date'][:10]
@@ -470,16 +535,21 @@ class LiveTradingMonitor:
                 title = f"📊 {symbol} - Last Signal"
                 message = "No recent signals in the last 5 days"
 
-        # Send with chart
+        # Generate stacked multi-timeframe chart
+        print(f"📊 Generating stacked chart for {symbol} (30 Day Hourly + 3 Month Daily)...")
+        chart_buffer = self.chart_gen.generate_multi_timeframe_chart(
+            symbol, chart_data_list
+        )
+
         if chart_buffer:
             self.notifier.send_notification_with_image(
                 title, message, chart_buffer, f"{symbol}_chart.png"
             )
-            print(f"✓ Sent last signal info with chart for {symbol}")
+            print(f"✓ Sent stacked chart for {symbol}")
         else:
             # Fallback to text only
             self.notifier.send_notification(title, message)
-            print(f"✓ Sent last signal info for {symbol} (chart generation failed)")
+            print(f"✓ Sent last signal info for {symbol} (text only, chart generation failed)")
 
     def handle_holdings_query(self):
         """Handle 'HOLDING' or 'HOLDINGS' query - shows all current positions with P&L"""

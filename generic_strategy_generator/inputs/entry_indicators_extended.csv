@@ -28,25 +28,29 @@
 
 # Dual Moving Average Crossovers (fast crosses above slow)
 #sma,10,sma,20
-sma,20,sma,50
+#sma,20,sma,50
 #ema,10,ema,20
 #ema,12,ema,26
-ema,5,ema,20
+#ema,5,ema,20
 
 # Trend Direction Indicators
-aroon,25
-adx,14
+#aroon,25
+#adx,14
 #adx,20
 #dmi,14
 #psar,0.02,0.20
 
 # MACD (trend + momentum hybrid)
-macd,12,26,9
+#macd,12,26,9
 #macd,5,35,5
 
 # Hurst Exponent (H > 0.5 = trending, use for trend confirmation)
 #hurst,100
 #hurst,200
+
+# Variance Ratio (VR > 1 = trending/momentum, Lo-MacKinlay test)
+#varratio,20,2
+#varratio,50,5
 
 # =============================================================================
 # MEAN REVERSION INDICATORS
@@ -59,6 +63,10 @@ macd,12,26,9
 rsi,14
 #rsi,7
 #rsi,21
+
+# RSI of Returns (applies RSI to returns, oversold < 30 = buy signal)
+#rsiret,14
+#rsiret,7
 
 # Stochastic (oversold crossover = buy signal)
 #stoch,14,3,3
@@ -78,7 +86,7 @@ rsi,14
 #bb,20,3
 
 # Money Flow Index (oversold = buy signal)
-mfi,14
+#mfi,14
 
 # Z-Score (price below -2 std devs = buy signal for mean reversion)
 #zscore,20
@@ -88,6 +96,14 @@ mfi,14
 #hurst,100
 #hurst,200
 
+# Variance Ratio (VR < 1 = mean-reverting, Lo-MacKinlay test)
+#varratio,20,2
+#varratio,50,5
+
+# OU Half-Life (short half-life = fast mean reversion, lower is better for MR)
+#ouhalflife,50
+#ouhalflife,100
+
 # =============================================================================
 # BREAKOUT INDICATORS
 # Best for: --stock-behavior breakout_prone
@@ -96,7 +112,7 @@ mfi,14
 # =============================================================================
 
 # Bollinger Bands - Breakout Mode (price breaks upper band = momentum buy)
-bb,20,2
+#bb,20,2
 
 # Donchian Channels (price breaks above N-period high)
 #donchian,20
@@ -106,7 +122,7 @@ bb,20,2
 # Keltner Channels (price breaks above channel)
 #keltner,20,2
 #keltner,20,1.5
-keltner,10,2
+#keltner,10,2
 
 # Price Action Breakouts
 #high,20
@@ -133,6 +149,10 @@ keltner,10,2
 
 # Ultimate Oscillator
 #ultimate,7,14,28
+
+# RSI of Returns (RSI > 70 = strong positive momentum)
+#rsiret,14
+#rsiret,7
 
 # =============================================================================
 # VOLATILITY-BASED INDICATORS

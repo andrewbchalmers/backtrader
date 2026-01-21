@@ -23,15 +23,19 @@ TEST_SPEED = 0  # Days per second (0 = instant, 1 = 1 day/sec, 10 = 10 days/sec)
 
 # Strategy configuration
 STRATEGY_MODULE = "../strategies/AROON_FILTER_ATR/aroon_atr"
-STRATEGY_CLASS = "Strategy"
+STRATEGY_CLASS = "AroonATRStrategy"
 STRATEGY_PARAMS = {
-    'fast_len': 7,
-    'slow_len': 50,
-    'atr_len': 10,
-    'atr_mult': 3.0,
-    'stop_loss_pct': 0.1,
-    'exit_live_bars': 5,  # Check last 5 days for missed stops
-    'verbose': False
+    'aroon_len': 20,
+    'atr_entry_sma_period': 20,
+    'atr_filter_mult': 1.2,
+    'stop_loss_pct': 0.05,
+    'verbose': False,
+    'atr_exit_len': 14,
+    'atr_exit_mult': 3.0,
+    'use_atr_filter': True,
+    'take_profit_pct': 0.13,
+    'use_take_profit': True,
+    'position_size_pct': '0.95'
 }
 
 # Watchlist

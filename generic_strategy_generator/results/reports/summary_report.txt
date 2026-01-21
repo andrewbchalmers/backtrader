@@ -1,110 +1,110 @@
 ================================================================================
 STRATEGY OPTIMIZATION SUMMARY
 ================================================================================
-Date: 2026-01-18 18:49:58
-Total Strategies Analyzed: 100
+Date: 2026-01-20 23:19:59
+Total Strategies Analyzed: 51
 
 TOP 10 STRATEGIES:
 --------------------------------------------------------------------------------
 
-Rank #1 (Score: 60.00)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: TRAILING_STOP on ATR(14,3) + TP 10%
-  Total Return: 7.64%
-  Sharpe Ratio: 0.838
-  Max Drawdown: 9.10%
-  Profit Factor: 13.49
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #1 (Score: 55.59)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on HALFLIFEEXIT(50) + SL 5% + TP 8%
+  Total Return: 4.41%
+  Sharpe Ratio: 0.660
+  Max Drawdown: 10.81%
+  Profit Factor: 3.69
+  Win Rate: 71.43%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #2 (Score: 60.00)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: TRAILING_STOP on ATR(14,3) + SL 10% + TP 10%
-  Total Return: 7.64%
-  Sharpe Ratio: 0.838
-  Max Drawdown: 9.10%
-  Profit Factor: 13.49
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #2 (Score: 55.01)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + TP 10%
+  Total Return: 4.85%
+  Sharpe Ratio: 0.821
+  Max Drawdown: 15.64%
+  Profit Factor: 8.15
+  Win Rate: 77.14%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #3 (Score: 59.98)
-  Description: Entry: THRESHOLD on RSI(14) | Exit: THRESHOLD on RSI(14) + SL 10% + TP 8%
-  Total Return: 11.10%
-  Sharpe Ratio: 217.293
-  Max Drawdown: 30.23%
-  Profit Factor: 2.93
-  Win Rate: 68.97%
-  Total Trades: 145
-  Stocks Traded: 54/54
+Rank #3 (Score: 54.89)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + TP 8%
+  Total Return: 4.51%
+  Sharpe Ratio: 0.812
+  Max Drawdown: 15.64%
+  Profit Factor: 7.67
+  Win Rate: 77.14%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #4 (Score: 59.94)
-  Description: Entry: THRESHOLD on RSI(14) | Exit: CROSSOVER on RSI(14) + SL 10% + TP 8%
-  Total Return: 9.34%
-  Sharpe Ratio: 219.984
-  Max Drawdown: 30.23%
-  Profit Factor: 2.97
-  Win Rate: 69.80%
-  Total Trades: 149
-  Stocks Traded: 54/54
+Rank #4 (Score: 54.57)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on HALFLIFEEXIT(50) + SL 10% + TP 8%
+  Total Return: 5.09%
+  Sharpe Ratio: 0.655
+  Max Drawdown: 15.53%
+  Profit Factor: 3.83
+  Win Rate: 80.00%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #5 (Score: 59.84)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + TP 8%
-  Total Return: 8.17%
-  Sharpe Ratio: 0.778
-  Max Drawdown: 9.10%
-  Profit Factor: 14.36
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #5 (Score: 54.51)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + TP 13%
+  Total Return: 5.37%
+  Sharpe Ratio: 0.810
+  Max Drawdown: 15.64%
+  Profit Factor: 8.24
+  Win Rate: 71.43%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #6 (Score: 59.84)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + SL 5% + TP 8%
-  Total Return: 8.17%
-  Sharpe Ratio: 0.778
-  Max Drawdown: 9.10%
-  Profit Factor: 14.36
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #6 (Score: 54.36)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + SL 5% + TP 10%
+  Total Return: 3.42%
+  Sharpe Ratio: 0.522
+  Max Drawdown: 10.81%
+  Profit Factor: 3.23
+  Win Rate: 68.57%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #7 (Score: 59.84)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on ATR(14,3) + SL 10% + TP 8%
-  Total Return: 8.17%
-  Sharpe Ratio: 0.778
-  Max Drawdown: 9.10%
-  Profit Factor: 14.36
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #7 (Score: 54.18)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + SL 5% + TP 8%
+  Total Return: 3.11%
+  Sharpe Ratio: 0.502
+  Max Drawdown: 10.81%
+  Profit Factor: 3.03
+  Win Rate: 68.57%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #8 (Score: 59.80)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: THRESHOLD on RSI(14) + TP 8%
-  Total Return: 8.43%
-  Sharpe Ratio: 0.755
-  Max Drawdown: 9.10%
-  Profit Factor: inf
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #8 (Score: 54.01)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + SL 5% + TP 13%
+  Total Return: 3.94%
+  Sharpe Ratio: 0.539
+  Max Drawdown: 10.81%
+  Profit Factor: 3.27
+  Win Rate: 62.86%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #9 (Score: 59.80)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: THRESHOLD on RSI(14) + SL 10% + TP 8%
-  Total Return: 8.43%
-  Sharpe Ratio: 0.755
-  Max Drawdown: 9.10%
-  Profit Factor: inf
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #9 (Score: 53.89)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on HALFLIFEEXIT(50) + SL 10% + TP 10%
+  Total Return: 4.28%
+  Sharpe Ratio: 0.613
+  Max Drawdown: 15.53%
+  Profit Factor: 4.00
+  Win Rate: 77.14%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
-Rank #10 (Score: 59.80)
-  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: CROSSOVER on RSI(14) + TP 8%
-  Total Return: 8.43%
-  Sharpe Ratio: 0.755
-  Max Drawdown: 9.10%
-  Profit Factor: inf
-  Win Rate: 90.00%
-  Total Trades: 10
-  Stocks Traded: 10/54
+Rank #10 (Score: 53.81)
+  Description: Entry: THRESHOLD on RSI(14) when price > DONCHIAN(20) | Exit: STOP_LOSS on HALFLIFEEXIT(50) + SL 10% + TP 10%
+  Total Return: 5.40%
+  Sharpe Ratio: 0.659
+  Max Drawdown: 15.53%
+  Profit Factor: 3.88
+  Win Rate: 71.43%
+  Total Trades: 35
+  Stocks Traded: 35/131
 
 ================================================================================

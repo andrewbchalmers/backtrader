@@ -38,7 +38,7 @@ class AroonATRStrategy(bt.Strategy):
         # ATR entry filter (identifies calm vs volatile markets)
         ('atr_entry_len', 10),
         ('atr_entry_sma_period', 20),
-        ('atr_filter_mult', Decimal('1.0')),  # 1.0 = exact SMA, >1.0 = looser filter
+        ('atr_filter_mult', Decimal('1.2')),  # 1.0 = exact SMA, >1.0 = looser filter
         ('use_atr_filter', True),
 
         # ATR trailing stop
@@ -46,10 +46,10 @@ class AroonATRStrategy(bt.Strategy):
         ('atr_exit_mult', Decimal('3.0')),
 
         # Risk management
-        ('stop_loss_pct', Decimal('0.02')),    # 2% stop loss
+        ('stop_loss_pct', Decimal('0.05')),    # 2% stop loss
         ('take_profit_pct', Decimal('0.13')),  # 13% take profit
         ('use_take_profit', True),
-        ('position_size_pct', Decimal('0.98')), # Use 98% of cash
+        ('position_size_pct', Decimal('0.95')),
 
         # Logging
         ('verbose', True),

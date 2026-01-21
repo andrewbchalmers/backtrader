@@ -72,6 +72,16 @@ class IndicatorFactory:
             return IndicatorFactory._create_zscore(data, *params)
         elif indicator_name == 'hurst':
             return IndicatorFactory._create_hurst(data, *params)
+        elif indicator_name == 'varratio':
+            return IndicatorFactory._create_variance_ratio(data, *params)
+        elif indicator_name == 'ouhalflife':
+            return IndicatorFactory._create_ou_halflife(data, *params)
+        elif indicator_name == 'rsiret':
+            return IndicatorFactory._create_rsi_returns(data, *params)
+        elif indicator_name == 'meantouch':
+            return IndicatorFactory._create_mean_touch(data, *params)
+        elif indicator_name == 'halflifeexit':
+            return IndicatorFactory._create_halflife_exit(data, *params)
         elif indicator_name == 'tsi':
             return IndicatorFactory._create_tsi(data, *params)
         elif indicator_name == 'ultimate':
@@ -363,6 +373,298 @@ class IndicatorFactory:
                     self.lines.hurst[0] = 0.5
 
         return HurstExponent(data.close, period=int(period))
+
+    @staticmethod
+    def _create_variance_ratio(data, period=20, k=2):
+        """Lo-MacKinlay Variance Ratio - tests for random walk in returns
+
+        Compares variance of k-period returns to variance of 1-period returns:
+        VR(k) = Var(k-period returns) / (k * Var(1-period returns))
+
+        Under random walk hypothesis, VR = 1
+        - VR > 1: Positive autocorrelation (trending/momentum)
+        - VR < 1: Negative autocorrelation (mean-reverting)
+        - VR = 1: Random walk (no predictable pattern)
+
+        Typical usage:
+        - VR > 1.1: Trending behavior, use momentum strategies
+        - VR < 0.9: Mean-reverting behavior, use mean reversion strategies
+        """
+        import math
+
+        class VarianceRatio(bt.Indicator):
+            lines = ('varratio',)
+            params = (('period', 20), ('k', 2),)
+
+            def __init__(self):
+                # Need enough data for k-period returns over the lookback period
+                self.addminperiod(self.p.period * self.p.k)
+
+            def next(self):
+                k = self.p.k
+                period = self.p.period
+
+                # Get prices for calculation
+                # We need period*k + 1 prices to calculate period k-returns
+                total_needed = period * k + 1
+                prices = [self.data[-i] for i in range(total_needed)]
+                prices = prices[::-1]  # Reverse to chronological order
+
+                if len(prices) < total_needed:
+                    self.lines.varratio[0] = 1.0
+                    return
+
+                # Calculate 1-period returns (log returns for better statistical properties)
+                returns_1 = []
+                for i in range(1, len(prices)):
+                    if prices[i-1] > 0 and prices[i] > 0:
+                        returns_1.append(math.log(prices[i] / prices[i-1]))
+                    else:
+                        returns_1.append(0)
+
+                # Calculate k-period returns
+                returns_k = []
+                for i in range(k, len(prices)):
+                    if prices[i-k] > 0 and prices[i] > 0:
+                        returns_k.append(math.log(prices[i] / prices[i-k]))
+                    else:
+                        returns_k.append(0)
+
+                if len(returns_1) < 2 or len(returns_k) < 2:
+                    self.lines.varratio[0] = 1.0
+                    return
+
+                # Calculate variances
+                mean_1 = sum(returns_1) / len(returns_1)
+                var_1 = sum((r - mean_1) ** 2 for r in returns_1) / (len(returns_1) - 1)
+
+                mean_k = sum(returns_k) / len(returns_k)
+                var_k = sum((r - mean_k) ** 2 for r in returns_k) / (len(returns_k) - 1)
+
+                # Variance Ratio = Var(k-period) / (k * Var(1-period))
+                if var_1 > 0.000001:
+                    vr = var_k / (k * var_1)
+                    self.lines.varratio[0] = vr
+                else:
+                    self.lines.varratio[0] = 1.0
+
+        return VarianceRatio(data.close, period=int(period), k=int(k))
+
+    @staticmethod
+    def _create_ou_halflife(data, period=50):
+        """Ornstein-Uhlenbeck Half-Life - measures mean reversion speed
+
+        The OU process models mean-reverting behavior:
+        dP = theta * (mu - P) * dt + sigma * dW
+
+        Half-life = ln(2) / theta = time for price to revert halfway to mean
+
+        Estimated via AR(1) regression: P(t) = a + b * P(t-1) + error
+        Then: half-life = -ln(2) / ln(b)
+
+        Interpretation:
+        - Short half-life (< 10 days): Fast mean reversion, good for mean reversion strategies
+        - Medium half-life (10-50 days): Moderate mean reversion
+        - Long half-life (> 50 days): Slow/no mean reversion, closer to random walk
+
+        Lower values indicate stronger mean reversion opportunities.
+        """
+        import math
+
+        class OUHalfLife(bt.Indicator):
+            lines = ('halflife',)
+            params = (('period', 50),)
+
+            def __init__(self):
+                self.addminperiod(self.p.period)
+
+            def next(self):
+                period = self.p.period
+
+                # Get price series
+                prices = [self.data[-i] for i in range(period)]
+                prices = prices[::-1]  # Reverse to chronological order
+
+                if len(prices) < period:
+                    self.lines.halflife[0] = 100.0  # Default to long half-life
+                    return
+
+                # AR(1) regression: P(t) = a + b * P(t-1)
+                # We need to estimate b using least squares
+                # y = P(t), x = P(t-1)
+                y = prices[1:]  # P(t)
+                x = prices[:-1]  # P(t-1)
+
+                n = len(x)
+                if n < 2:
+                    self.lines.halflife[0] = 100.0
+                    return
+
+                # Calculate means
+                mean_x = sum(x) / n
+                mean_y = sum(y) / n
+
+                # Calculate slope (b) using least squares
+                # b = sum((x - mean_x) * (y - mean_y)) / sum((x - mean_x)^2)
+                numerator = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
+                denominator = sum((x[i] - mean_x) ** 2 for i in range(n))
+
+                if denominator < 0.000001:
+                    self.lines.halflife[0] = 100.0
+                    return
+
+                b = numerator / denominator
+
+                # Half-life = -ln(2) / ln(b)
+                # b should be between 0 and 1 for mean reversion
+                # b close to 1 means slow reversion (random walk)
+                # b close to 0 means fast reversion
+
+                if b <= 0 or b >= 1:
+                    # No valid mean reversion (trending or invalid)
+                    self.lines.halflife[0] = 100.0
+                else:
+                    halflife = -math.log(2) / math.log(b)
+                    # Cap at reasonable values
+                    halflife = max(0.1, min(halflife, 500.0))
+                    self.lines.halflife[0] = halflife
+
+        return OUHalfLife(data.close, period=int(period))
+
+    @staticmethod
+    def _create_rsi_returns(data, period=14):
+        """RSI of Returns - applies RSI to price returns instead of price
+
+        Standard RSI measures overbought/oversold based on price movement.
+        RSI of Returns measures momentum in the returns themselves.
+
+        Calculation:
+        1. Calculate daily returns: ret = (close - close[-1]) / close[-1]
+        2. Apply RSI formula to the returns series
+
+        Interpretation (similar to standard RSI):
+        - RSI_ret > 70: Returns have been consistently positive (overbought momentum)
+        - RSI_ret < 30: Returns have been consistently negative (oversold momentum)
+        - RSI_ret = 50: Neutral momentum
+
+        Can be more responsive than price-based RSI for momentum detection.
+        """
+        # Calculate percentage returns
+        returns = (data.close - data.close(-1)) / data.close(-1) * 100
+
+        # Apply RSI to returns
+        # RSI needs positive values, so we shift returns by adding 100
+        # This transforms returns from roughly (-10, +10) to (90, 110)
+        shifted_returns = returns + 100
+
+        return bt.indicators.RSI(shifted_returns, period=int(period))
+
+    @staticmethod
+    def _create_mean_touch(data, period=20):
+        """Mean Touch Exit - measures distance from mean for mean reversion exits
+
+        Returns a normalized value indicating how close price is to the mean:
+        - Value near 0: Price is at or near the mean (signal to exit MR trade)
+        - Value > 0: Price is above the mean
+        - Value < 0: Price is below the mean
+
+        For mean reversion exits:
+        - If you bought on oversold (below mean), exit when value approaches 0 or goes positive
+        - The indicator returns (close - SMA) / SMA * 100 (percentage deviation)
+
+        Typical exit signal: When value crosses above 0 (price touches mean from below)
+        """
+        sma = bt.indicators.SimpleMovingAverage(data.close, period=int(period))
+        # Percentage deviation from mean
+        mean_touch = (data.close - sma) / sma * 100
+        return mean_touch
+
+    @staticmethod
+    def _create_halflife_exit(data, period=50):
+        """Half-Life Exit Timer - signals based on OU mean reversion timing
+
+        Uses the Ornstein-Uhlenbeck half-life to create an exit timing signal.
+        The idea: if you enter a mean reversion trade, you should expect
+        the price to revert within approximately 1-2 half-lives.
+
+        Returns a value from 0 to 100:
+        - 0: Just entered (or half-life is very long)
+        - 50: One half-life has passed since significant deviation
+        - 100: Two half-lives have passed (strong exit signal)
+
+        The indicator tracks bars since price was significantly deviated from mean
+        and compares to the estimated half-life.
+
+        Typical exit: When value > 50-70 (one half-life elapsed)
+        """
+        import math
+
+        class HalfLifeExit(bt.Indicator):
+            lines = ('exit_signal',)
+            params = (('period', 50), ('deviation_threshold', 1.5),)
+
+            def __init__(self):
+                self.addminperiod(self.p.period)
+                self.bars_since_entry = 0
+                self.current_halflife = 50  # Default estimate
+                self.in_trade = False
+
+            def next(self):
+                period = self.p.period
+
+                # Calculate current z-score to detect entry/exit conditions
+                prices = [self.data[-i] for i in range(min(period, len(self)))]
+                if len(prices) < 10:
+                    self.lines.exit_signal[0] = 0
+                    return
+
+                prices = prices[::-1]
+                mean_price = sum(prices) / len(prices)
+                variance = sum((p - mean_price) ** 2 for p in prices) / len(prices)
+                std_price = math.sqrt(variance) if variance > 0 else 0.001
+
+                current_zscore = (self.data[0] - mean_price) / std_price
+
+                # Estimate half-life using AR(1)
+                if len(prices) >= 20:
+                    y = prices[1:]
+                    x = prices[:-1]
+                    n = len(x)
+                    mean_x = sum(x) / n
+                    mean_y = sum(y) / n
+                    numerator = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
+                    denominator = sum((xi - mean_x) ** 2 for xi in x)
+
+                    if denominator > 0.0001:
+                        b = numerator / denominator
+                        if 0 < b < 1:
+                            self.current_halflife = -math.log(2) / math.log(b)
+                            self.current_halflife = max(1, min(self.current_halflife, 200))
+
+                # Track trade timing
+                # If price is significantly deviated, reset the counter (new entry)
+                if abs(current_zscore) > self.p.deviation_threshold:
+                    self.bars_since_entry = 0
+                    self.in_trade = True
+                elif self.in_trade:
+                    self.bars_since_entry += 1
+
+                # Calculate exit signal (0-100 scale)
+                if self.current_halflife > 0 and self.in_trade:
+                    # How many half-lives have passed?
+                    halflives_passed = self.bars_since_entry / self.current_halflife
+                    # Scale to 0-100, capping at 2 half-lives = 100
+                    exit_signal = min(100, halflives_passed * 50)
+                    self.lines.exit_signal[0] = exit_signal
+                else:
+                    self.lines.exit_signal[0] = 0
+
+                # Reset if price returned to mean
+                if abs(current_zscore) < 0.5:
+                    self.in_trade = False
+                    self.bars_since_entry = 0
+
+        return HalfLifeExit(data.close, period=int(period))
 
     @staticmethod
     def _create_tsi(data, period1=25, period2=13):

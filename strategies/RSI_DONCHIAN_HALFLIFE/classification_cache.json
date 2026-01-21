@@ -1,0 +1,3180 @@
+{
+  "ABBV": {
+    "symbol": "ABBV",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.281137053418313,
+    "avg_atr_pct": 2.170296531402764
+  },
+  "LULU": {
+    "symbol": "LULU",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 28.28695131254479,
+    "avg_atr_pct": 3.469781064087269
+  },
+  "ROK": {
+    "symbol": "ROK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.650100781231213,
+    "avg_atr_pct": 2.5695957147197364
+  },
+  "BKSY": {
+    "symbol": "BKSY",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.933830472471367,
+    "avg_atr_pct": 8.518581975996703
+  },
+  "IYW": {
+    "symbol": "IYW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.1395086418132,
+    "avg_atr_pct": 1.899669534228929
+  },
+  "CCO.TO": {
+    "symbol": "CCO.TO",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.282677227656503,
+    "avg_atr_pct": 4.022298560046649
+  },
+  "PGR": {
+    "symbol": "PGR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.72076505561863,
+    "avg_atr_pct": 2.0318247809766183
+  },
+  "AVGO": {
+    "symbol": "AVGO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.55580229270591,
+    "avg_atr_pct": 4.007206411758083
+  },
+  "SPOT": {
+    "symbol": "SPOT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.96564208214849,
+    "avg_atr_pct": 3.501738941666661
+  },
+  "SOFI": {
+    "symbol": "SOFI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.633942786025784,
+    "avg_atr_pct": 5.177639902282607
+  },
+  "NFLX": {
+    "symbol": "NFLX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.430457966171076,
+    "avg_atr_pct": 2.651087411186045
+  },
+  "IONQ": {
+    "symbol": "IONQ",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.562998473725496,
+    "avg_atr_pct": 8.502127503174407
+  },
+  "META": {
+    "symbol": "META",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.81184921407183,
+    "avg_atr_pct": 2.8959924287563577
+  },
+  "AMAT": {
+    "symbol": "AMAT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.00230843997082,
+    "avg_atr_pct": 3.4326654945633566
+  },
+  "TTWO": {
+    "symbol": "TTWO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.678135808271055,
+    "avg_atr_pct": 2.3386713394483842
+  },
+  "RGTI": {
+    "symbol": "RGTI",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 26.718927973907338,
+    "avg_atr_pct": 11.21589913153821
+  },
+  "LMT": {
+    "symbol": "LMT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.904795308457814,
+    "avg_atr_pct": 1.8634199000795226
+  },
+  "SCHD": {
+    "symbol": "SCHD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.01602713547653,
+    "avg_atr_pct": 1.1367072586476867
+  },
+  "COST": {
+    "symbol": "COST",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.168590938394825,
+    "avg_atr_pct": 1.8259730350980479
+  },
+  "AI": {
+    "symbol": "AI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.113203284740628,
+    "avg_atr_pct": 5.490880431263692
+  },
+  "ADBE": {
+    "symbol": "ADBE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.282865478438854,
+    "avg_atr_pct": 2.6315001747645583
+  },
+  "MSFT": {
+    "symbol": "MSFT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.90133771393261,
+    "avg_atr_pct": 1.8925966717556404
+  },
+  "QCOM": {
+    "symbol": "QCOM",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.929934778023874,
+    "avg_atr_pct": 3.025853278636805
+  },
+  "AMZN": {
+    "symbol": "AMZN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.496974037681326,
+    "avg_atr_pct": 2.5732769284900754
+  },
+  "PLTR": {
+    "symbol": "PLTR",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.626018159155226,
+    "avg_atr_pct": 5.056647067025727
+  },
+  "AMD": {
+    "symbol": "AMD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.06918518025451,
+    "avg_atr_pct": 4.352505719430652
+  },
+  "TSLA": {
+    "symbol": "TSLA",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.271417854785938,
+    "avg_atr_pct": 5.027545993444544
+  },
+  "GOOG": {
+    "symbol": "GOOG",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.062941451059796,
+    "avg_atr_pct": 2.4967996073034837
+  },
+  "AAPL": {
+    "symbol": "AAPL",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.897425374483923,
+    "avg_atr_pct": 2.236850101267016
+  },
+  "BBD-B.TO": {
+    "symbol": "BBD-B.TO",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 29.6225373568308,
+    "avg_atr_pct": 3.7513117215878986
+  },
+  "NVDA": {
+    "symbol": "NVDA",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.579580612501484,
+    "avg_atr_pct": 4.11417779619013
+  },
+  "XOM": {
+    "symbol": "XOM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.31067237292383,
+    "avg_atr_pct": 1.9700856200234038
+  },
+  "CVX": {
+    "symbol": "CVX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.81090818291778,
+    "avg_atr_pct": 1.924330516400975
+  },
+  "COP": {
+    "symbol": "COP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.4155681246342,
+    "avg_atr_pct": 2.423232346569197
+  },
+  "EOG": {
+    "symbol": "EOG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.838680574461005,
+    "avg_atr_pct": 2.296869218139979
+  },
+  "SLB": {
+    "symbol": "SLB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.24530268381363,
+    "avg_atr_pct": 2.7526450621761382
+  },
+  "UNH": {
+    "symbol": "UNH",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.01828439796488,
+    "avg_atr_pct": 2.7619519752706183
+  },
+  "LLY": {
+    "symbol": "LLY",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.16704403919482,
+    "avg_atr_pct": 2.870257391683364
+  },
+  "JNJ": {
+    "symbol": "JNJ",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.199308851912253,
+    "avg_atr_pct": 1.5672830291518944
+  },
+  "JPM": {
+    "symbol": "JPM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.75588967080628,
+    "avg_atr_pct": 2.01294465439055
+  },
+  "V": {
+    "symbol": "V",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.917670874125914,
+    "avg_atr_pct": 1.7053234541119404
+  },
+  "MA": {
+    "symbol": "MA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.75208389860692,
+    "avg_atr_pct": 1.7203065157543296
+  },
+  "BLK": {
+    "symbol": "BLK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.895534133724656,
+    "avg_atr_pct": 2.0083443108453887
+  },
+  "GS": {
+    "symbol": "GS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.991916549529773,
+    "avg_atr_pct": 2.387340621499951
+  },
+  "PG": {
+    "symbol": "PG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.805686113905878,
+    "avg_atr_pct": 1.520494191142635
+  },
+  "KO": {
+    "symbol": "KO",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 25.797442983096165,
+    "avg_atr_pct": 1.43689657815728
+  },
+  "WMT": {
+    "symbol": "WMT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.854769514235027,
+    "avg_atr_pct": 1.7744250592885975
+  },
+  "PEP": {
+    "symbol": "PEP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.577353074202698,
+    "avg_atr_pct": 1.7364638209598526
+  },
+  "NEE": {
+    "symbol": "NEE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.57217278781635,
+    "avg_atr_pct": 2.3281919415825283
+  },
+  "DUK": {
+    "symbol": "DUK",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.167274738684586,
+    "avg_atr_pct": 1.5801937338008814
+  },
+  "AMT": {
+    "symbol": "AMT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.93104543404779,
+    "avg_atr_pct": 2.2288492091948826
+  },
+  "PLD": {
+    "symbol": "PLD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.49814136801381,
+    "avg_atr_pct": 2.291542095502368
+  },
+  "ASML": {
+    "symbol": "ASML",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.430097150954662,
+    "avg_atr_pct": 3.0443972515895896
+  },
+  "TSM": {
+    "symbol": "TSM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.73267439709916,
+    "avg_atr_pct": 3.30417978583605
+  },
+  "MU": {
+    "symbol": "MU",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.972871500910255,
+    "avg_atr_pct": 4.550710427753805
+  },
+  "KLAC": {
+    "symbol": "KLAC",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.798100344884322,
+    "avg_atr_pct": 3.4245919050668117
+  },
+  "BA": {
+    "symbol": "BA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.085692911826065,
+    "avg_atr_pct": 2.9354507517950768
+  },
+  "RTX": {
+    "symbol": "RTX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 29.351758832312957,
+    "avg_atr_pct": 1.8486144131142164
+  },
+  "NOC": {
+    "symbol": "NOC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.001933318109625,
+    "avg_atr_pct": 1.9282742498813024
+  },
+  "GD": {
+    "symbol": "GD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.72675222101527,
+    "avg_atr_pct": 1.6968415893835287
+  },
+  "HII": {
+    "symbol": "HII",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.15354476166144,
+    "avg_atr_pct": 2.5381069066641393
+  },
+  "TDG": {
+    "symbol": "TDG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.3992969732043,
+    "avg_atr_pct": 2.2791851866829305
+  },
+  "CAT": {
+    "symbol": "CAT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.877993025081594,
+    "avg_atr_pct": 2.44050789430485
+  },
+  "DE": {
+    "symbol": "DE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.159633225402203,
+    "avg_atr_pct": 2.2627305928527366
+  },
+  "HON": {
+    "symbol": "HON",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.375791181948536,
+    "avg_atr_pct": 1.8203075884993825
+  },
+  "MMM": {
+    "symbol": "MMM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.71229205944465,
+    "avg_atr_pct": 2.264412596805085
+  },
+  "GE": {
+    "symbol": "GE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.330142617859774,
+    "avg_atr_pct": 2.575396685132451
+  },
+  "EMR": {
+    "symbol": "EMR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 29.819391703334,
+    "avg_atr_pct": 2.2515998919552147
+  },
+  "ITW": {
+    "symbol": "ITW",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.498001969234203,
+    "avg_atr_pct": 1.727858510888293
+  },
+  "ETN": {
+    "symbol": "ETN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.692295247331344,
+    "avg_atr_pct": 2.796365312966901
+  },
+  "PH": {
+    "symbol": "PH",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.564775751827025,
+    "avg_atr_pct": 2.277116627382747
+  },
+  "CMI": {
+    "symbol": "CMI",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 30.51852432351058,
+    "avg_atr_pct": 2.3508852513725222
+  },
+  "UNP": {
+    "symbol": "UNP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.364103607815437,
+    "avg_atr_pct": 1.819232607278573
+  },
+  "CSX": {
+    "symbol": "CSX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.07052970249401,
+    "avg_atr_pct": 2.007918821511133
+  },
+  "NSC": {
+    "symbol": "NSC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.047598500909285,
+    "avg_atr_pct": 2.059527322673004
+  },
+  "FDX": {
+    "symbol": "FDX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.38830987757964,
+    "avg_atr_pct": 2.3617026944066133
+  },
+  "UPS": {
+    "symbol": "UPS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.882557608639722,
+    "avg_atr_pct": 2.2066731151560006
+  },
+  "DAL": {
+    "symbol": "DAL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 30.12539137258617,
+    "avg_atr_pct": 3.3982958508992938
+  },
+  "UAL": {
+    "symbol": "UAL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 29.451911007712784,
+    "avg_atr_pct": 4.044050619887353
+  },
+  "LUV": {
+    "symbol": "LUV",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.745569246796208,
+    "avg_atr_pct": 3.23552044526181
+  },
+  "FCX": {
+    "symbol": "FCX",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.843489352169453,
+    "avg_atr_pct": 3.445076875417684
+  },
+  "NEM": {
+    "symbol": "NEM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 28.370029881149616,
+    "avg_atr_pct": 3.0651873732687243
+  },
+  "BHP": {
+    "symbol": "BHP",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 16.63730939962395,
+    "avg_atr_pct": 2.0314125051763594
+  },
+  "RIO": {
+    "symbol": "RIO",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.638966041580876,
+    "avg_atr_pct": 1.8754240009793441
+  },
+  "NUE": {
+    "symbol": "NUE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.15953620263319,
+    "avg_atr_pct": 2.937659442132666
+  },
+  "CLF": {
+    "symbol": "CLF",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.489954189476332,
+    "avg_atr_pct": 5.100389229757588
+  },
+  "APD": {
+    "symbol": "APD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.520141986112503,
+    "avg_atr_pct": 2.107047655677814
+  },
+  "LIN": {
+    "symbol": "LIN",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.288161672610116,
+    "avg_atr_pct": 1.553801065969327
+  },
+  "ECL": {
+    "symbol": "ECL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.562131498126064,
+    "avg_atr_pct": 1.6687195468984477
+  },
+  "DD": {
+    "symbol": "DD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.6340574294567,
+    "avg_atr_pct": 2.224617149883596
+  },
+  "AMGN": {
+    "symbol": "AMGN",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.969797324748058,
+    "avg_atr_pct": 2.286165854712222
+  },
+  "GILD": {
+    "symbol": "GILD",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.48483425379579,
+    "avg_atr_pct": 2.276553575583991
+  },
+  "BIIB": {
+    "symbol": "BIIB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.08951101372346,
+    "avg_atr_pct": 2.7877659892628794
+  },
+  "VRTX": {
+    "symbol": "VRTX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.006891884117106,
+    "avg_atr_pct": 2.3758221496129144
+  },
+  "REGN": {
+    "symbol": "REGN",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.38308936958956,
+    "avg_atr_pct": 2.7522811330633177
+  },
+  "MRNA": {
+    "symbol": "MRNA",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.168279691676094,
+    "avg_atr_pct": 5.746616568067998
+  },
+  "BMY": {
+    "symbol": "BMY",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.720913236796477,
+    "avg_atr_pct": 2.4404163614004037
+  },
+  "PFE": {
+    "symbol": "PFE",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 18.467204856240244,
+    "avg_atr_pct": 2.1672929685618105
+  },
+  "MRK": {
+    "symbol": "MRK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.591386317938603,
+    "avg_atr_pct": 2.2452800942425766
+  },
+  "AZN": {
+    "symbol": "AZN",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.251113189153905,
+    "avg_atr_pct": 1.7626975204880406
+  },
+  "NVO": {
+    "symbol": "NVO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.941406547319026,
+    "avg_atr_pct": 3.0419926885451565
+  },
+  "HCA": {
+    "symbol": "HCA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.940375110351102,
+    "avg_atr_pct": 2.4353667269536503
+  },
+  "ELV": {
+    "symbol": "ELV",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.109957729983535,
+    "avg_atr_pct": 2.5452247604849507
+  },
+  "CI": {
+    "symbol": "CI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.0806688001148,
+    "avg_atr_pct": 2.344118325704281
+  },
+  "ISRG": {
+    "symbol": "ISRG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.97478712076614,
+    "avg_atr_pct": 2.472279637203359
+  },
+  "MDT": {
+    "symbol": "MDT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.545559326692118,
+    "avg_atr_pct": 1.804599848988879
+  },
+  "ABT": {
+    "symbol": "ABT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.636164805083435,
+    "avg_atr_pct": 1.8905106723527587
+  },
+  "SYK": {
+    "symbol": "SYK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.705674464981552,
+    "avg_atr_pct": 1.9128917019085687
+  },
+  "DHR": {
+    "symbol": "DHR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.841635119710496,
+    "avg_atr_pct": 2.351484706444386
+  },
+  "TMO": {
+    "symbol": "TMO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.526698486880722,
+    "avg_atr_pct": 2.314160187351255
+  },
+  "BSX": {
+    "symbol": "BSX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.313314640079287,
+    "avg_atr_pct": 1.9360003950617246
+  },
+  "HD": {
+    "symbol": "HD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.841486740822948,
+    "avg_atr_pct": 2.0112389141768316
+  },
+  "LOW": {
+    "symbol": "LOW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.99474310596809,
+    "avg_atr_pct": 2.115150814800493
+  },
+  "NKE": {
+    "symbol": "NKE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.6948207383448,
+    "avg_atr_pct": 2.7060754141105265
+  },
+  "SBUX": {
+    "symbol": "SBUX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.37489881482766,
+    "avg_atr_pct": 2.5347402876520384
+  },
+  "MCD": {
+    "symbol": "MCD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.35141891069909,
+    "avg_atr_pct": 1.6679430301899605
+  },
+  "YUM": {
+    "symbol": "YUM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.52075658355778,
+    "avg_atr_pct": 1.8136073103229233
+  },
+  "DPZ": {
+    "symbol": "DPZ",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.43495386123116,
+    "avg_atr_pct": 2.4721858826725387
+  },
+  "CMG": {
+    "symbol": "CMG",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.839127571744015,
+    "avg_atr_pct": 2.7470574364419917
+  },
+  "TJX": {
+    "symbol": "TJX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.036323238269826,
+    "avg_atr_pct": 1.6244450373611716
+  },
+  "ROST": {
+    "symbol": "ROST",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.007999457635222,
+    "avg_atr_pct": 2.059266961663256
+  },
+  "DG": {
+    "symbol": "DG",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 26.203817992742895,
+    "avg_atr_pct": 3.064959402699711
+  },
+  "DLTR": {
+    "symbol": "DLTR",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 30.76502779843197,
+    "avg_atr_pct": 3.4272905895659482
+  },
+  "DIS": {
+    "symbol": "DIS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.984548413271966,
+    "avg_atr_pct": 2.1099677061737356
+  },
+  "CMCSA": {
+    "symbol": "CMCSA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.960931521856903,
+    "avg_atr_pct": 2.2255315382659773
+  },
+  "WBD": {
+    "symbol": "WBD",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.298177757644332,
+    "avg_atr_pct": 4.317803441703392
+  },
+  "RBLX": {
+    "symbol": "RBLX",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.42433013590136,
+    "avg_atr_pct": 4.102912260423729
+  },
+  "EA": {
+    "symbol": "EA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.006590606466283,
+    "avg_atr_pct": 1.7998200239289195
+  },
+  "T": {
+    "symbol": "T",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.05099712364074,
+    "avg_atr_pct": 1.9257927748309014
+  },
+  "VZ": {
+    "symbol": "VZ",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.0593924398713,
+    "avg_atr_pct": 1.7701002709565712
+  },
+  "TMUS": {
+    "symbol": "TMUS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 29.236641022424056,
+    "avg_atr_pct": 1.9480188980147943
+  },
+  "CRWD": {
+    "symbol": "CRWD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.559081910665583,
+    "avg_atr_pct": 3.948229842696417
+  },
+  "PANW": {
+    "symbol": "PANW",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.818692678609246,
+    "avg_atr_pct": 3.081604378210571
+  },
+  "ZS": {
+    "symbol": "ZS",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.500747598238977,
+    "avg_atr_pct": 3.4833707100576157
+  },
+  "FTNT": {
+    "symbol": "FTNT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.42890742654041,
+    "avg_atr_pct": 2.931238425369442
+  },
+  "NET": {
+    "symbol": "NET",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.704367652550708,
+    "avg_atr_pct": 4.140470869492411
+  },
+  "DDOG": {
+    "symbol": "DDOG",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.701201943835,
+    "avg_atr_pct": 3.586278898176399
+  },
+  "SNOW": {
+    "symbol": "SNOW",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.15185916731774,
+    "avg_atr_pct": 3.853367572997289
+  },
+  "NOW": {
+    "symbol": "NOW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.57694629301467,
+    "avg_atr_pct": 2.9200272843335924
+  },
+  "CRM": {
+    "symbol": "CRM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.067906737172724,
+    "avg_atr_pct": 2.7394044316167183
+  },
+  "ORCL": {
+    "symbol": "ORCL",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 28.09945603371681,
+    "avg_atr_pct": 3.2613192617594584
+  },
+  "PYPL": {
+    "symbol": "PYPL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.44916183185082,
+    "avg_atr_pct": 2.8955515497563593
+  },
+  "COIN": {
+    "symbol": "COIN",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.038993415740524,
+    "avg_atr_pct": 6.508418995689341
+  },
+  "HOOD": {
+    "symbol": "HOOD",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.8243320939246,
+    "avg_atr_pct": 5.813674284078841
+  },
+  "AFRM": {
+    "symbol": "AFRM",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.968391820168844,
+    "avg_atr_pct": 6.26016987305872
+  },
+  "NU": {
+    "symbol": "NU",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.477361143228332,
+    "avg_atr_pct": 3.590431717371032
+  },
+  "SPG": {
+    "symbol": "SPG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.932844493310846,
+    "avg_atr_pct": 2.0171580438861265
+  },
+  "O": {
+    "symbol": "O",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.47638697039514,
+    "avg_atr_pct": 1.61814540247667
+  },
+  "EQIX": {
+    "symbol": "EQIX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.544885342177103,
+    "avg_atr_pct": 2.264456959017871
+  },
+  "DLR": {
+    "symbol": "DLR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.955231321354663,
+    "avg_atr_pct": 2.401672232223351
+  },
+  "WELL": {
+    "symbol": "WELL",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 30.707506783245538,
+    "avg_atr_pct": 1.9207292724932556
+  },
+  "VTR": {
+    "symbol": "VTR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 31.25215664336979,
+    "avg_atr_pct": 1.9195708641995746
+  },
+  "PSA": {
+    "symbol": "PSA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.58525633594231,
+    "avg_atr_pct": 2.067804395957121
+  },
+  "EXR": {
+    "symbol": "EXR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.159336382721825,
+    "avg_atr_pct": 2.2435239412997765
+  },
+  "SO": {
+    "symbol": "SO",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.65153326175834,
+    "avg_atr_pct": 1.6119388872106881
+  },
+  "D": {
+    "symbol": "D",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.65682758394632,
+    "avg_atr_pct": 2.019070095286725
+  },
+  "AEP": {
+    "symbol": "AEP",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.660112112882757,
+    "avg_atr_pct": 1.728468837112947
+  },
+  "XEL": {
+    "symbol": "XEL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.66655839675061,
+    "avg_atr_pct": 1.8966516073668016
+  },
+  "EXC": {
+    "symbol": "EXC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.84294048551166,
+    "avg_atr_pct": 1.7736098814589483
+  },
+  "SRE": {
+    "symbol": "SRE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.61100572722168,
+    "avg_atr_pct": 2.0223691930278775
+  },
+  "WEC": {
+    "symbol": "WEC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.03199079822046,
+    "avg_atr_pct": 1.6122329112880955
+  },
+  "ES": {
+    "symbol": "ES",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.391223718984165,
+    "avg_atr_pct": 2.131668576179437
+  },
+  "BABA": {
+    "symbol": "BABA",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.476330453148766,
+    "avg_atr_pct": 3.183706768983636
+  },
+  "JD": {
+    "symbol": "JD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 19.616806974443715,
+    "avg_atr_pct": 3.4921332293617255
+  },
+  "PDD": {
+    "symbol": "PDD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.6578103808081,
+    "avg_atr_pct": 3.896302910876955
+  },
+  "BIDU": {
+    "symbol": "BIDU",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.52726331202019,
+    "avg_atr_pct": 3.3666475251370866
+  },
+  "NIO": {
+    "symbol": "NIO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.693680841116713,
+    "avg_atr_pct": 5.768299458355599
+  },
+  "XPEV": {
+    "symbol": "XPEV",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 18.954733533828698,
+    "avg_atr_pct": 5.512827460597962
+  },
+  "LI": {
+    "symbol": "LI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.57203185665037,
+    "avg_atr_pct": 4.320341104491899
+  },
+  "TM": {
+    "symbol": "TM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.722735597556596,
+    "avg_atr_pct": 1.8636932576476863
+  },
+  "HMC": {
+    "symbol": "HMC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.761928477464078,
+    "avg_atr_pct": 1.882342905942955
+  },
+  "SNY": {
+    "symbol": "SNY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.34589746046167,
+    "avg_atr_pct": 1.8403782321900393
+  },
+  "SAP": {
+    "symbol": "SAP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.74638029180742,
+    "avg_atr_pct": 1.9262261282679545
+  },
+  "SE": {
+    "symbol": "SE",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.181380341646356,
+    "avg_atr_pct": 3.767899676997223
+  },
+  "GRAB": {
+    "symbol": "GRAB",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.793924433143726,
+    "avg_atr_pct": 3.7107127952409495
+  },
+  "MELI": {
+    "symbol": "MELI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.968529675654835,
+    "avg_atr_pct": 3.1682156017046266
+  },
+  "ADM": {
+    "symbol": "ADM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.504963337731365,
+    "avg_atr_pct": 2.415825951979635
+  },
+  "BG": {
+    "symbol": "BG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.634247991528543,
+    "avg_atr_pct": 2.5441718127661606
+  },
+  "MOS": {
+    "symbol": "MOS",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.150705438634024,
+    "avg_atr_pct": 3.1559379654161566
+  },
+  "CF": {
+    "symbol": "CF",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.046050800531386,
+    "avg_atr_pct": 2.6752694894805282
+  },
+  "CTVA": {
+    "symbol": "CTVA",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.320474651875802,
+    "avg_atr_pct": 2.10882478566633
+  },
+  "GME": {
+    "symbol": "GME",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.130739341137073,
+    "avg_atr_pct": 6.5556096328814935
+  },
+  "AMC": {
+    "symbol": "AMC",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.625771865447096,
+    "avg_atr_pct": 6.2041211961724505
+  },
+  "MARA": {
+    "symbol": "MARA",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 19.568835806569982,
+    "avg_atr_pct": 8.400671193428606
+  },
+  "RIOT": {
+    "symbol": "RIOT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.799469586921884,
+    "avg_atr_pct": 8.035879005514317
+  },
+  "MSTR": {
+    "symbol": "MSTR",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 26.42629507997896,
+    "avg_atr_pct": 7.577973835405479
+  },
+  "SMCI": {
+    "symbol": "SMCI",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.21859694516949,
+    "avg_atr_pct": 8.065038342845416
+  },
+  "ARM": {
+    "symbol": "ARM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.04923199394432,
+    "avg_atr_pct": 5.563837990434938
+  },
+  "UBER": {
+    "symbol": "UBER",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.482004492839113,
+    "avg_atr_pct": 3.3305716524839424
+  },
+  "LYFT": {
+    "symbol": "LYFT",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.895995893109774,
+    "avg_atr_pct": 4.956463557529601
+  },
+  "DASH": {
+    "symbol": "DASH",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.40551446140058,
+    "avg_atr_pct": 3.415533507194487
+  },
+  "ABNB": {
+    "symbol": "ABNB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.370164859275828,
+    "avg_atr_pct": 2.87335906812551
+  },
+  "ED": {
+    "symbol": "ED",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.485878408379584,
+    "avg_atr_pct": 1.720629954257806
+  },
+  "AWK": {
+    "symbol": "AWK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.107744856135888,
+    "avg_atr_pct": 2.024632080574978
+  },
+  "AEE": {
+    "symbol": "AEE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.799286207077675,
+    "avg_atr_pct": 1.6735610772951741
+  },
+  "CMS": {
+    "symbol": "CMS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.737099732376265,
+    "avg_atr_pct": 1.6340898305750613
+  },
+  "PPL": {
+    "symbol": "PPL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.800908822619302,
+    "avg_atr_pct": 1.628336414914062
+  },
+  "ATO": {
+    "symbol": "ATO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.93871842826479,
+    "avg_atr_pct": 1.586139442112112
+  },
+  "NI": {
+    "symbol": "NI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.184750144381955,
+    "avg_atr_pct": 1.7347247902525884
+  },
+  "EVRG": {
+    "symbol": "EVRG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.288108785152573,
+    "avg_atr_pct": 1.5749343797469657
+  },
+  "LNT": {
+    "symbol": "LNT",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.27785461316472,
+    "avg_atr_pct": 1.6453821189026177
+  },
+  "PNW": {
+    "symbol": "PNW",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.886590833208277,
+    "avg_atr_pct": 1.6824015557136243
+  },
+  "GIS": {
+    "symbol": "GIS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.489714236215256,
+    "avg_atr_pct": 2.017290549934318
+  },
+  "K": {
+    "symbol": "K",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 34.232595017152555,
+    "avg_atr_pct": 0.8890597118801006
+  },
+  "CPB": {
+    "symbol": "CPB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.89279232990624,
+    "avg_atr_pct": 2.2746368152770313
+  },
+  "SJM": {
+    "symbol": "SJM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 18.764099637699886,
+    "avg_atr_pct": 2.2810169177582647
+  },
+  "CAG": {
+    "symbol": "CAG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.548706695583686,
+    "avg_atr_pct": 2.2051254644115694
+  },
+  "HRL": {
+    "symbol": "HRL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.298279774274178,
+    "avg_atr_pct": 2.0326482488897613
+  },
+  "MKC": {
+    "symbol": "MKC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.23316803067111,
+    "avg_atr_pct": 2.0709996617779223
+  },
+  "CLX": {
+    "symbol": "CLX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.135046522444814,
+    "avg_atr_pct": 1.968909860633958
+  },
+  "CL": {
+    "symbol": "CL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.822860062335888,
+    "avg_atr_pct": 1.6811353904809347
+  },
+  "KMB": {
+    "symbol": "KMB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.931933796840326,
+    "avg_atr_pct": 1.7425150785581212
+  },
+  "CHD": {
+    "symbol": "CHD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.979114802325363,
+    "avg_atr_pct": 1.8322588603333554
+  },
+  "HSY": {
+    "symbol": "HSY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.174817945148966,
+    "avg_atr_pct": 2.4005585749081484
+  },
+  "CVS": {
+    "symbol": "CVS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.419186523593268,
+    "avg_atr_pct": 2.7542064690044574
+  },
+  "NNN": {
+    "symbol": "NNN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.36311851710819,
+    "avg_atr_pct": 1.7006977075362661
+  },
+  "WPC": {
+    "symbol": "WPC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.30196318102615,
+    "avg_atr_pct": 1.8854384181570767
+  },
+  "STAG": {
+    "symbol": "STAG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.183053353720837,
+    "avg_atr_pct": 1.9568891789156875
+  },
+  "ADC": {
+    "symbol": "ADC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.206932114703733,
+    "avg_atr_pct": 1.692003954301689
+  },
+  "BND": {
+    "symbol": "BND",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.415576963712493,
+    "avg_atr_pct": 0.3965127814348614
+  },
+  "AGG": {
+    "symbol": "AGG",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.204340490884583,
+    "avg_atr_pct": 0.3983453516107338
+  },
+  "LQD": {
+    "symbol": "LQD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.956033922081264,
+    "avg_atr_pct": 0.5494411450375015
+  },
+  "TLT": {
+    "symbol": "TLT",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.3430206120537,
+    "avg_atr_pct": 1.0517219727430072
+  },
+  "IEF": {
+    "symbol": "IEF",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.572019125889458,
+    "avg_atr_pct": 0.4852186635595895
+  },
+  "SHY": {
+    "symbol": "SHY",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 34.269673138332735,
+    "avg_atr_pct": 0.11817438756345268
+  },
+  "HYG": {
+    "symbol": "HYG",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.26356481693824,
+    "avg_atr_pct": 0.3669254968789179
+  },
+  "VCIT": {
+    "symbol": "VCIT",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.217375150688074,
+    "avg_atr_pct": 0.41965996954483664
+  },
+  "SPLV": {
+    "symbol": "SPLV",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.522625553613338,
+    "avg_atr_pct": 0.9605396938595212
+  },
+  "USMV": {
+    "symbol": "USMV",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.038377713999083,
+    "avg_atr_pct": 0.8718524921063117
+  },
+  "IBM": {
+    "symbol": "IBM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.042132981427883,
+    "avg_atr_pct": 2.1858801625949003
+  },
+  "INTC": {
+    "symbol": "INTC",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.036713921432014,
+    "avg_atr_pct": 4.43565898622506
+  },
+  "F": {
+    "symbol": "F",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.48193449753499,
+    "avg_atr_pct": 2.7073553132673016
+  },
+  "GM": {
+    "symbol": "GM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.91925516708053,
+    "avg_atr_pct": 2.753262495443628
+  },
+  "KHC": {
+    "symbol": "KHC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.060677967396828,
+    "avg_atr_pct": 2.00315538306649
+  },
+  "PM": {
+    "symbol": "PM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 30.40018944186732,
+    "avg_atr_pct": 1.874162292188484
+  },
+  "MO": {
+    "symbol": "MO",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.04355422320523,
+    "avg_atr_pct": 1.605859535525844
+  },
+  "BTI": {
+    "symbol": "BTI",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.337614337684244,
+    "avg_atr_pct": 1.5094721902026362
+  },
+  "COTY": {
+    "symbol": "COTY",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 19.013068739800275,
+    "avg_atr_pct": 3.604275265678333
+  },
+  "PFG": {
+    "symbol": "PFG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.527340972488805,
+    "avg_atr_pct": 2.0654186424498966
+  },
+  "LNC": {
+    "symbol": "LNC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.94763322929558,
+    "avg_atr_pct": 2.9641607253207556
+  },
+  "XRAY": {
+    "symbol": "XRAY",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.51472530232671,
+    "avg_atr_pct": 3.265954926789183
+  },
+  "ALE": {
+    "symbol": "ALE",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 29.114242163481638,
+    "avg_atr_pct": 0.789196542774666
+  },
+  "CACC": {
+    "symbol": "CACC",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 17.816246425100545,
+    "avg_atr_pct": 3.158496364383132
+  },
+  "SON": {
+    "symbol": "SON",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.547950466800117,
+    "avg_atr_pct": 2.2070215292064246
+  },
+  "AM": {
+    "symbol": "AM",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.99170538190333,
+    "avg_atr_pct": 2.0595269015191957
+  },
+  "IDA": {
+    "symbol": "IDA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.05301079882759,
+    "avg_atr_pct": 1.6401591311257024
+  },
+  "ZBH": {
+    "symbol": "ZBH",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.420514691230203,
+    "avg_atr_pct": 2.217715094395328
+  },
+  "HE": {
+    "symbol": "HE",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.59818790269491,
+    "avg_atr_pct": 4.049216163702276
+  },
+  "OTTR": {
+    "symbol": "OTTR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.613951467753985,
+    "avg_atr_pct": 2.3585360906986814
+  },
+  "VLGEA": {
+    "symbol": "VLGEA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.04776582298542,
+    "avg_atr_pct": 2.779135595004053
+  },
+  "EWD": {
+    "symbol": "EWD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 18.516427406227546,
+    "avg_atr_pct": 1.4406656729768694
+  },
+  "KBWD": {
+    "symbol": "KBWD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 18.40676923542015,
+    "avg_atr_pct": 1.3904303571398486
+  },
+  "NAVI": {
+    "symbol": "NAVI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.00225197463778,
+    "avg_atr_pct": 2.97608032430116
+  },
+  "DKL": {
+    "symbol": "DKL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.814685525396463,
+    "avg_atr_pct": 2.328771300565728
+  },
+  "TTC": {
+    "symbol": "TTC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.529132378409525,
+    "avg_atr_pct": 2.468420112520898
+  },
+  "SR": {
+    "symbol": "SR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.743984234065767,
+    "avg_atr_pct": 1.889452150924196
+  },
+  "HSIC": {
+    "symbol": "HSIC",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.34057668094356,
+    "avg_atr_pct": 2.5087705214670875
+  },
+  "OSCR": {
+    "symbol": "OSCR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.840839617073954,
+    "avg_atr_pct": 6.778512825671125
+  },
+  "EWS": {
+    "symbol": "EWS",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.124114529574364,
+    "avg_atr_pct": 1.1128024822516516
+  },
+  "ALGN": {
+    "symbol": "ALGN",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.837230764287522,
+    "avg_atr_pct": 3.6608523900605023
+  },
+  "OMI": {
+    "symbol": "OMI",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.781880686057576,
+    "avg_atr_pct": 6.1909812526918655
+  },
+  "GL": {
+    "symbol": "GL",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.48710112141251,
+    "avg_atr_pct": 2.767959326528732
+  },
+  "ENB": {
+    "symbol": "ENB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.394687120473524,
+    "avg_atr_pct": 1.5101486813219827
+  },
+  "ATUS": {
+    "symbol": "ATUS",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "high",
+    "avg_adx": 19.974337882738972,
+    "avg_atr_pct": 6.725899342433427
+  },
+  "SAM": {
+    "symbol": "SAM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.79351044864393,
+    "avg_atr_pct": 2.912273998612777
+  },
+  "FYBR": {
+    "symbol": "FYBR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.435992191219064,
+    "avg_atr_pct": 1.523996336689781
+  },
+  "MET": {
+    "symbol": "MET",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 18.586009620165097,
+    "avg_atr_pct": 2.0946370837214214
+  },
+  "DIV": {
+    "symbol": "DIV",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.889728987300032,
+    "avg_atr_pct": 1.0350321650142216
+  },
+  "PODD": {
+    "symbol": "PODD",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.530407135224014,
+    "avg_atr_pct": 3.2468326884666117
+  },
+  "AIG": {
+    "symbol": "AIG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.951026712985588,
+    "avg_atr_pct": 2.0156241840798614
+  },
+  "HDV": {
+    "symbol": "HDV",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 25.691084724363225,
+    "avg_atr_pct": 0.9882054278091128
+  },
+  "SHEN": {
+    "symbol": "SHEN",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.838642892651244,
+    "avg_atr_pct": 4.190990102425546
+  },
+  "NORW": {
+    "symbol": "NORW",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.922365080481306,
+    "avg_atr_pct": 1.455281645963258
+  },
+  "OGE": {
+    "symbol": "OGE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.294559124812913,
+    "avg_atr_pct": 1.6413575108060956
+  },
+  "DTE": {
+    "symbol": "DTE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.177241355450857,
+    "avg_atr_pct": 1.6874073639117035
+  },
+  "HYLB": {
+    "symbol": "HYLB",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.74478374664652,
+    "avg_atr_pct": 0.36156783916053303
+  },
+  "GO": {
+    "symbol": "GO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.25399649003027,
+    "avg_atr_pct": 4.348349251748351
+  },
+  "ALLY": {
+    "symbol": "ALLY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.76558610915023,
+    "avg_atr_pct": 2.916183545440879
+  },
+  "CHEF": {
+    "symbol": "CHEF",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.962219886662133,
+    "avg_atr_pct": 3.305884078027643
+  },
+  "BF-B": {
+    "symbol": "BF-B",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.937637870892086,
+    "avg_atr_pct": 2.754882177075352
+  },
+  "AVY": {
+    "symbol": "AVY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.033577556107172,
+    "avg_atr_pct": 1.9486852358479667
+  },
+  "BGS": {
+    "symbol": "BGS",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.28971639311803,
+    "avg_atr_pct": 4.106485677432255
+  },
+  "NRG": {
+    "symbol": "NRG",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.777119822331287,
+    "avg_atr_pct": 3.780763310162809
+  },
+  "AVA": {
+    "symbol": "AVA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.75071857439348,
+    "avg_atr_pct": 1.7803304796280095
+  },
+  "JNK": {
+    "symbol": "JNK",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.371334940008293,
+    "avg_atr_pct": 0.37608739702714805
+  },
+  "USHY": {
+    "symbol": "USHY",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.33089426366297,
+    "avg_atr_pct": 0.38812973936045064
+  },
+  "NOBL": {
+    "symbol": "NOBL",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.34896245479337,
+    "avg_atr_pct": 1.067601341948276
+  },
+  "OGS": {
+    "symbol": "OGS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.332773563942904,
+    "avg_atr_pct": 1.957939361939251
+  },
+  "LTC": {
+    "symbol": "LTC",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.997221749176084,
+    "avg_atr_pct": 1.7356690323371868
+  },
+  "EWA": {
+    "symbol": "EWA",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 18.459073490545777,
+    "avg_atr_pct": 1.3104053347124927
+  },
+  "EQH": {
+    "symbol": "EQH",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.368107322505477,
+    "avg_atr_pct": 2.5345932098359207
+  },
+  "WMK": {
+    "symbol": "WMK",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.137570539608355,
+    "avg_atr_pct": 2.4839673806296987
+  },
+  "SJNK": {
+    "symbol": "SJNK",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 26.55877818306689,
+    "avg_atr_pct": 0.3285519658343872
+  },
+  "CDC": {
+    "symbol": "CDC",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.347299513626677,
+    "avg_atr_pct": 0.9840165413808767
+  },
+  "EWQ": {
+    "symbol": "EWQ",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 17.840150641013302,
+    "avg_atr_pct": 1.2392730494721222
+  },
+  "FVD": {
+    "symbol": "FVD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.466101431429397,
+    "avg_atr_pct": 0.9583867283643472
+  },
+  "ANGL": {
+    "symbol": "ANGL",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.956280798342096,
+    "avg_atr_pct": 0.41740328054046233
+  },
+  "VYM": {
+    "symbol": "VYM",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.707274903591866,
+    "avg_atr_pct": 1.0546892634636522
+  },
+  "FND": {
+    "symbol": "FND",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.446564807425375,
+    "avg_atr_pct": 3.9075735342413465
+  },
+  "VOYA": {
+    "symbol": "VOYA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.550387925975876,
+    "avg_atr_pct": 2.3189322697149506
+  },
+  "OMF": {
+    "symbol": "OMF",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.452985285271346,
+    "avg_atr_pct": 2.7882210479870437
+  },
+  "IMKTA": {
+    "symbol": "IMKTA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.40222177066368,
+    "avg_atr_pct": 2.5045739851638706
+  },
+  "AGCO": {
+    "symbol": "AGCO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.461953103599,
+    "avg_atr_pct": 2.9860467685424936
+  },
+  "QYLD": {
+    "symbol": "QYLD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.04149537937632,
+    "avg_atr_pct": 0.821908994450549
+  },
+  "COF": {
+    "symbol": "COF",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.569201064388235,
+    "avg_atr_pct": 2.6879238546227056
+  },
+  "ALHC": {
+    "symbol": "ALHC",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 26.67136467217256,
+    "avg_atr_pct": 5.131499505701502
+  },
+  "PRU": {
+    "symbol": "PRU",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.67538949278621,
+    "avg_atr_pct": 2.0366514559775797
+  },
+  "DVY": {
+    "symbol": "DVY",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.57937591258453,
+    "avg_atr_pct": 1.1749910286669172
+  },
+  "EWC": {
+    "symbol": "EWC",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.681018495464986,
+    "avg_atr_pct": 1.2112133786999064
+  },
+  "AOS": {
+    "symbol": "AOS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.84565422317368,
+    "avg_atr_pct": 2.125674262304993
+  },
+  "VIG": {
+    "symbol": "VIG",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.275766998124606,
+    "avg_atr_pct": 1.007998024095115
+  },
+  "GMRE": {
+    "symbol": "GMRE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.936038641156063,
+    "avg_atr_pct": 2.603806593956013
+  },
+  "BAX": {
+    "symbol": "BAX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.01814752757145,
+    "avg_atr_pct": 2.7765444447480143
+  },
+  "KR": {
+    "symbol": "KR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.320578719771152,
+    "avg_atr_pct": 2.032761023697844
+  },
+  "EWU": {
+    "symbol": "EWU",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.782272743749445,
+    "avg_atr_pct": 1.0141180129482255
+  },
+  "CNP": {
+    "symbol": "CNP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.09131733697712,
+    "avg_atr_pct": 1.8032360463092847
+  },
+  "WMB": {
+    "symbol": "WMB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.266446819286443,
+    "avg_atr_pct": 2.199550030180997
+  },
+  "TRP": {
+    "symbol": "TRP",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.220249721344807,
+    "avg_atr_pct": 1.8012971920463876
+  },
+  "EWN": {
+    "symbol": "EWN",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.663758266377844,
+    "avg_atr_pct": 1.3636831594977645
+  },
+  "DGRO": {
+    "symbol": "DGRO",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.481500429809525,
+    "avg_atr_pct": 0.9901776117036526
+  },
+  "XYLD": {
+    "symbol": "XYLD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.76049914914408,
+    "avg_atr_pct": 0.6186803249122423
+  },
+  "AXP": {
+    "symbol": "AXP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.877760213763263,
+    "avg_atr_pct": 2.1998420631386866
+  },
+  "APTV": {
+    "symbol": "APTV",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.6510757375678,
+    "avg_atr_pct": 3.0836679409617234
+  },
+  "RYLD": {
+    "symbol": "RYLD",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.588498025668535,
+    "avg_atr_pct": 0.9588332873268277
+  },
+  "SDY": {
+    "symbol": "SDY",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.618234317284823,
+    "avg_atr_pct": 1.0292445329836297
+  },
+  "EWG": {
+    "symbol": "EWG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "low",
+    "avg_adx": 19.56793617858019,
+    "avg_atr_pct": 1.2073428643476842
+  },
+  "ZION": {
+    "symbol": "ZION",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.920681237794703,
+    "avg_atr_pct": 2.975615613377303
+  },
+  "HESM": {
+    "symbol": "HESM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.149119202666718,
+    "avg_atr_pct": 2.133168422868108
+  },
+  "EWH": {
+    "symbol": "EWH",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.756307765442763,
+    "avg_atr_pct": 1.4105049467578965
+  },
+  "SEE": {
+    "symbol": "SEE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.540858712939055,
+    "avg_atr_pct": 2.70385033306233
+  },
+  "OI": {
+    "symbol": "OI",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.79955433541192,
+    "avg_atr_pct": 3.7599573686115453
+  },
+  "KEY": {
+    "symbol": "KEY",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.21611569019016,
+    "avg_atr_pct": 2.744878762743755
+  },
+  "LEA": {
+    "symbol": "LEA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.42851065592204,
+    "avg_atr_pct": 2.764558303960794
+  },
+  "EWT": {
+    "symbol": "EWT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.485552530807553,
+    "avg_atr_pct": 1.6389108609267553
+  },
+  "BKH": {
+    "symbol": "BKH",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.28757302459221,
+    "avg_atr_pct": 1.800634245991813
+  },
+  "AIT": {
+    "symbol": "AIT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.100188262643563,
+    "avg_atr_pct": 2.5239602021210286
+  },
+  "HUM": {
+    "symbol": "HUM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.166741574099603,
+    "avg_atr_pct": 3.3773433977977096
+  },
+  "FHN": {
+    "symbol": "FHN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.039730041778576,
+    "avg_atr_pct": 2.654146080498596
+  },
+  "CCK": {
+    "symbol": "CCK",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.862699496998356,
+    "avg_atr_pct": 2.1443682591976514
+  },
+  "EPD": {
+    "symbol": "EPD",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.138164677496817,
+    "avg_atr_pct": 1.53532034020562
+  },
+  "MPW": {
+    "symbol": "MPW",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.930539205385426,
+    "avg_atr_pct": 4.547277347665571
+  },
+  "WES": {
+    "symbol": "WES",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.30287942800632,
+    "avg_atr_pct": 2.316066632484208
+  },
+  "EWI": {
+    "symbol": "EWI",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.70549647570271,
+    "avg_atr_pct": 1.2238853408427377
+  },
+  "HBAN": {
+    "symbol": "HBAN",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.92001144110809,
+    "avg_atr_pct": 2.3955037502113083
+  },
+  "AMCR": {
+    "symbol": "AMCR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.93099537243282,
+    "avg_atr_pct": 1.9831522643018697
+  },
+  "STZ": {
+    "symbol": "STZ",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.59334175968465,
+    "avg_atr_pct": 2.2692711948416733
+  },
+  "DGRW": {
+    "symbol": "DGRW",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.342046233572248,
+    "avg_atr_pct": 1.0051241993260869
+  },
+  "FE": {
+    "symbol": "FE",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.046796890429462,
+    "avg_atr_pct": 1.555065910140707
+  },
+  "TAP": {
+    "symbol": "TAP",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.393906679535736,
+    "avg_atr_pct": 2.275821184956887
+  },
+  "TFC": {
+    "symbol": "TFC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.52239734181153,
+    "avg_atr_pct": 2.3223582771206708
+  },
+  "SWK": {
+    "symbol": "SWK",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.991360644762047,
+    "avg_atr_pct": 3.0840832934783964
+  },
+  "WSO": {
+    "symbol": "WSO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.80242618530994,
+    "avg_atr_pct": 2.6974834969633354
+  },
+  "ESS": {
+    "symbol": "ESS",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.3962592701615,
+    "avg_atr_pct": 2.087094502144699
+  },
+  "EQR": {
+    "symbol": "EQR",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.565189527931622,
+    "avg_atr_pct": 1.9272085918687039
+  },
+  "CNH": {
+    "symbol": "CNH",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.29833872775313,
+    "avg_atr_pct": 3.00548468075912
+  },
+  "MMSI": {
+    "symbol": "MMSI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.09220769151784,
+    "avg_atr_pct": 2.369099123231908
+  },
+  "CABO": {
+    "symbol": "CABO",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.566301064408282,
+    "avg_atr_pct": 4.875425858011201
+  },
+  "MPLX": {
+    "symbol": "MPLX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.05812677531394,
+    "avg_atr_pct": 1.686091850918083
+  },
+  "SPYD": {
+    "symbol": "SPYD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.17642358828053,
+    "avg_atr_pct": 1.2130576274179075
+  },
+  "NEAR": {
+    "symbol": "NEAR",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 36.034074424404984,
+    "avg_atr_pct": 0.1555908723570368
+  },
+  "SPHD": {
+    "symbol": "SPHD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.61192172862358,
+    "avg_atr_pct": 1.1080197321833503
+  },
+  "CFG": {
+    "symbol": "CFG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.774874583223976,
+    "avg_atr_pct": 2.6255400149266763
+  },
+  "COR": {
+    "symbol": "COR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.27639033430656,
+    "avg_atr_pct": 1.8859266314503933
+  },
+  "ACI": {
+    "symbol": "ACI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.702807200265596,
+    "avg_atr_pct": 2.059054052560742
+  },
+  "PCAR": {
+    "symbol": "PCAR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.220695437601883,
+    "avg_atr_pct": 2.351576608326542
+  },
+  "BDX": {
+    "symbol": "BDX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.432982292631323,
+    "avg_atr_pct": 2.0400763983631878
+  },
+  "ANDE": {
+    "symbol": "ANDE",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.810729445465835,
+    "avg_atr_pct": 3.106045461057578
+  },
+  "MOH": {
+    "symbol": "MOH",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.74467853172779,
+    "avg_atr_pct": 3.4717934081008597
+  },
+  "FIZZ": {
+    "symbol": "FIZZ",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.10125967805861,
+    "avg_atr_pct": 2.4992508663406374
+  },
+  "FRT": {
+    "symbol": "FRT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.962369366429716,
+    "avg_atr_pct": 1.8090928336808063
+  },
+  "GOVT": {
+    "symbol": "GOVT",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.75984628091307,
+    "avg_atr_pct": 0.3927025886016244
+  },
+  "AES": {
+    "symbol": "AES",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.55457574714669,
+    "avg_atr_pct": 3.5908142927062854
+  },
+  "IBKR": {
+    "symbol": "IBKR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.830462507209454,
+    "avg_atr_pct": 3.0025868178550956
+  },
+  "USB": {
+    "symbol": "USB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.62666884036357,
+    "avg_atr_pct": 2.24738858302134
+  },
+  "EDEN": {
+    "symbol": "EDEN",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.464094287002034,
+    "avg_atr_pct": 1.2914520032836698
+  },
+  "LIVN": {
+    "symbol": "LIVN",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.676693388497526,
+    "avg_atr_pct": 3.15668977155275
+  },
+  "NVST": {
+    "symbol": "NVST",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 23.48751779080583,
+    "avg_atr_pct": 3.553223673422805
+  },
+  "MCK": {
+    "symbol": "MCK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.948584080175415,
+    "avg_atr_pct": 2.087640250713541
+  },
+  "REG": {
+    "symbol": "REG",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.359620881317973,
+    "avg_atr_pct": 1.791643400434215
+  },
+  "BLDR": {
+    "symbol": "BLDR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.264321680750726,
+    "avg_atr_pct": 3.8483472160359247
+  },
+  "BAC": {
+    "symbol": "BAC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.57766379959025,
+    "avg_atr_pct": 2.1515190538759543
+  },
+  "WFC": {
+    "symbol": "WFC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.40048906735294,
+    "avg_atr_pct": 2.385987675967683
+  },
+  "MNST": {
+    "symbol": "MNST",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.32503845720265,
+    "avg_atr_pct": 2.020333760316534
+  },
+  "EWK": {
+    "symbol": "EWK",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.490888640233454,
+    "avg_atr_pct": 0.9663353759454876
+  },
+  "BLD": {
+    "symbol": "BLD",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.38467336921995,
+    "avg_atr_pct": 3.4871045110583014
+  },
+  "SLM": {
+    "symbol": "SLM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.847607571676132,
+    "avg_atr_pct": 2.9007015193273182
+  },
+  "MS": {
+    "symbol": "MS",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.270898105319404,
+    "avg_atr_pct": 2.31905198267676
+  },
+  "SUSC": {
+    "symbol": "SUSC",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.600480184089886,
+    "avg_atr_pct": 0.5112763060575137
+  },
+  "MTB": {
+    "symbol": "MTB",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.405135127442357,
+    "avg_atr_pct": 2.304150502727659
+  },
+  "TILE": {
+    "symbol": "TILE",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 26.926056009976534,
+    "avg_atr_pct": 3.3356981039137787
+  },
+  "FITB": {
+    "symbol": "FITB",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.3282885991556,
+    "avg_atr_pct": 2.3245235388429393
+  },
+  "MAS": {
+    "symbol": "MAS",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.74547547299724,
+    "avg_atr_pct": 2.4081110716735314
+  },
+  "DXCM": {
+    "symbol": "DXCM",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.43948290812224,
+    "avg_atr_pct": 3.490490803228813
+  },
+  "IP": {
+    "symbol": "IP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.451541830016126,
+    "avg_atr_pct": 2.771427638906477
+  },
+  "EWP": {
+    "symbol": "EWP",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.411272767278827,
+    "avg_atr_pct": 1.2705689982643515
+  },
+  "CMA": {
+    "symbol": "CMA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.325708854642134,
+    "avg_atr_pct": 2.856330833524107
+  },
+  "SCHO": {
+    "symbol": "SCHO",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 34.69008691331471,
+    "avg_atr_pct": 0.1273831146833194
+  },
+  "USIG": {
+    "symbol": "USIG",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.933993100878467,
+    "avg_atr_pct": 0.42395413802651816
+  },
+  "EWZ": {
+    "symbol": "EWZ",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.524999416428354,
+    "avg_atr_pct": 1.8470634004826476
+  },
+  "AWI": {
+    "symbol": "AWI",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 28.130138247155667,
+    "avg_atr_pct": 2.1995198743929483
+  },
+  "GWW": {
+    "symbol": "GWW",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.89164134932991,
+    "avg_atr_pct": 1.9767438805397444
+  },
+  "QLTA": {
+    "symbol": "QLTA",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.175608302258386,
+    "avg_atr_pct": 0.4394694587550399
+  },
+  "FLO": {
+    "symbol": "FLO",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.988426733364573,
+    "avg_atr_pct": 2.1741242502542684
+  },
+  "AFL": {
+    "symbol": "AFL",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.167176992957987,
+    "avg_atr_pct": 1.7391547826542892
+  },
+  "EFNL": {
+    "symbol": "EFNL",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.572663575479037,
+    "avg_atr_pct": 1.1076405701466383
+  },
+  "SNA": {
+    "symbol": "SNA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.242587354433468,
+    "avg_atr_pct": 1.9326641841402883
+  },
+  "CPT": {
+    "symbol": "CPT",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.744143693654518,
+    "avg_atr_pct": 1.980807221999642
+  },
+  "UNM": {
+    "symbol": "UNM",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.866696123794046,
+    "avg_atr_pct": 2.0199872821949922
+  },
+  "C": {
+    "symbol": "C",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.680897526239892,
+    "avg_atr_pct": 2.479954321095604
+  },
+  "CAH": {
+    "symbol": "CAH",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.32755369789062,
+    "avg_atr_pct": 2.110798793886211
+  },
+  "DTM": {
+    "symbol": "DTM",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.966955909358735,
+    "avg_atr_pct": 2.2843084431523057
+  },
+  "CUBE": {
+    "symbol": "CUBE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.544963685454523,
+    "avg_atr_pct": 2.165546651646671
+  },
+  "DSGR": {
+    "symbol": "DSGR",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 21.32797746795637,
+    "avg_atr_pct": 3.6106831965061996
+  },
+  "TFX": {
+    "symbol": "TFX",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.329465899552204,
+    "avg_atr_pct": 2.7845686263542837
+  },
+  "UDR": {
+    "symbol": "UDR",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.790848978522472,
+    "avg_atr_pct": 1.9533305742167728
+  },
+  "POR": {
+    "symbol": "POR",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.019805073775228,
+    "avg_atr_pct": 1.7631706273069165
+  },
+  "SBRA": {
+    "symbol": "SBRA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.46666138846789,
+    "avg_atr_pct": 2.194254788438695
+  },
+  "IGSB": {
+    "symbol": "IGSB",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 32.42368724536114,
+    "avg_atr_pct": 0.20034340222370248
+  },
+  "SCHW": {
+    "symbol": "SCHW",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.236742742119702,
+    "avg_atr_pct": 2.202003252619929
+  },
+  "VCSH": {
+    "symbol": "VCSH",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 30.422564934950568,
+    "avg_atr_pct": 0.18589003662655693
+  },
+  "BRX": {
+    "symbol": "BRX",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.691377985566188,
+    "avg_atr_pct": 1.9597666746545381
+  },
+  "RF": {
+    "symbol": "RF",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.14277059984005,
+    "avg_atr_pct": 2.453474107901683
+  },
+  "DOC": {
+    "symbol": "DOC",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.799760243413086,
+    "avg_atr_pct": 2.230435867315981
+  },
+  "THS": {
+    "symbol": "THS",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.467426599507196,
+    "avg_atr_pct": 3.2683955189990312
+  },
+  "DAN": {
+    "symbol": "DAN",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.831296877091095,
+    "avg_atr_pct": 3.82771095534784
+  },
+  "PFFD": {
+    "symbol": "PFFD",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 22.17714511493025,
+    "avg_atr_pct": 0.7456260307885724
+  },
+  "IGIB": {
+    "symbol": "IGIB",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.060782500532444,
+    "avg_atr_pct": 0.40739524320216436
+  },
+  "SPAB": {
+    "symbol": "SPAB",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.898976519492532,
+    "avg_atr_pct": 0.4325886551568098
+  },
+  "ARE": {
+    "symbol": "ARE",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 23.027050014435122,
+    "avg_atr_pct": 2.793151920822847
+  },
+  "PFF": {
+    "symbol": "PFF",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 20.117468110728435,
+    "avg_atr_pct": 0.6992164778074652
+  },
+  "GPK": {
+    "symbol": "GPK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.501296226597734,
+    "avg_atr_pct": 2.533548226574932
+  },
+  "AVB": {
+    "symbol": "AVB",
+    "trend_behavior": "mean_reverting",
+    "volatility_level": "medium",
+    "avg_adx": 19.84669119413061,
+    "avg_atr_pct": 1.8718992668909
+  },
+  "OSK": {
+    "symbol": "OSK",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.244950147583243,
+    "avg_atr_pct": 2.817645688865824
+  },
+  "ET": {
+    "symbol": "ET",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 21.42699807880403,
+    "avg_atr_pct": 1.9450516026901998
+  },
+  "HR": {
+    "symbol": "HR",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.110159142083084,
+    "avg_atr_pct": 2.2540728567151658
+  },
+  "UNFI": {
+    "symbol": "UNFI",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 30.950410100373443,
+    "avg_atr_pct": 4.3936057353111995
+  },
+  "SYF": {
+    "symbol": "SYF",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 27.797511149264484,
+    "avg_atr_pct": 2.861358236046671
+  },
+  "MAA": {
+    "symbol": "MAA",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 22.985467907801173,
+    "avg_atr_pct": 1.9120643908341328
+  },
+  "VGSH": {
+    "symbol": "VGSH",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 34.407396750962135,
+    "avg_atr_pct": 0.11940437717034048
+  },
+  "PNC": {
+    "symbol": "PNC",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 25.600667741041928,
+    "avg_atr_pct": 2.1500274426617585
+  },
+  "FAST": {
+    "symbol": "FAST",
+    "trend_behavior": "trending",
+    "volatility_level": "medium",
+    "avg_adx": 26.94138908753745,
+    "avg_atr_pct": 1.9844370668632219
+  },
+  "NGVC": {
+    "symbol": "NGVC",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 27.8092361314138,
+    "avg_atr_pct": 4.2689732967743055
+  },
+  "HAIN": {
+    "symbol": "HAIN",
+    "trend_behavior": "trending",
+    "volatility_level": "high",
+    "avg_adx": 25.20126636963935,
+    "avg_atr_pct": 6.604814694625511
+  },
+  "KMI": {
+    "symbol": "KMI",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.371331420956327,
+    "avg_atr_pct": 1.9916442014896585
+  },
+  "BIV": {
+    "symbol": "BIV",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 21.63823390492921,
+    "avg_atr_pct": 0.4102166629692155
+  },
+  "EWO": {
+    "symbol": "EWO",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 23.146128433487757,
+    "avg_atr_pct": 1.2383344539881314
+  },
+  "PCG": {
+    "symbol": "PCG",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 24.95006072448674,
+    "avg_atr_pct": 2.288184932126226
+  },
+  "PGX": {
+    "symbol": "PGX",
+    "trend_behavior": "mixed",
+    "volatility_level": "low",
+    "avg_adx": 24.03665033390573,
+    "avg_atr_pct": 0.7898307762423658
+  },
+  "AXL": {
+    "symbol": "AXL",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 20.58145042371579,
+    "avg_atr_pct": 4.187954088522568
+  },
+  "BSV": {
+    "symbol": "BSV",
+    "trend_behavior": "trending",
+    "volatility_level": "low",
+    "avg_adx": 29.548201497352764,
+    "avg_atr_pct": 0.18490548195543283
+  },
+  "BXP": {
+    "symbol": "BXP",
+    "trend_behavior": "mixed",
+    "volatility_level": "medium",
+    "avg_adx": 20.66143552359748,
+    "avg_atr_pct": 2.805696221985066
+  },
+  "SLG": {
+    "symbol": "SLG",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.038563093439794,
+    "avg_atr_pct": 3.480353746276461
+  },
+  "EL": {
+    "symbol": "EL",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 24.733454660666577,
+    "avg_atr_pct": 3.611378637007599
+  },
+  "GEL": {
+    "symbol": "GEL",
+    "trend_behavior": "mixed",
+    "volatility_level": "high",
+    "avg_adx": 22.569230818917536,
+    "avg_atr_pct": 3.300860244503369
+  }
+}

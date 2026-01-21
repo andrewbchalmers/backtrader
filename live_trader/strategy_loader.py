@@ -161,7 +161,7 @@ class StrategyLoader:
         return indicators
 
 
-def calculate_warmup_days(strategy_params, default_days=300):
+def calculate_warmup_days(strategy_params, default_days=100):
     """
     Automatically calculate required warmup days from strategy parameters
     Looks for common parameter names and adds safety buffer
@@ -188,8 +188,8 @@ def calculate_warmup_days(strategy_params, default_days=300):
                 max_period = max(max_period, int(param_value))
 
     if max_period > 0:
-        # Add 50% buffer for indicator stabilization
-        recommended = int(max_period * 1.5)
-        return max(recommended, default_days)  # Use at least the default
+        # Add small buffer for indicator stabilization
+        recommended = max_period + 10
+        return max(recommended, default_days)
     else:
         return default_days

@@ -13,7 +13,7 @@
 # Format: atr,period,multiplier (e.g., atr,14,3 = 3x ATR trailing stop)
 # =============================================================================
 
-atr,14,3              # Standard ATR trailing stop (proven performer)
+#atr,14,3              # Standard ATR trailing stop (proven performer)
 #atr,14,2              # Tighter stop for lower volatility
 #atr,10,3              # Faster-reacting ATR stop
 #atr,10,2
@@ -59,7 +59,7 @@ atr,14,3              # Standard ATR trailing stop (proven performer)
 # =============================================================================
 
 # RSI Exits (overbought > 70 = take profit)
-rsi,14
+#rsi,14
 #rsi,7                # Faster RSI for quicker exits
 #rsi,21
 
@@ -78,6 +78,14 @@ rsi,14
 # Money Flow (overbought = exit)
 #mfi,14
 
+# Mean Touch Exit (exit when price returns to mean, value crosses 0)
+#meantouch,20
+#meantouch,50
+
+# Half-Life Exit Timer (exit after expected reversion time, value > 50-70)
+halflifeexit,50
+#halflifeexit,100
+
 # =============================================================================
 # BREAKOUT / BAND EXITS
 # Best for: --stock-behavior breakout_prone
@@ -86,7 +94,7 @@ rsi,14
 # =============================================================================
 
 # Bollinger Band Exits (price touches middle/lower band = exit)
-bb,20,2
+#bb,20,2
 #bb,20,3
 
 # Keltner Channel Exits
@@ -117,8 +125,9 @@ bb,20,2
 #   Exit:  atr,14,3 (trailing) or ema,5,ema,20 (crossover)
 #
 # MEAN REVERSION on mean_reverting stocks:
-#   Entry: rsi,14 or bb,10,2 or williams,14
-#   Exit:  rsi,14 (overbought) or bb,20,2 (middle band)
+#   Entry: rsi,14 or bb,10,2 or williams,14 or zscore,20
+#   Exit:  meantouch,20 (price returns to mean) or halflifeexit,50 (time-based)
+#          or rsi,14 (overbought) or bb,20,2 (middle band)
 #
 # BREAKOUT on breakout_prone stocks:
 #   Entry: donchian,20 or keltner,20,2 or bb,20,2
