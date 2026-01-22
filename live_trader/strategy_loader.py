@@ -4,8 +4,23 @@ Dynamically load trading strategies and extract signals
 """
 
 import importlib.util
+import sys
+import os
 import pandas as pd
 import numpy as np
+import backtrader as bt
+
+
+class SignalCapture(bt.Observer):
+    """Observer to capture buy/sell signals from strategy"""
+    lines = ('signal', 'price')
+
+    def __init__(self):
+        self.buy_signals = []
+        self.sell_signals = []
+
+    def next(self):
+        pass
 
 
 class StrategyLoader:
@@ -15,19 +30,28 @@ class StrategyLoader:
         self.module_name = module_name
         self.class_name = class_name
         self.strategy_class = self._load_strategy()
+        self._is_ml_strategy = 'lorentzian' in class_name.lower() or 'classification' in class_name.lower()
 
     def _load_strategy(self):
         """Load strategy class from module"""
         try:
+            # Get absolute path and create a proper module name
+            module_path = os.path.abspath(f"{self.module_name}.py")
+            module_name = os.path.basename(self.module_name).replace('-', '_')
+
             spec = importlib.util.spec_from_file_location(
-                self.module_name,
-                f"{self.module_name}.py"
+                module_name,
+                module_path
             )
             module = importlib.util.module_from_spec(spec)
+
+            # Register in sys.modules BEFORE executing (required by backtrader)
+            sys.modules[module_name] = module
+
             spec.loader.exec_module(module)
 
             strategy_class = getattr(module, self.class_name)
-            print(f"✓ Loaded strategy: {self.class_name} from {self.module_name}.py")
+            print(f"✓ Loaded strategy: {self.class_name} from {module_path}")
             return strategy_class
 
         except Exception as e:
@@ -39,6 +63,11 @@ class StrategyLoader:
         Extract entry logic from strategy
         Returns: {'signal': bool, 'price': float, 'stop_loss': float, 'atr': float}
         """
+        # Use backtrader-based signal detection for ML strategies
+        if self._is_ml_strategy:
+            return self._get_ml_strategy_signal(df, params)
+
+        # Legacy: simple indicator-based strategies
         indicators = self._calculate_indicators(df, params)
 
         # Check for crossover (common pattern)
@@ -74,6 +103,126 @@ class StrategyLoader:
 
         return {'signal': False}
 
+    def _get_ml_strategy_signal(self, df, params):
+        """
+        Run the actual ML strategy through backtrader to detect signals.
+        Returns: {'signal': bool, 'signal_type': str, 'price': float, 'stop_loss': float, 'bars_ago': int}
+        """
+        try:
+            # Prepare data for backtrader
+            bt_df = df.copy()
+            bt_df.columns = [c.lower() for c in bt_df.columns]
+
+            # Ensure required columns exist
+            required = ['open', 'high', 'low', 'close', 'volume']
+            for col in required:
+                if col not in bt_df.columns:
+                    return {'signal': False}
+
+            # Create cerebro instance
+            cerebro = bt.Cerebro(stdstats=False)
+
+            # Add data
+            data = bt.feeds.PandasData(
+                dataname=bt_df,
+                datetime=None,
+                open='open',
+                high='high',
+                low='low',
+                close='close',
+                volume='volume'
+            )
+            cerebro.adddata(data)
+
+            # Prepare params (remove non-strategy params, set verbose=False)
+            strategy_params = params.copy()
+            strategy_params['verbose'] = False
+
+            # Create a signal-capturing wrapper strategy
+            captured_signals = []
+
+            class SignalCaptureStrategy(self.strategy_class):
+                def __init__(self):
+                    super().__init__()
+                    self.captured_buys = []
+                    self.captured_sells = []
+
+                def _execute_buy(self):
+                    # Capture the signal instead of executing
+                    self.captured_buys.append({
+                        'bar': len(self),
+                        'date': self.data.datetime.date(0),
+                        'price': self.data.close[0],
+                        'prediction': self.prediction
+                    })
+                    # Still call parent to maintain state
+                    super()._execute_buy()
+
+                def _close_position(self, reason):
+                    # Capture sell signal
+                    self.captured_sells.append({
+                        'bar': len(self),
+                        'date': self.data.datetime.date(0),
+                        'price': self.data.close[0],
+                        'reason': reason
+                    })
+                    super()._close_position(reason)
+
+            # Add strategy
+            cerebro.addstrategy(SignalCaptureStrategy, **strategy_params)
+
+            # Set broker with enough cash
+            cerebro.broker.setcash(1000000)
+            cerebro.broker.setcommission(commission=0.0)
+
+            # Run
+            results = cerebro.run()
+            strat = results[0]
+
+            # Check for recent buy signals (last 5 bars)
+            total_bars = len(bt_df)
+            recent_threshold = total_bars - 5
+
+            for sig in reversed(strat.captured_buys):
+                if sig['bar'] >= recent_threshold:
+                    bars_ago = total_bars - sig['bar']
+                    close = df['Close'].iloc[-1]
+                    stop_pct = params.get('stop_loss_pct', 0.05)
+                    if hasattr(stop_pct, '__float__'):
+                        stop_pct = float(stop_pct)
+
+                    return {
+                        'signal': True,
+                        'signal_type': 'BUY',
+                        'price': sig['price'],
+                        'current_price': close,
+                        'stop_loss': sig['price'] * (1 - stop_pct),
+                        'date': sig['date'],
+                        'bars_ago': bars_ago,
+                        'prediction': sig.get('prediction', 0)
+                    }
+
+            # Check for recent sell signals
+            for sig in reversed(strat.captured_sells):
+                if sig['bar'] >= recent_threshold:
+                    bars_ago = total_bars - sig['bar']
+                    return {
+                        'signal': True,
+                        'signal_type': 'SELL',
+                        'price': sig['price'],
+                        'date': sig['date'],
+                        'bars_ago': bars_ago,
+                        'reason': sig.get('reason', 'EXIT')
+                    }
+
+            return {'signal': False}
+
+        except Exception as e:
+            print(f"❌ Error running ML strategy signal detection: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'signal': False}
+
     def get_exit_signal(self, df, params, entry_price, current_stop):
         """
         Extract exit logic from strategy
@@ -81,59 +230,50 @@ class StrategyLoader:
 
         Returns: {'signal': bool, 'price': float, 'stop_type': str, 'new_stop': float, 'bars_ago': int}
         """
-        indicators = self._calculate_indicators(df, params)
+        # For ML strategies, use simple percentage-based stop logic
+        # (The actual exit signals are captured during buy signal detection)
+        stop_pct = params.get('stop_loss_pct', 0.05)
+        if hasattr(stop_pct, '__float__'):
+            stop_pct = float(stop_pct)
 
-        # Get parameters
-        atr_mult = params.get('atr_mult', 3.0)
-        stop_pct = params.get('stop_loss_pct', 0.1)
-        lookback_bars = params.get('exit_lookback_bars', 5)  # Check last 5 bars by default
+        lookback_bars = params.get('exit_lookback_bars', 5)
 
         # Check recent bars for stop hits (in reverse chronological order)
         for i in range(lookback_bars):
-            idx = -(i + 1)  # -1, -2, -3, etc.
+            idx = -(i + 1)
 
             if abs(idx) > len(df):
                 break
 
             close = df['Close'].iloc[idx]
-            atr_series = indicators.get('atr', pd.Series([0]))
-
-            if abs(idx) > len(atr_series):
-                continue
-
-            atr = atr_series.iloc[idx]
-
-            # Calculate what the stop would have been at that bar
-            # ATR-based stop (trails below price)
-            atr_stop = close - atr_mult * atr if atr > 0 else entry_price * (1 - stop_pct)
 
             # Percentage-based stop (from entry)
             pct_stop = entry_price * (1 - stop_pct)
 
-            # The stop at that point in time (can't go below current_stop from before)
-            stop_at_bar = max(atr_stop, pct_stop, current_stop)
+            # Trailing stop (can't go below current_stop)
+            new_stop = max(pct_stop, current_stop)
 
             # Check if price closed below stop
-            if close <= stop_at_bar:
+            if close <= new_stop:
                 bars_ago = i
                 bar_date = df.index[idx].strftime('%Y-%m-%d') if hasattr(df.index[idx], 'strftime') else str(df.index[idx])
 
                 return {
                     'signal': True,
                     'price': close,
-                    'stop_type': 'TRAILING_STOP',
-                    'new_stop': stop_at_bar,
+                    'stop_type': 'STOP_LOSS',
+                    'new_stop': new_stop,
                     'bars_ago': bars_ago,
                     'bar_date': bar_date
                 }
 
-        # No stop hit in recent history, calculate current trailing stop
+        # No stop hit, calculate new trailing stop
         close = df['Close'].iloc[-1]
-        atr = indicators.get('atr', pd.Series([0])).iloc[-1]
-
-        atr_stop = close - atr_mult * atr if atr > 0 else entry_price * (1 - stop_pct)
         pct_stop = entry_price * (1 - stop_pct)
-        new_stop = max(atr_stop, pct_stop, current_stop)
+
+        # Simple trailing: stop trails at stop_pct below highest close since entry
+        # For simplicity, just use the higher of pct_stop or current_stop
+        new_stop = max(pct_stop, current_stop)
 
         return {'signal': False, 'new_stop': new_stop}
 
@@ -179,7 +319,8 @@ def calculate_warmup_days(strategy_params, default_days=100):
     lookback_params = [
         'trend_len', 'slow_len', 'fast_len', 'atr_len',
         'ma_period', 'sma_period', 'ema_period', 'rsi_period',
-        'bb_period', 'macd_slow', 'lookback', 'period', 'length'
+        'bb_period', 'macd_slow', 'lookback', 'period', 'length',
+        'max_bars_back'  # For ML strategies like Lorentzian Classification
     ]
 
     for param_name, param_value in strategy_params.items():

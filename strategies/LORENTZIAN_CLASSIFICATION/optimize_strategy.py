@@ -44,7 +44,7 @@ CONFIG = {
     # Walk-Forward Settings
     'train_period_months': 18,      # Optimize on 18 months
     'test_period_months': 6,        # Validate on next 6 months
-    'step_months': 6,               # Roll forward 6 months each iteration
+    'step_months': 3,               # Roll forward 6 months each iteration
     'total_periods': 3,             # Number of train/test cycles
 
     # Date range control (optional - leave None for automatic)
@@ -80,7 +80,7 @@ CONFIG = {
     # Parameter grid for Lorentzian Classification
     'param_grid': {
         # ==================== ML SETTINGS ====================
-        'neighbors_count': [6, 8, 12],
+        'neighbors_count': [8],
         'max_bars_back': [2000],            # Keep fixed - needs lots of history
         'feature_count': [5],
 
@@ -110,10 +110,10 @@ CONFIG = {
         'f5_param_b': [1],
 
         # ==================== FILTERS ====================
-        'use_volatility_filter': [True],
+        'use_volatility_filter': [True, False],
         'use_regime_filter': [True, False],
-        'regime_threshold': [Decimal('-0.1')],
-        'use_adx_filter': [False],
+        'regime_threshold': [Decimal('-0.1'), Decimal('0.5')],
+        'use_adx_filter': [True, False],
         'adx_threshold': [20],
         'use_ema_filter': [False],
         'ema_period': [200],

@@ -89,7 +89,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "ADBE"
+symbol = "ROK"
 initial_cash = 10_000
 
 # Backtest date range (test period - trades will only occur within this range)
@@ -129,14 +129,14 @@ strategy_params = {
     'f5_param_b': 1,
 
     # Filters
-    'use_volatility_filter': True,
+    'use_volatility_filter': False,
     'use_regime_filter': True,
     'regime_threshold': -0.1,
     'use_adx_filter': False,
     'adx_threshold': 20,
     'use_ema_filter': False,
     'ema_period': 200,
-    'use_sma_filter': False,
+    'use_sma_filter': True,
     'sma_period': 200,
 
     # Kernel Settings
@@ -148,7 +148,7 @@ strategy_params = {
     'kernel_lag': 2,
 
     # Exit Settings
-    'use_dynamic_exits': False,
+    'use_dynamic_exits': True,
     'bars_to_hold': 4,
 
     # Risk Management
@@ -160,7 +160,10 @@ strategy_params = {
     'long_only': True,  # Set to False to enable short selling
 
     # Display
-    'verbose': False,
+    'verbose': True,
+
+    # Backtest control (set by script - do not modify)
+    'test_start_idx': 0,  # Will be set automatically
 }
 
 # =============================================================================
@@ -215,6 +218,9 @@ test_df = df.iloc[actual_test_start_idx:]
 
 print(f"   Lookback period: {lookback_df.index[0].date()} to {lookback_df.index[-1].date()} ({len(lookback_df)} bars)")
 print(f"   Test period: {test_df.index[0].date()} to {test_df.index[-1].date()} ({len(test_df)} bars)")
+
+# Set test_start_idx in strategy params so trading only starts in test period
+strategy_params['test_start_idx'] = actual_test_start_idx
 
 # Download SPY for benchmark comparison (test period only)
 spy_df = yf.download('SPY', start=start_date, end=end_date, progress=False)
@@ -297,14 +303,63 @@ results = cerebro.run()
 strat = results[0]
 
 # =============================================================================
-# Results Analysis
+# Results Analysis (calculated from TEST PERIOD ONLY)
 # =============================================================================
 
-sharpe = strat.analyzers.sharpe.get_analysis()
-dd = strat.analyzers.dd.get_analysis()
+# Get trade statistics from analyzer (these are correct since no trades during lookback)
 trades = strat.analyzers.trades.get_analysis()
-returns = strat.analyzers.returns.get_analysis()
 sqn = strat.analyzers.sqn.get_analysis()
+
+# Extract portfolio values for test period only
+test_portfolio_values = []
+observer = strat.observers.portfoliovalue
+for i in range(len(observer.lines.value)):
+    if i >= actual_test_start_idx:
+        try:
+            val = observer.lines.value.array[i]
+            if not np.isnan(val) and val > 0:
+                test_portfolio_values.append(val)
+        except (IndexError, AttributeError):
+            break
+
+# Calculate returns from test period only
+if len(test_portfolio_values) >= 2:
+    test_start_value = test_portfolio_values[0]
+    test_final_value = test_portfolio_values[-1]
+
+    # Daily returns for test period
+    daily_returns = []
+    for i in range(1, len(test_portfolio_values)):
+        daily_ret = (test_portfolio_values[i] / test_portfolio_values[i-1]) - 1
+        daily_returns.append(daily_ret)
+
+    # Calculate Sharpe ratio from test period returns
+    if len(daily_returns) > 1:
+        avg_daily_return = np.mean(daily_returns)
+        std_daily_return = np.std(daily_returns, ddof=1)
+        sharpe_ratio = (avg_daily_return / std_daily_return) * np.sqrt(252) if std_daily_return > 0 else 0
+    else:
+        sharpe_ratio = 0
+
+    # Calculate max drawdown from test period only
+    peak = test_portfolio_values[0]
+    max_dd_pct = 0
+    max_dd_money = 0
+    for val in test_portfolio_values:
+        if val > peak:
+            peak = val
+        dd_pct = (peak - val) / peak * 100
+        dd_money = peak - val
+        if dd_pct > max_dd_pct:
+            max_dd_pct = dd_pct
+            max_dd_money = dd_money
+else:
+    test_start_value = initial_cash
+    test_final_value = cerebro.broker.getvalue()
+    sharpe_ratio = 0
+    max_dd_pct = 0
+    max_dd_money = 0
+    daily_returns = []
 
 # Calculate metrics
 total_trades = trades.get('total', {}).get('total', 0)
@@ -339,16 +394,17 @@ else:
     avg_trade_len = max_trade_len = min_trade_len = 0
     win_rate = loss_rate = win_count = loss_count = 0
 
-final_value = cerebro.broker.getvalue()
+# Use test period values for final calculations
+final_value = test_final_value
 total_return = final_value - initial_cash
 total_return_pct = (final_value / initial_cash - 1) * 100
 
-max_dd_pct = dd.get('max', {}).get('drawdown', 0)
 calmar_ratio = (total_return_pct / max_dd_pct) if max_dd_pct > 0 else 0
-recovery_factor = (total_return / dd.get('max', {}).get('moneydown', 1)) if dd.get('max', {}).get('moneydown', 0) > 0 else 0
+recovery_factor = (total_return / max_dd_money) if max_dd_money > 0 else 0
 sqn_score = sqn.get('sqn', 0)
 
-days_traded = len(test_df) if len(df) > lookback_bars else len(df)
+# Days traded is test period only
+days_traded = len(test_df)
 years = days_traded / 252
 annualized_return = ((final_value / initial_cash) ** (1 / years) - 1) * 100 if years > 0 else 0
 
@@ -364,6 +420,7 @@ else:
 
 print("\n" + "="*70)
 print(f"LORENTZIAN CLASSIFICATION BACKTEST RESULTS - {symbol}")
+print(f"Test Period: {test_df.index[0].date()} to {test_df.index[-1].date()} ({len(test_df)} bars)")
 print("="*70)
 
 print(f"\n💰 Portfolio Performance:")
@@ -376,12 +433,11 @@ print(f"   SPY Buy & Hold:     ${spy_final_value:,.2f} ({spy_return:.2f}%)")
 print(f"   Outperformance:     {total_return_pct - spy_return:.2f}%")
 
 print(f"\n📉 Risk Metrics:")
-sharpe_ratio = sharpe.get('sharperatio', None)
-print(f"   Sharpe Ratio:       {sharpe_ratio:.3f}" if sharpe_ratio is not None else "   Sharpe Ratio:       N/A")
+print(f"   Sharpe Ratio:       {sharpe_ratio:.3f}" if sharpe_ratio != 0 else "   Sharpe Ratio:       N/A")
 print(f"   Calmar Ratio:       {calmar_ratio:.3f}")
 print(f"   SQN (Quality):      {sqn_score:.2f}")
 print(f"   Max Drawdown:       {max_dd_pct:.2f}%")
-print(f"   Max Drawdown ($):   ${dd.get('max', {}).get('moneydown', 0):,.2f}")
+print(f"   Max Drawdown ($):   ${max_dd_money:,.2f}")
 print(f"   Recovery Factor:    {recovery_factor:.2f}")
 
 print(f"\n📈 Trade Statistics:")

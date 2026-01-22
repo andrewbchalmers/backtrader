@@ -22,20 +22,70 @@ TEST_END_DATE = "2024-12-31"
 TEST_SPEED = 0  # Days per second (0 = instant, 1 = 1 day/sec, 10 = 10 days/sec)
 
 # Strategy configuration
-STRATEGY_MODULE = "../strategies/AROON_FILTER_ATR/aroon_atr"
-STRATEGY_CLASS = "AroonATRStrategy"
+STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION/lorentzian_classification"
+STRATEGY_CLASS = "LorentzianClassificationStrategy"
 STRATEGY_PARAMS = {
-    'aroon_len': 20,
-    'atr_entry_sma_period': 20,
-    'atr_filter_mult': 1.2,
+    # ML Settings
+    'neighbors_count': 8,
+    'max_bars_back': 2000,
+    'feature_count': 5,
+
+    # Feature 1: RSI
+    'f1_type': 'RSI',
+    'f1_param_a': 14,
+    'f1_param_b': 1,
+
+    # Feature 2: Wave Trend
+    'f2_type': 'WT',
+    'f2_param_a': 10,
+    'f2_param_b': 11,
+
+    # Feature 3: CCI
+    'f3_type': 'CCI',
+    'f3_param_a': 20,
+    'f3_param_b': 1,
+
+    # Feature 4: ADX
+    'f4_type': 'ADX',
+    'f4_param_a': 20,
+    'f4_param_b': 2,
+
+    # Feature 5: RSI
+    'f5_type': 'RSI',
+    'f5_param_a': 9,
+    'f5_param_b': 1,
+
+    # Filters
+    'use_volatility_filter': True,
+    'use_regime_filter': True,
+    'regime_threshold': -0.1,
+    'use_adx_filter': False,
+    'adx_threshold': 20,
+    'use_ema_filter': False,
+    'ema_period': 200,
+    'use_sma_filter': False,
+    'sma_period': 200,
+
+    # Kernel Settings
+    'use_kernel_filter': True,
+    'use_kernel_smoothing': False,
+    'kernel_lookback': 8,
+    'kernel_rel_weight': 8.0,
+    'kernel_start_bar': 25,
+    'kernel_lag': 2,
+
+    # Exit Settings
+    'use_dynamic_exits': False,
+    'bars_to_hold': 4,
+
+    # Risk Management
+    'position_size_pct': 0.95,
     'stop_loss_pct': 0.05,
+    'use_stop_loss': False,
+    'long_only': True,
+
+    # Display
     'verbose': False,
-    'atr_exit_len': 14,
-    'atr_exit_mult': 3.0,
-    'use_atr_filter': True,
-    'take_profit_pct': 0.13,
-    'use_take_profit': True,
-    'position_size_pct': '0.95'
 }
 
 # Watchlist

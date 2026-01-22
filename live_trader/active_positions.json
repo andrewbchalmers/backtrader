@@ -2,16 +2,12 @@
   "NFLX": {
     "entry_price": 109.13,
     "entry_date": "2025-12-11T00:00:00",
-    "stop_loss": 84.49700012207032,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "stop_loss": 84.49700012207032
   },
   "SOFI": {
     "entry_price": 26.87,
     "entry_date": "2025-01-06T00:00:00",
-    "stop_loss": 25.5265,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "stop_loss": 25.5265
   },
   "IDXX": {
     "entry_price": 713.72,
@@ -31,9 +27,7 @@
   "MMM": {
     "entry_price": 169.8800048828125,
     "entry_date": "2026-01-13T15:10:15.464169",
-    "stop_loss": 161.968408203125,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "stop_loss": 161.968408203125
   },
   "TPL": {
     "entry_price": 323.6400146484375,

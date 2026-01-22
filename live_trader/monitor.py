@@ -129,16 +129,20 @@ class LiveTradingMonitor:
                         # Already sent alert today, skip
                         continue
 
-                df = self.get_live_data(symbol)
+                df = self.get_live_data(symbol, period="max", interval="1d")
                 if df is None or len(df) < 200:
                     continue
 
                 buy_signal = self.strategy.get_entry_signal(df, self.params)
 
-                if buy_signal['signal']:
-                    self.notifier.send_buy_alert(symbol, buy_signal)
-                    self.buy_alerts_sent[symbol] = today  # Mark as alerted today
-                    buy_opportunities += 1
+                if buy_signal.get('signal') and buy_signal.get('signal_type', 'BUY') == 'BUY':
+                    # Only alert if signal is from today or yesterday (bars_ago <= 1)
+                    bars_ago = buy_signal.get('bars_ago', 0)
+                    if bars_ago <= 1:
+                        self.notifier.send_buy_alert(symbol, buy_signal)
+                        self.buy_alerts_sent[symbol] = today  # Mark as alerted today
+                        buy_opportunities += 1
+                        print(f"🟢 BUY SIGNAL: {symbol} (ML prediction: {buy_signal.get('prediction', 'N/A')})")
 
             except Exception as e:
                 print(f"❌ Error scanning {symbol} for buy: {e}")
@@ -178,6 +182,8 @@ class LiveTradingMonitor:
             self.handle_sold_reply(reply)
         elif reply.startswith("LAST "):
             self.handle_last_signal_query(reply)
+        elif reply.startswith("BACKTEST "):
+            self.handle_backtest_query(reply)
         elif reply == "HOLDING" or reply == "HOLDINGS":
             self.handle_holdings_query()
         else:
@@ -439,7 +445,6 @@ class LiveTradingMonitor:
             }
         ]
 
-        warmup_needed = self.chart_gen.warmup_days
         print(f"📊 Fetching multi-timeframe data for {symbol}...")
 
         # Fetch data for each timeframe
@@ -474,7 +479,7 @@ class LiveTradingMonitor:
 
         # Use daily data for status calculations, fall back to first available
         df = df_daily if df_daily is not None else chart_data_list[0]['df']
-        print(f"📊 Using {len(df)} bars for status calculations")
+        print(f"📊 Using {len(df)} bars for signal detection")
 
         # Build the status message
         position = self.position_manager.get(symbol)
@@ -501,39 +506,40 @@ class LiveTradingMonitor:
                 message += f"\n\n⚠️ Exit signal active!\nReply: SOLD {symbol}"
 
         else:
-            # Not holding - check for recent signals
-            buy_signal_found = False
-            for i in range(min(5, len(df))):
-                idx = -(i + 1)
-                current_df = df.iloc[:len(df) + idx + 1]
+            # Not holding - run ML strategy to detect recent signals
+            print(f"📊 Running ML strategy signal detection for {symbol}...")
+            signal = self.strategy.get_entry_signal(df, self.params)
 
-                if len(current_df) < warmup_needed:
-                    continue
+            if signal.get('signal'):
+                signal_type = signal.get('signal_type', 'BUY')
+                signal_date = signal.get('date', df.index[-1])
+                if hasattr(signal_date, 'strftime'):
+                    signal_date = signal_date.strftime('%Y-%m-%d')
+                else:
+                    signal_date = str(signal_date)
 
-                signal = self.strategy.get_entry_signal(current_df, self.params)
+                signal_price = signal.get('price', df['Close'].iloc[-1])
+                current_price = signal.get('current_price', df['Close'].iloc[-1])
+                bars_ago = signal.get('bars_ago', 0)
+                prediction = signal.get('prediction', 0)
 
-                if signal['signal']:
-                    signal_date = df.index[idx].strftime('%Y-%m-%d')
-                    signal_price = signal['price']
-                    current_price = df['Close'].iloc[-1]
-                    pnl = ((current_price / signal_price) - 1) * 100
-                    days_ago = i
+                pnl = ((current_price / signal_price) - 1) * 100
 
-                    title = f"📊 {symbol} - Last Signal"
-                    message = (
-                        f"Signal: BUY\n"
-                        f"Date: {signal_date} ({days_ago} day(s) ago)\n"
-                        f"Price then: ${signal_price:.2f}\n"
-                        f"Price now: ${current_price:.2f}\n"
-                        f"Change: {pnl:+.2f}%\n\n"
-                        f"⚠️ Not currently holding"
-                    )
-                    buy_signal_found = True
-                    break
-
-            if not buy_signal_found:
                 title = f"📊 {symbol} - Last Signal"
-                message = "No recent signals in the last 5 days"
+                message = (
+                    f"Signal: {signal_type}\n"
+                    f"Date: {signal_date} ({bars_ago} bar(s) ago)\n"
+                    f"Price then: ${signal_price:.2f}\n"
+                    f"Price now: ${current_price:.2f}\n"
+                    f"Change: {pnl:+.2f}%\n"
+                    f"ML Prediction: {prediction:+d}\n\n"
+                    f"⚠️ Not currently holding"
+                )
+                print(f"✓ Found {signal_type} signal from {signal_date}")
+            else:
+                title = f"📊 {symbol} - Last Signal"
+                message = "No recent BUY/SELL signals in the last 5 bars"
+                print(f"✓ No recent signals found for {symbol}")
 
         # Generate stacked multi-timeframe chart
         print(f"📊 Generating stacked chart for {symbol} (30 Day Hourly + 3 Month Daily)...")
@@ -550,6 +556,328 @@ class LiveTradingMonitor:
             # Fallback to text only
             self.notifier.send_notification(title, message)
             print(f"✓ Sent last signal info for {symbol} (text only, chart generation failed)")
+
+    def handle_backtest_query(self, reply):
+        """
+        Handle 'BACKTEST SYMBOL PERIOD' query - runs a backtest and returns results
+
+        Args:
+            reply: The reply string like "BACKTEST NVDA 1Y" or "BACKTEST AAPL 6M"
+        """
+        parts = reply.split()
+
+        if len(parts) < 2:
+            self.notifier.send_notification(
+                "⚠️ Invalid Format",
+                "Usage: BACKTEST <SYMBOL> [PERIOD]\n"
+                "Periods: 1M, 3M, 6M, 1Y, 2Y, 3Y, 5Y\n"
+                "Example: BACKTEST NVDA 1Y"
+            )
+            return
+
+        symbol = parts[1].upper()
+        period = parts[2].upper() if len(parts) >= 3 else "1Y"
+
+        # Parse period to get start/end dates
+        period_map = {
+            '1M': 30,
+            '3M': 90,
+            '6M': 180,
+            '1Y': 365,
+            '2Y': 730,
+            '3Y': 1095,
+            '5Y': 1825,
+        }
+
+        if period not in period_map:
+            self.notifier.send_notification(
+                "⚠️ Invalid Period",
+                f"Unknown period: {period}\n"
+                "Valid periods: 1M, 3M, 6M, 1Y, 2Y, 3Y, 5Y"
+            )
+            return
+
+        days = period_map[period]
+
+        print(f"📊 Running backtest for {symbol} over {period}...")
+        self.notifier.send_notification(
+            f"⏳ Backtest Started",
+            f"Running {period} backtest for {symbol}...\nThis may take a moment."
+        )
+
+        try:
+            results = self._run_backtest(symbol, days)
+
+            if results is None:
+                self.notifier.send_notification(
+                    f"❌ Backtest Failed",
+                    f"Could not run backtest for {symbol}\nInsufficient data or error occurred."
+                )
+                return
+
+            # Format results message
+            title = f"📊 {symbol} Backtest ({period})"
+
+            # Build detailed message
+            message_lines = [
+                f"Period: {results['start_date']} to {results['end_date']}",
+                f"",
+                f"💰 Returns:",
+                f"  Total: {results['total_return_pct']:+.2f}%",
+                f"  Annualized: {results['annualized_return']:+.2f}%",
+                f"  vs SPY: {results['spy_return']:+.2f}%",
+                f"  Alpha: {results['total_return_pct'] - results['spy_return']:+.2f}%",
+                f"",
+                f"📈 Trades:",
+                f"  Total: {results['total_trades']}",
+                f"  Win Rate: {results['win_rate']:.1f}%",
+                f"  Profit Factor: {results['profit_factor']:.2f}",
+                f"",
+                f"📉 Risk:",
+                f"  Max Drawdown: {results['max_drawdown']:.2f}%",
+                f"  Sharpe Ratio: {results['sharpe_ratio']:.2f}",
+            ]
+
+            if results['total_trades'] > 0:
+                message_lines.extend([
+                    f"",
+                    f"💵 Avg Trade:",
+                    f"  Win: ${results['avg_win']:.2f}",
+                    f"  Loss: ${results['avg_loss']:.2f}",
+                ])
+
+            message = "\n".join(message_lines)
+
+            self.notifier.send_notification(title, message)
+            print(f"✓ Sent backtest results for {symbol}")
+
+        except Exception as e:
+            print(f"❌ Backtest error: {e}")
+            import traceback
+            traceback.print_exc()
+            self.notifier.send_notification(
+                f"❌ Backtest Error",
+                f"Error running backtest for {symbol}:\n{str(e)[:100]}"
+            )
+
+    def _run_backtest(self, symbol, days):
+        """
+        Run a backtest for the given symbol and period.
+
+        Args:
+            symbol: Stock ticker
+            days: Number of calendar days to backtest
+
+        Returns:
+            dict: Backtest results or None on failure
+        """
+        import backtrader as bt
+        import numpy as np
+
+        # Calculate dates
+        end_date = datetime.now()
+        test_start = end_date - timedelta(days=days)
+
+        # Add warmup period (need extra data for ML model)
+        warmup_calendar_days = int(self.warmup_days * 1.5)
+        data_start = test_start - timedelta(days=warmup_calendar_days)
+
+        print(f"   Fetching data from {data_start.date()} to {end_date.date()}...")
+
+        # Fetch data
+        try:
+            import yfinance as yf
+            df = yf.download(symbol, start=data_start.strftime('%Y-%m-%d'),
+                           end=end_date.strftime('%Y-%m-%d'), progress=False)
+
+            if df.empty or len(df) < 100:
+                print(f"   ❌ Insufficient data for {symbol}")
+                return None
+
+            df.index = df.index.tz_localize(None)
+
+            # Handle multi-level columns from yfinance
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+
+            df.columns = [c.lower() for c in df.columns]
+
+            # Find test start index
+            test_start_mask = df.index >= pd.Timestamp(test_start)
+            if not test_start_mask.any():
+                print(f"   ❌ No data after test start date")
+                return None
+
+            test_start_idx = test_start_mask.argmax()
+
+            print(f"   Got {len(df)} bars, test period starts at bar {test_start_idx}")
+
+            # Fetch SPY for benchmark
+            spy_df = yf.download('SPY', start=test_start.strftime('%Y-%m-%d'),
+                                end=end_date.strftime('%Y-%m-%d'), progress=False)
+            spy_df.index = spy_df.index.tz_localize(None)
+
+            # Handle multi-level columns from yfinance
+            if isinstance(spy_df.columns, pd.MultiIndex):
+                spy_df.columns = spy_df.columns.get_level_values(0)
+
+            if len(spy_df) > 0:
+                spy_start = float(spy_df['Close'].iloc[0])
+                spy_end = float(spy_df['Close'].iloc[-1])
+                spy_return = ((spy_end / spy_start) - 1) * 100
+            else:
+                spy_return = 0
+
+        except Exception as e:
+            print(f"   ❌ Data fetch error: {e}")
+            return None
+
+        # Run backtrader
+        try:
+            cerebro = bt.Cerebro(stdstats=False)
+
+            # Add data
+            data = bt.feeds.PandasData(
+                dataname=df,
+                datetime=None,
+                open='open',
+                high='high',
+                low='low',
+                close='close',
+                volume='volume'
+            )
+            cerebro.adddata(data)
+
+            # Prepare params
+            strategy_params = self.params.copy()
+            strategy_params['verbose'] = False
+            strategy_params['test_start_idx'] = test_start_idx
+
+            # Add strategy
+            cerebro.addstrategy(self.strategy.strategy_class, **strategy_params)
+
+            # Broker settings
+            initial_cash = 10000
+            cerebro.broker.setcash(initial_cash)
+            cerebro.broker.setcommission(commission=0.0)
+
+            # Add analyzers
+            cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
+            cerebro.addanalyzer(bt.analyzers.DrawDown, _name="dd")
+
+            # Add portfolio value observer
+            class PortfolioValue(bt.Observer):
+                lines = ('value',)
+                plotinfo = dict(plot=False)
+                def next(self):
+                    self.lines.value[0] = self._owner.broker.getvalue()
+                def prenext(self):
+                    self.lines.value[0] = self._owner.broker.getvalue()
+
+            cerebro.addobserver(PortfolioValue)
+
+            print(f"   Running backtest...")
+            results = cerebro.run()
+            strat = results[0]
+
+            # Extract results
+            trades = strat.analyzers.trades.get_analysis()
+
+            # Get portfolio values for test period
+            test_values = []
+            observer = strat.observers.portfoliovalue
+            for i in range(len(observer.lines.value)):
+                if i >= test_start_idx:
+                    try:
+                        val = observer.lines.value.array[i]
+                        if not np.isnan(val) and val > 0:
+                            test_values.append(val)
+                    except:
+                        break
+
+            if len(test_values) < 2:
+                test_values = [initial_cash, cerebro.broker.getvalue()]
+
+            final_value = test_values[-1]
+            total_return_pct = ((final_value / initial_cash) - 1) * 100
+
+            # Calculate metrics
+            total_trades = trades.get('total', {}).get('total', 0)
+
+            if total_trades > 0:
+                win_count = trades.get('won', {}).get('total', 0)
+                win_rate = (win_count / total_trades) * 100
+
+                total_win_pnl = trades.get('won', {}).get('pnl', {}).get('total', 0)
+                total_loss_pnl = abs(trades.get('lost', {}).get('pnl', {}).get('total', 0))
+                profit_factor = (total_win_pnl / total_loss_pnl) if total_loss_pnl > 0 else 999
+
+                avg_win = trades.get('won', {}).get('pnl', {}).get('average', 0)
+                avg_loss = abs(trades.get('lost', {}).get('pnl', {}).get('average', 0))
+            else:
+                win_rate = 0
+                profit_factor = 0
+                avg_win = 0
+                avg_loss = 0
+
+            # Calculate drawdown from test period
+            peak = test_values[0]
+            max_dd = 0
+            for val in test_values:
+                if val > peak:
+                    peak = val
+                dd = ((peak - val) / peak) * 100
+                if dd > max_dd:
+                    max_dd = dd
+
+            # Calculate Sharpe ratio
+            if len(test_values) > 1:
+                daily_returns = []
+                for i in range(1, len(test_values)):
+                    ret = (test_values[i] / test_values[i-1]) - 1
+                    daily_returns.append(ret)
+
+                if len(daily_returns) > 1 and np.std(daily_returns) > 0:
+                    sharpe = (np.mean(daily_returns) / np.std(daily_returns)) * np.sqrt(252)
+                else:
+                    sharpe = 0
+            else:
+                sharpe = 0
+
+            # Annualized return
+            test_days = len(test_values)
+            years = test_days / 252
+            if years > 0:
+                annualized = ((final_value / initial_cash) ** (1 / years) - 1) * 100
+            else:
+                annualized = total_return_pct
+
+            # Get actual date range
+            test_df = df.iloc[test_start_idx:]
+            start_date_str = test_df.index[0].strftime('%Y-%m-%d')
+            end_date_str = test_df.index[-1].strftime('%Y-%m-%d')
+
+            return {
+                'start_date': start_date_str,
+                'end_date': end_date_str,
+                'total_return_pct': total_return_pct,
+                'annualized_return': annualized,
+                'spy_return': spy_return,
+                'total_trades': total_trades,
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'max_drawdown': max_dd,
+                'sharpe_ratio': sharpe,
+                'avg_win': avg_win,
+                'avg_loss': avg_loss,
+                'final_value': final_value,
+            }
+
+        except Exception as e:
+            print(f"   ❌ Backtest execution error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     def handle_holdings_query(self):
         """Handle 'HOLDING' or 'HOLDINGS' query - shows all current positions with P&L"""

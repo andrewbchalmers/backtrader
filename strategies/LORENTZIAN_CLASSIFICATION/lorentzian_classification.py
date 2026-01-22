@@ -315,6 +315,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
         # === Display ===
         ('verbose', True),
+
+        # === Backtest Control ===
+        ('test_start_idx', 0),  # Bar index to start trading (0 = trade from start)
     )
 
     def __init__(self):
@@ -603,10 +606,15 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.order:
             return
 
-        # Store features and labels
+        # Store features and labels (always do this to build training data)
         self._store_features()
         label = self._calculate_label()
         self.label_array.append(label)
+
+        # Skip trading if before test period start
+        # (still accumulate training data above, just don't trade)
+        if self.p.test_start_idx > 0 and len(self) < self.p.test_start_idx:
+            return
 
         # Run ML prediction
         self.prediction = self._run_knn()

@@ -188,7 +188,7 @@ class PushbulletNotifier:
                         continue
 
                     # Accept all valid command formats
-                    valid_commands = ['BOUGHT ', 'SOLD ', 'LAST ', 'HOLDING', 'HOLDINGS']
+                    valid_commands = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'HOLDING', 'HOLDINGS']
                     if any(body_upper.startswith(cmd) or body_upper == cmd for cmd in valid_commands):
                         replies.append(body_upper)
                         self.processed_push_ids.add(push_id)
