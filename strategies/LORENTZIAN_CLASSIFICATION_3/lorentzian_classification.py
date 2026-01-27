@@ -1,26 +1,20 @@
 """
-Machine Learning: Lorentzian Classification Strategy
+Machine Learning: Lorentzian Classification Strategy - Trend Features
 
-A backtrader implementation of the TradingView indicator by @jdehorty.
+A backtrader implementation using trend-focused features for better pattern matching.
 
-This strategy uses a K-Nearest Neighbors (KNN) machine learning algorithm with
-Lorentzian distance instead of Euclidean distance for classification.
+This version uses a 5-feature vector optimized for trend detection:
+1. RSI(14) - Momentum/overbought-oversold
+2. ADX(14) - Trend strength
+3. ATR Ratio - Normalized volatility (ATR/Close)
+4. Price Position - Where price sits in recent range (0-1)
+5. Efficiency Ratio - Kaufman's trend efficiency metric
 
-Key Features:
-- Lorentzian distance metric (reduces influence of outliers)
-- Multiple configurable features (RSI, Wave Trend, CCI, ADX)
-- Approximate Nearest Neighbors (ANN) search algorithm
-- Multiple filters (Volatility, Regime, ADX, EMA, SMA)
-- Nadaraya-Watson Kernel Regression for trend confirmation
-- Configurable entry/exit logic
-
-Note on Label Alignment:
-The original TradingView implementation uses backward-looking labels which
-effectively creates a mean-reversion bias. This implementation preserves
-that behavior for accuracy to the original, but can be configured for
-forward-looking labels if desired.
+These features provide more meaningful data for Lorentzian distance calculations
+when identifying similar market conditions and trend behavior patterns.
 
 Author: Backtrader implementation based on TradingView indicator by @jdehorty
+Modified: Trend-focused feature vector
 """
 
 import math
@@ -53,52 +47,10 @@ class NormalizedRSI(bt.Indicator):
         self.lines.nrsi = (rsi - 50) / 50
 
 
-class WaveTrend(bt.Indicator):
-    """
-    Wave Trend Oscillator (LazyBear style).
-    Used as a momentum indicator.
-    """
-    lines = ('wt1', 'wt2', 'nwt')
-    params = (
-        ('channel_len', 10),
-        ('avg_len', 21),
-    )
-
-    def __init__(self):
-        hlc3 = (self.data.high + self.data.low + self.data.close) / 3
-        esa = bt.indicators.EMA(hlc3, period=self.p.channel_len)
-        d = bt.indicators.EMA(abs(hlc3 - esa), period=self.p.channel_len)
-        # Avoid division by zero
-        ci = (hlc3 - esa) / (0.015 * d + 0.0001)
-        self.lines.wt1 = bt.indicators.EMA(ci, period=self.p.avg_len)
-        self.lines.wt2 = bt.indicators.SMA(self.lines.wt1, period=4)
-        # Normalized version (typical WT ranges from -100 to 100)
-        self.lines.nwt = self.lines.wt1 / 100
-
-
-class NormalizedCCI(bt.Indicator):
-    """
-    Normalized CCI indicator.
-    Returns CCI rescaled to approximately -1 to 1 range.
-    """
-    lines = ('ncci',)
-    params = (
-        ('period', 20),
-        ('smoothing', 1),
-    )
-
-    def __init__(self):
-        cci = bt.indicators.CCI(self.data, period=self.p.period)
-        if self.p.smoothing > 1:
-            cci = bt.indicators.EMA(cci, period=self.p.smoothing)
-        # Normalize: CCI typically ranges -200 to 200, divide by 200
-        self.lines.ncci = cci / 200
-
-
 class NormalizedADX(bt.Indicator):
     """
     Normalized ADX indicator.
-    Returns ADX rescaled to 0 to 1 range.
+    Returns ADX rescaled to -1 to 1 range.
     """
     lines = ('nadx',)
     params = (
@@ -107,8 +59,119 @@ class NormalizedADX(bt.Indicator):
 
     def __init__(self):
         adx = bt.indicators.ADX(self.data, period=self.p.period)
-        # Normalize: ADX ranges 0-100, divide by 100
-        self.lines.nadx = adx / 50 - 1  # Scale to -1 to 1
+        # Normalize: ADX ranges 0-100, scale to -1 to 1
+        self.lines.nadx = adx / 50 - 1
+
+
+class ATRRatio(bt.Indicator):
+    """
+    ATR Ratio - Normalized volatility indicator.
+
+    Measures ATR relative to closing price, providing a normalized
+    volatility measure that works across different price levels.
+
+    Formula: (ATR / Close) * 100, then normalized to -1 to 1
+    Typical range: 0.5% to 5% of price
+    """
+    lines = ('atr_ratio',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        self.atr = bt.indicators.ATR(self.data, period=self.p.period)
+        self.addminperiod(self.p.period)
+
+    def next(self):
+        if self.data.close[0] > 0:
+            # ATR as percentage of price
+            ratio_pct = (self.atr[0] / self.data.close[0]) * 100
+            # Normalize: typical range 0.5-5%, center at 2.5%, scale to -1 to 1
+            # (ratio - 2.5) / 2.5 gives roughly -1 to 1 for typical values
+            self.lines.atr_ratio[0] = (ratio_pct - 2.5) / 2.5
+        else:
+            self.lines.atr_ratio[0] = 0
+
+
+class PricePosition(bt.Indicator):
+    """
+    Price Position indicator.
+
+    Shows where current price sits within the recent price range.
+    Similar to Stochastic %K but normalized to -1 to 1.
+
+    Formula: ((Close - Lowest Low) / (Highest High - Lowest Low)) * 2 - 1
+
+    Values:
+    - +1: Price at highest point of range
+    - 0: Price at midpoint of range
+    - -1: Price at lowest point of range
+    """
+    lines = ('position',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        self.highest = bt.indicators.Highest(self.data.high, period=self.p.period)
+        self.lowest = bt.indicators.Lowest(self.data.low, period=self.p.period)
+        self.addminperiod(self.p.period)
+
+    def next(self):
+        high_low_range = self.highest[0] - self.lowest[0]
+        if high_low_range > 0:
+            # Position in range: 0 to 1
+            pos = (self.data.close[0] - self.lowest[0]) / high_low_range
+            # Scale to -1 to 1
+            self.lines.position[0] = pos * 2 - 1
+        else:
+            self.lines.position[0] = 0
+
+
+class EfficiencyRatio(bt.Indicator):
+    """
+    Kaufman's Efficiency Ratio (ER).
+
+    Measures trend efficiency by comparing directional movement to total movement.
+    Used in Kaufman's Adaptive Moving Average (KAMA).
+
+    Formula: ER = abs(Close - Close[n]) / sum(abs(Close[i] - Close[i-1]))
+
+    Values:
+    - 1.0: Perfect trend (price moved in one direction only)
+    - 0.0: No net movement (choppy/ranging market)
+
+    Normalized to -1 to 1 range: (ER * 2) - 1
+    """
+    lines = ('er',)
+    params = (
+        ('period', 14),
+    )
+
+    def __init__(self):
+        self.addminperiod(self.p.period + 1)
+
+    def next(self):
+        if len(self) < self.p.period + 1:
+            self.lines.er[0] = 0
+            return
+
+        # Direction: net price change over period
+        direction = abs(self.data.close[0] - self.data.close[-self.p.period])
+
+        # Volatility: sum of absolute bar-to-bar changes
+        volatility = 0.0
+        for i in range(self.p.period):
+            volatility += abs(self.data.close[-i] - self.data.close[-i-1])
+
+        # Efficiency Ratio
+        if volatility > 0:
+            er = direction / volatility
+        else:
+            er = 0
+
+        # Normalize to -1 to 1 (ER naturally ranges 0 to 1)
+        self.lines.er[0] = er * 2 - 1
 
 
 class RationalQuadraticKernel(bt.Indicator):
@@ -245,10 +308,17 @@ class RegimeFilter(bt.Indicator):
 
 class LorentzianClassificationStrategy(bt.Strategy):
     """
-    Machine Learning Lorentzian Classification Strategy.
+    Machine Learning Lorentzian Classification Strategy - Trend Features.
 
     Uses K-Nearest Neighbors with Lorentzian distance metric for
     price direction classification.
+
+    This version uses trend-focused features:
+    - RSI(14): Momentum
+    - ADX(14): Trend strength
+    - ATR Ratio: Normalized volatility
+    - Price Position: Location in recent range
+    - Efficiency Ratio: Trend quality
     """
 
     params = (
@@ -256,36 +326,39 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('neighbors_count', 8),          # Number of neighbors for KNN
         ('max_bars_back', 2000),         # Maximum lookback for training data
         ('feature_count', 5),            # Number of features (2-5)
+        ('trend_following_labels', False),  # False=mean-reversion labels, True=trend-following labels
+        ('allow_reentry', True),         # True=enter anytime signal favorable, False=only on signal flip
+        ('min_prediction_strength', 4),  # Minimum |prediction| to generate signal (0=any, 4=half neighbors agree)
 
         # === Feature 1 (RSI) ===
         ('f1_type', 'RSI'),
-        ('f1_param_a', 14),
-        ('f1_param_b', 1),
+        ('f1_param_a', 14),              # RSI period
+        ('f1_param_b', 1),               # Smoothing (1 = none)
 
-        # === Feature 2 (Wave Trend) ===
-        ('f2_type', 'WT'),
-        ('f2_param_a', 10),
-        ('f2_param_b', 11),
+        # === Feature 2 (ADX) ===
+        ('f2_type', 'ADX'),
+        ('f2_param_a', 14),              # ADX period
+        ('f2_param_b', 1),               # Not used
 
-        # === Feature 3 (CCI) ===
-        ('f3_type', 'CCI'),
-        ('f3_param_a', 20),
-        ('f3_param_b', 1),
+        # === Feature 3 (ATR Ratio) ===
+        ('f3_type', 'ATRR'),
+        ('f3_param_a', 14),              # ATR period
+        ('f3_param_b', 1),               # Not used
 
-        # === Feature 4 (ADX) ===
-        ('f4_type', 'ADX'),
-        ('f4_param_a', 20),
-        ('f4_param_b', 2),
+        # === Feature 4 (Price Position) ===
+        ('f4_type', 'PP'),
+        ('f4_param_a', 14),              # Lookback period
+        ('f4_param_b', 1),               # Not used
 
-        # === Feature 5 (RSI) ===
-        ('f5_type', 'RSI'),
-        ('f5_param_a', 9),
-        ('f5_param_b', 1),
+        # === Feature 5 (Efficiency Ratio) ===
+        ('f5_type', 'ER'),
+        ('f5_param_a', 14),              # ER period
+        ('f5_param_b', 1),               # Not used
 
         # === Filters ===
-        ('use_volatility_filter', False),
+        ('use_volatility_filter', True),
         ('use_regime_filter', True),
-        ('regime_threshold', -0.2),
+        ('regime_threshold', -0.1),
         ('use_adx_filter', False),
         ('adx_threshold', 20),
         ('use_ema_filter', False),
@@ -294,7 +367,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('sma_period', 200),
 
         # === Kernel Settings ===
-        ('use_kernel_filter', True),
+        ('use_kernel_filter', False),
         ('use_kernel_smoothing', False),
         ('kernel_lookback', 8),
         ('kernel_rel_weight', 8.0),
@@ -302,13 +375,22 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('kernel_lag', 2),
 
         # === Exit Settings ===
-        ('use_dynamic_exits', False),
-        ('bars_to_hold', 4),  # Default holding period
+        ('use_dynamic_exits', True),
+        ('bars_to_hold', 100000),
+
+        # === RSI Exit Settings ===
+        ('use_rsi_exit', False),          # Enable RSI threshold exits
+        ('rsi_exit_period', 14),         # RSI period for exit signals
+        ('rsi_overbought', 70),          # Exit longs when RSI crosses above this
+        ('rsi_oversold', 30),            # Exit shorts when RSI crosses below this
+
+        # === Kernel Exit Settings ===
+        ('use_kernel_exit', True),       # Enable kernel line exit (price crosses below kernel)
 
         # === Risk Management ===
         ('position_size_pct', Decimal('0.95')),
         ('stop_loss_pct', Decimal('0.05')),
-        ('use_stop_loss', False),
+        ('use_stop_loss', True),
 
         # === Trade Direction ===
         ('long_only', True),  # Set to False to enable short selling
@@ -347,12 +429,14 @@ class LorentzianClassificationStrategy(bt.Strategy):
         """Create a feature indicator based on type."""
         if ftype == 'RSI':
             return NormalizedRSI(self.data, period=param_a, smoothing=param_b)
-        elif ftype == 'WT':
-            return WaveTrend(self.data, channel_len=param_a, avg_len=param_b)
-        elif ftype == 'CCI':
-            return NormalizedCCI(self.data, period=param_a, smoothing=param_b)
         elif ftype == 'ADX':
             return NormalizedADX(self.data, period=param_a)
+        elif ftype == 'ATRR':
+            return ATRRatio(self.data, period=param_a)
+        elif ftype == 'PP':
+            return PricePosition(self.data, period=param_a)
+        elif ftype == 'ER':
+            return EfficiencyRatio(self.data, period=param_a)
         else:
             raise ValueError(f"Unknown feature type: {ftype}")
 
@@ -378,9 +462,14 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.p.use_sma_filter:
             self.sma = bt.indicators.SMA(self.data.close, period=self.p.sma_period)
 
+        # RSI for exit signals
+        if self.p.use_rsi_exit:
+            self.rsi_exit = bt.indicators.RSI(self.data.close, period=self.p.rsi_exit_period)
+
     def _init_kernels(self):
         """Initialize kernel regression indicators."""
-        if self.p.use_kernel_filter:
+        # Create kernel indicators if needed for entry filter OR exit
+        if self.p.use_kernel_filter or self.p.use_kernel_exit:
             self.kernel_rq = RationalQuadraticKernel(
                 self.data.close,
                 lookback=self.p.kernel_lookback,
@@ -407,6 +496,36 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self.entry_price = 0
         self.prediction = 0
 
+        # ML Prediction Accuracy Tracking
+        # Store predictions as: (bar_idx, prediction, price_at_prediction)
+        self.pending_predictions = []
+        self.prediction_results = {
+            'total': 0,
+            'correct': 0,
+            'bullish_total': 0,
+            'bullish_correct': 0,
+            'bearish_total': 0,
+            'bearish_correct': 0,
+            'neutral': 0,  # predictions of 0
+        }
+        self.prediction_lookforward = 4  # Bars to look forward for validation
+
+        # Raw prediction diagnostics (tracks ALL predictions including 0)
+        self.prediction_diagnostics = {
+            'total_bars': 0,
+            'bullish_predictions': 0,    # prediction > 0
+            'bearish_predictions': 0,    # prediction < 0
+            'neutral_predictions': 0,    # prediction == 0
+            'strong_bullish': 0,         # prediction >= neighbors_count/2
+            'strong_bearish': 0,         # prediction <= -neighbors_count/2
+            'prediction_sum': 0,         # for calculating average
+            'signal_changes': 0,         # how often signal flips
+            'entry_attempts': 0,         # how often we tried to enter
+            'entries_blocked_by_kernel': 0,
+            'entries_blocked_by_ema': 0,
+            'entries_blocked_by_sma': 0,
+        }
+
     def _get_lorentzian_distance(self, idx):
         """
         Calculate Lorentzian distance between current features and historical features.
@@ -427,12 +546,14 @@ class LorentzianClassificationStrategy(bt.Strategy):
         """Get the current value from a feature indicator."""
         if hasattr(feature, 'nrsi'):
             return feature.nrsi[0]
-        elif hasattr(feature, 'nwt'):
-            return feature.nwt[0]
-        elif hasattr(feature, 'ncci'):
-            return feature.ncci[0]
         elif hasattr(feature, 'nadx'):
             return feature.nadx[0]
+        elif hasattr(feature, 'atr_ratio'):
+            return feature.atr_ratio[0]
+        elif hasattr(feature, 'position'):
+            return feature.position[0]
+        elif hasattr(feature, 'er'):
+            return feature.er[0]
         return 0.0
 
     def _store_features(self):
@@ -445,11 +566,17 @@ class LorentzianClassificationStrategy(bt.Strategy):
         """
         Calculate training label based on price movement.
 
-        Note: The original TradingView implementation uses backward-looking labels:
-        - If price rose over past 4 bars -> SHORT label
-        - If price fell over past 4 bars -> LONG label
+        Two modes available via `trend_following_labels` parameter:
 
-        This creates a mean-reversion bias in the model.
+        MEAN-REVERSION (trend_following_labels=False, default):
+        - If price rose over past 4 bars -> SHORT label (expect reversal down)
+        - If price fell over past 4 bars -> LONG label (expect reversal up)
+        - Best with oscillator features: RSI, CCI, Stochastic
+
+        TREND-FOLLOWING (trend_following_labels=True):
+        - If price rose over past 4 bars -> LONG label (expect continuation up)
+        - If price fell over past 4 bars -> SHORT label (expect continuation down)
+        - Best with trend features: ADX, Efficiency Ratio, Price Position
         """
         if len(self) < 5:
             return 0
@@ -457,10 +584,18 @@ class LorentzianClassificationStrategy(bt.Strategy):
         current_price = self.data.close[0]
         past_price = self.data.close[-4]
 
-        if past_price < current_price:
-            return -1  # SHORT (price rose, expect reversal)
-        elif past_price > current_price:
-            return 1   # LONG (price fell, expect reversal)
+        if self.p.trend_following_labels:
+            # TREND-FOLLOWING: expect price to continue in same direction
+            if current_price > past_price:
+                return 1   # LONG (price rising, expect continuation)
+            elif current_price < past_price:
+                return -1  # SHORT (price falling, expect continuation)
+        else:
+            # MEAN-REVERSION: expect price to reverse (original behavior)
+            if past_price < current_price:
+                return -1  # SHORT (price rose, expect reversal)
+            elif past_price > current_price:
+                return 1   # LONG (price fell, expect reversal)
         return 0
 
     def _run_knn(self):
@@ -577,10 +712,17 @@ class LorentzianClassificationStrategy(bt.Strategy):
         """Update trading signal based on ML prediction and filters."""
         old_signal = self.signal
 
-        if self.prediction > 0 and self._check_filters():
+        # Check if prediction meets minimum strength requirement
+        min_strength = self.p.min_prediction_strength
+        prediction_strong_enough = abs(self.prediction) >= min_strength
+
+        if self.prediction > 0 and prediction_strong_enough and self._check_filters():
             self.signal = 1  # Long
-        elif self.prediction < 0 and self._check_filters():
+        elif self.prediction < 0 and prediction_strong_enough and self._check_filters():
             self.signal = -1  # Short
+        elif not prediction_strong_enough:
+            # Weak prediction - go neutral (exit existing positions on next check)
+            self.signal = 0
         # else keep previous signal
 
         # Track signal changes
@@ -619,8 +761,36 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # Run ML prediction
         self.prediction = self._run_knn()
 
+        # === Raw Prediction Diagnostics ===
+        self.prediction_diagnostics['total_bars'] += 1
+        self.prediction_diagnostics['prediction_sum'] += self.prediction
+        if self.prediction > 0:
+            self.prediction_diagnostics['bullish_predictions'] += 1
+            if self.prediction >= self.p.neighbors_count / 2:
+                self.prediction_diagnostics['strong_bullish'] += 1
+        elif self.prediction < 0:
+            self.prediction_diagnostics['bearish_predictions'] += 1
+            if self.prediction <= -self.p.neighbors_count / 2:
+                self.prediction_diagnostics['strong_bearish'] += 1
+        else:
+            self.prediction_diagnostics['neutral_predictions'] += 1
+
+        # === ML Prediction Accuracy Tracking ===
+        # Validate old predictions that have matured
+        self._validate_predictions()
+
+        # Store new prediction for future validation
+        if self.prediction != 0:
+            self.pending_predictions.append({
+                'bar_idx': len(self),
+                'prediction': self.prediction,
+                'price': self.data.close[0],
+            })
+
         # Update signal
         signal_changed = self._update_signal()
+        if signal_changed:
+            self.prediction_diagnostics['signal_changes'] += 1
 
         # Check for entries
         if not self.position:
@@ -628,11 +798,124 @@ class LorentzianClassificationStrategy(bt.Strategy):
         else:
             self._check_exit(signal_changed)
 
+    def _validate_predictions(self):
+        """
+        Validate predictions that are now old enough to check.
+        A prediction is correct if:
+        - Bullish (>0): price increased over lookforward period
+        - Bearish (<0): price decreased over lookforward period
+        """
+        current_bar = len(self)
+        current_price = self.data.close[0]
+
+        # Check predictions that are old enough
+        still_pending = []
+        for pred in self.pending_predictions:
+            bars_elapsed = current_bar - pred['bar_idx']
+
+            if bars_elapsed >= self.prediction_lookforward:
+                # Prediction is mature, validate it
+                price_change = current_price - pred['price']
+                prediction = pred['prediction']
+
+                self.prediction_results['total'] += 1
+
+                if prediction > 0:  # Bullish prediction
+                    self.prediction_results['bullish_total'] += 1
+                    if price_change > 0:  # Price went up - correct
+                        self.prediction_results['correct'] += 1
+                        self.prediction_results['bullish_correct'] += 1
+                elif prediction < 0:  # Bearish prediction
+                    self.prediction_results['bearish_total'] += 1
+                    if price_change < 0:  # Price went down - correct
+                        self.prediction_results['correct'] += 1
+                        self.prediction_results['bearish_correct'] += 1
+            else:
+                # Keep for later validation
+                still_pending.append(pred)
+
+        self.pending_predictions = still_pending
+
+    def get_prediction_stats(self):
+        """
+        Get ML prediction accuracy statistics.
+        Returns dict with accuracy metrics.
+        """
+        stats = self.prediction_results.copy()
+
+        # Calculate accuracy percentages
+        if stats['total'] > 0:
+            stats['accuracy_pct'] = (stats['correct'] / stats['total']) * 100
+        else:
+            stats['accuracy_pct'] = 0
+
+        if stats['bullish_total'] > 0:
+            stats['bullish_accuracy_pct'] = (stats['bullish_correct'] / stats['bullish_total']) * 100
+        else:
+            stats['bullish_accuracy_pct'] = 0
+
+        if stats['bearish_total'] > 0:
+            stats['bearish_accuracy_pct'] = (stats['bearish_correct'] / stats['bearish_total']) * 100
+        else:
+            stats['bearish_accuracy_pct'] = 0
+
+        # Prediction bias (how often model predicts bullish vs bearish)
+        total_directional = stats['bullish_total'] + stats['bearish_total']
+        if total_directional > 0:
+            stats['bullish_bias_pct'] = (stats['bullish_total'] / total_directional) * 100
+        else:
+            stats['bullish_bias_pct'] = 50
+
+        return stats
+
+    def get_diagnostics(self):
+        """
+        Get raw prediction diagnostics to understand ML behavior.
+        Returns dict with diagnostic metrics.
+        """
+        diag = self.prediction_diagnostics.copy()
+
+        # Calculate percentages
+        if diag['total_bars'] > 0:
+            diag['bullish_pct'] = (diag['bullish_predictions'] / diag['total_bars']) * 100
+            diag['bearish_pct'] = (diag['bearish_predictions'] / diag['total_bars']) * 100
+            diag['neutral_pct'] = (diag['neutral_predictions'] / diag['total_bars']) * 100
+            diag['avg_prediction'] = diag['prediction_sum'] / diag['total_bars']
+        else:
+            diag['bullish_pct'] = diag['bearish_pct'] = diag['neutral_pct'] = 0
+            diag['avg_prediction'] = 0
+
+        # Entry blocking percentages
+        if diag['entry_attempts'] > 0:
+            diag['kernel_block_pct'] = (diag['entries_blocked_by_kernel'] / diag['entry_attempts']) * 100
+            diag['ema_block_pct'] = (diag['entries_blocked_by_ema'] / diag['entry_attempts']) * 100
+            diag['sma_block_pct'] = (diag['entries_blocked_by_sma'] / diag['entry_attempts']) * 100
+        else:
+            diag['kernel_block_pct'] = diag['ema_block_pct'] = diag['sma_block_pct'] = 0
+
+        return diag
+
     def _check_entry(self, signal_changed):
         """Check for entry conditions."""
+        # Determine signal requirement based on allow_reentry setting
+        # allow_reentry=True: enter anytime signal is favorable (don't require flip)
+        # allow_reentry=False: only enter on signal flip (original behavior)
+        signal_ok = signal_changed or self.p.allow_reentry
+
+        # Track entry attempts for diagnostics (when signal is bullish and we're checking)
+        if signal_ok and self.signal == 1:
+            self.prediction_diagnostics['entry_attempts'] += 1
+            # Track what's blocking
+            if not self._check_kernel_bullish():
+                self.prediction_diagnostics['entries_blocked_by_kernel'] += 1
+            if not self._check_ema_uptrend():
+                self.prediction_diagnostics['entries_blocked_by_ema'] += 1
+            if not self._check_sma_uptrend():
+                self.prediction_diagnostics['entries_blocked_by_sma'] += 1
+
         # Long entry
         is_new_buy = (
-            signal_changed and
+            signal_ok and
             self.signal == 1 and
             self._check_kernel_bullish() and
             self._check_ema_uptrend() and
@@ -642,7 +925,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # Short entry (only if long_only=False)
         is_new_short = (
             not self.p.long_only and
-            signal_changed and
+            signal_ok and
             self.signal == -1 and
             self._check_kernel_bearish() and
             self._check_ema_downtrend() and
@@ -683,20 +966,71 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self._close_position("SIGNAL FLIP TO BULLISH")
             return
 
+        # RSI threshold exit
+        if self.p.use_rsi_exit:
+            rsi_val = self.rsi_exit[0]
+            # Exit long when RSI crosses above overbought threshold
+            if self.position.size > 0 and rsi_val >= self.p.rsi_overbought:
+                self._close_position(f"RSI OVERBOUGHT ({rsi_val:.1f})")
+                return
+            # Exit short when RSI crosses below oversold threshold
+            if self.position.size < 0 and rsi_val <= self.p.rsi_oversold:
+                self._close_position(f"RSI OVERSOLD ({rsi_val:.1f})")
+                return
+
+        # Kernel line exit (price crosses below kernel)
+        if self.p.use_kernel_exit and hasattr(self, 'kernel_rq'):
+            kernel_val = self.kernel_rq.estimate[0]
+            # Exit long when price crosses below kernel line
+            if self.position.size > 0 and self.data.close[0] < kernel_val:
+                self._close_position(f"PRICE BELOW KERNEL ({self.data.close[0]:.2f} < {kernel_val:.2f})")
+                return
+            # Exit short when price crosses above kernel line
+            if self.position.size < 0 and self.data.close[0] > kernel_val:
+                self._close_position(f"PRICE ABOVE KERNEL ({self.data.close[0]:.2f} > {kernel_val:.2f})")
+                return
+
         # Stop loss
         if self.p.use_stop_loss:
             if self.position.size > 0:
-                # Long position stop loss
                 current_pnl_pct = (self.data.close[0] - self.entry_price) / self.entry_price
-            else:
-                # Short position stop loss
+                print(current_pnl_pct)
+            elif self.position.size < 0:
                 current_pnl_pct = (self.entry_price - self.data.close[0]) / self.entry_price
+                print(current_pnl_pct)
+            else:
+                return
 
-            if current_pnl_pct <= -float(self.p.stop_loss_pct):
+            stop = float(self.p.stop_loss_pct)
+            if current_pnl_pct <= -stop:
                 self._close_position("STOP LOSS HIT")
 
     def _check_dynamic_exit(self):
+        # Stop loss
+        if self.p.use_stop_loss:
+            if self.position.size > 0:
+                current_pnl_pct = (self.data.close[0] - self.entry_price) / self.entry_price
+                #print(current_pnl_pct)
+            elif self.position.size < 0:
+                current_pnl_pct = (self.entry_price - self.data.close[0]) / self.entry_price
+                #print(current_pnl_pct)
+            else:
+                return
+
+            stop = float(self.p.stop_loss_pct)
+            if current_pnl_pct <= -stop:
+                self._close_position("STOP LOSS HIT")
+
         """Check for dynamic exit based on kernel regression."""
+        # If kernel filter is disabled, fall back to signal-based exit
+        if not self.p.use_kernel_filter:
+            # Exit on signal flip when kernel not available
+            if self.position.size > 0 and self.signal == -1:
+                self._close_position("SIGNAL FLIP TO BEARISH")
+            elif self.position.size < 0 and self.signal == 1:
+                self._close_position("SIGNAL FLIP TO BULLISH")
+            return
+
         if len(self.kernel_rq) < 2:
             return
 
@@ -745,11 +1079,13 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.position.size > 0:
             # Close long position
             pnl = (self.data.close[0] - self.entry_price) * self.position.size
+            pnl_percent = ((self.data.close[0] / self.entry_price) - 1) * 100
             if self.p.verbose:
                 print(f"CLOSE LONG: {reason} | {self.data.datetime.date(0)} | "
                       f"Entry: ${self.entry_price:.2f} | "
                       f"Exit: ${self.data.close[0]:.2f} | "
-                      f"P&L: ${pnl:.2f}")
+                      f"P&L: ${pnl:.2f} | "
+                      f"P&L%: {pnl_percent:.2f}%")
             self.order = self.sell(size=self.position.size)
 
         elif self.position.size < 0:

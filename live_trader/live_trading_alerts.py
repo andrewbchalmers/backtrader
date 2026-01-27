@@ -22,69 +22,87 @@ TEST_END_DATE = "2024-12-31"
 TEST_SPEED = 0  # Days per second (0 = instant, 1 = 1 day/sec, 10 = 10 days/sec)
 
 # Strategy configuration
-STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION/lorentzian_classification"
+STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION_3/lorentzian_classification"
 STRATEGY_CLASS = "LorentzianClassificationStrategy"
 STRATEGY_PARAMS = {
-    # ML Settings
-    'neighbors_count': 8,
+    # === General Settings ===
+    'neighbors_count': 10,
     'max_bars_back': 2000,
     'feature_count': 5,
 
-    # Feature 1: RSI
+    # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
+    'trend_following_labels': False,
+
+    # Re-entry Mode: True=enter anytime signal is favorable, False=only enter on signal flip
+    'allow_reentry': True,
+
+    # Minimum prediction strength to trade (0=any signal, higher=stronger consensus required)
+    'min_prediction_strength': 4,
+
+    # === Feature 1: RSI (Momentum) ===
     'f1_type': 'RSI',
     'f1_param_a': 14,
     'f1_param_b': 1,
 
-    # Feature 2: Wave Trend
-    'f2_type': 'WT',
-    'f2_param_a': 10,
-    'f2_param_b': 11,
+    # === Feature 2: ADX (Trend Strength) ===
+    'f2_type': 'ADX',
+    'f2_param_a': 14,
+    'f2_param_b': 1,
 
-    # Feature 3: CCI
-    'f3_type': 'CCI',
-    'f3_param_a': 20,
+    # === Feature 3: ATR Ratio (Normalized Volatility) ===
+    'f3_type': 'ATRR',
+    'f3_param_a': 14,
     'f3_param_b': 1,
 
-    # Feature 4: ADX
-    'f4_type': 'ADX',
+    # === Feature 4: Price Position (Range Location) ===
+    'f4_type': 'PP',
     'f4_param_a': 20,
-    'f4_param_b': 2,
+    'f4_param_b': 1,
 
-    # Feature 5: RSI
-    'f5_type': 'RSI',
-    'f5_param_a': 9,
+    # === Feature 5: Efficiency Ratio (Trend Quality) ===
+    'f5_type': 'ER',
+    'f5_param_a': 10,
     'f5_param_b': 1,
 
-    # Filters
+    # === Filters ===
     'use_volatility_filter': True,
     'use_regime_filter': True,
     'regime_threshold': -0.1,
     'use_adx_filter': False,
     'adx_threshold': 20,
     'use_ema_filter': False,
-    'ema_period': 200,
+    'ema_period': 50,
     'use_sma_filter': False,
     'sma_period': 200,
 
-    # Kernel Settings
-    'use_kernel_filter': True,
+    # === Kernel Settings ===
+    'use_kernel_filter': False,
     'use_kernel_smoothing': False,
     'kernel_lookback': 8,
     'kernel_rel_weight': 8.0,
     'kernel_start_bar': 25,
     'kernel_lag': 2,
 
-    # Exit Settings
-    'use_dynamic_exits': False,
-    'bars_to_hold': 4,
+    # === Exit Settings ===
+    'use_dynamic_exits': True,
+    'bars_to_hold': 10000,
 
-    # Risk Management
+    # === RSI Exit Settings ===
+    'use_rsi_exit': False,
+    'rsi_exit_period': 14,
+    'rsi_overbought': 70,
+    'rsi_oversold': 30,
+
+    # === Kernel Exit Settings ===
+    'use_kernel_exit': True,
+
+    # === Risk Management ===
     'position_size_pct': 0.95,
     'stop_loss_pct': 0.05,
-    'use_stop_loss': False,
+    'use_stop_loss': True,
     'long_only': True,
 
-    # Display
+    # === Display ===
     'verbose': False,
 }
 

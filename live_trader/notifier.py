@@ -180,16 +180,27 @@ class PushbulletNotifier:
                     # Convert to uppercase for processing
                     body_upper = body.upper()
 
-                    # Check if it starts with a known response pattern (our notifications)
-                    # These start with emojis or specific formats we send
-                    if body_upper.startswith(('ENTRY:', '✅', '🟢', '🔴', '📊', '⚠️', '❌', '📭')):
-                        # This is one of our notification responses, ignore it
-                        self.processed_push_ids.add(push_id)
-                        continue
+                    # Valid commands must match exactly at the start
+                    # Commands with arguments (space after keyword)
+                    command_prefixes = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'TIMEFRAME SET ', 'ANALYZE ', 'COMPARE ']
+                    # Exact match commands (no arguments)
+                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME']
 
-                    # Accept all valid command formats
-                    valid_commands = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'HOLDING', 'HOLDINGS']
-                    if any(body_upper.startswith(cmd) or body_upper == cmd for cmd in valid_commands):
+                    is_valid_command = False
+
+                    # Check exact matches first
+                    if body_upper in exact_commands:
+                        is_valid_command = True
+                    else:
+                        # Check prefix commands - must start with prefix and have content after
+                        for prefix in command_prefixes:
+                            if body_upper.startswith(prefix) and len(body_upper) > len(prefix):
+                                # Make sure it's not a multi-line message (our notifications)
+                                if '\n' not in body:
+                                    is_valid_command = True
+                                    break
+
+                    if is_valid_command:
                         replies.append(body_upper)
                         self.processed_push_ids.add(push_id)
                         print(f"📩 Received reply: {body_upper}")
@@ -209,9 +220,20 @@ class PushbulletNotifier:
 
     def send_buy_alert(self, symbol, signal):
         """Send buy opportunity notification"""
+        import yfinance as yf
+
         risk_pct = ((signal['price'] - signal['stop_loss']) / signal['price']) * 100
+
+        # Get exchange info
+        try:
+            ticker = yf.Ticker(symbol)
+            exchange = ticker.info.get('fullExchangeName', 'Unknown')
+        except Exception:
+            exchange = 'Unknown'
+
         title = f"🟢 BUY {symbol}"
         message = (
+            f"Exchange: {exchange}\n"
             f"Price: ${signal['price']:.2f}\n"
             f"Stop Loss: ${signal['stop_loss']:.2f}\n"
             f"Risk: {risk_pct:.2f}%\n\n"
@@ -219,7 +241,7 @@ class PushbulletNotifier:
             f"Or: BOUGHT {symbol} AT <price>"
         )
         self.send_notification(title, message)
-        print(f"🟢 BUY ALERT: {symbol} @ ${signal['price']:.2f}, SL @ ${signal['stop_loss']:.2f}")
+        print(f"🟢 BUY ALERT: {symbol} ({exchange}) @ ${signal['price']:.2f}, SL @ ${signal['stop_loss']:.2f}")
 
     def send_sell_alert(self, symbol, signal, entry_price):
         """Send sell alert notification"""

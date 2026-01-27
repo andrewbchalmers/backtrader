@@ -255,7 +255,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # === General Settings ===
         ('neighbors_count', 8),          # Number of neighbors for KNN
         ('max_bars_back', 2000),         # Maximum lookback for training data
-        ('feature_count', 5),            # Number of features (2-5)
+        ('feature_count', 3),            # Number of features (2-5)
 
         # === Feature 1 (RSI) ===
         ('f1_type', 'RSI'),
@@ -303,7 +303,13 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
         # === Exit Settings ===
         ('use_dynamic_exits', False),
-        ('bars_to_hold', 4),  # Default holding period
+        ('bars_to_hold', 1000),  # Default holding period
+
+        # === RSI Exit Settings ===
+        ('use_rsi_exit', True),          # Enable RSI threshold exits
+        ('rsi_exit_period', 14),         # RSI period for exit signals
+        ('rsi_overbought', 70),          # Exit longs when RSI crosses above this
+        ('rsi_oversold', 30),            # Exit shorts when RSI crosses below this
 
         # === Risk Management ===
         ('position_size_pct', Decimal('0.95')),
@@ -378,6 +384,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.p.use_sma_filter:
             self.sma = bt.indicators.SMA(self.data.close, period=self.p.sma_period)
 
+        # RSI for exit signals
+        if self.p.use_rsi_exit:
+            self.rsi_exit = bt.indicators.RSI(self.data.close, period=self.p.rsi_exit_period)
+
     def _init_kernels(self):
         """Initialize kernel regression indicators."""
         if self.p.use_kernel_filter:
@@ -406,6 +416,20 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self.entry_bar = 0
         self.entry_price = 0
         self.prediction = 0
+
+        # ML Prediction Accuracy Tracking
+        # Store predictions as: (bar_idx, prediction, price_at_prediction)
+        self.pending_predictions = []
+        self.prediction_results = {
+            'total': 0,
+            'correct': 0,
+            'bullish_total': 0,
+            'bullish_correct': 0,
+            'bearish_total': 0,
+            'bearish_correct': 0,
+            'neutral': 0,  # predictions of 0
+        }
+        self.prediction_lookforward = 4  # Bars to look forward for validation
 
     def _get_lorentzian_distance(self, idx):
         """
@@ -619,6 +643,18 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # Run ML prediction
         self.prediction = self._run_knn()
 
+        # === ML Prediction Accuracy Tracking ===
+        # Validate old predictions that have matured
+        self._validate_predictions()
+
+        # Store new prediction for future validation
+        if self.prediction != 0:
+            self.pending_predictions.append({
+                'bar_idx': len(self),
+                'prediction': self.prediction,
+                'price': self.data.close[0],
+            })
+
         # Update signal
         signal_changed = self._update_signal()
 
@@ -627,6 +663,76 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self._check_entry(signal_changed)
         else:
             self._check_exit(signal_changed)
+
+    def _validate_predictions(self):
+        """
+        Validate predictions that are now old enough to check.
+        A prediction is correct if:
+        - Bullish (>0): price increased over lookforward period
+        - Bearish (<0): price decreased over lookforward period
+        """
+        current_bar = len(self)
+        current_price = self.data.close[0]
+
+        # Check predictions that are old enough
+        still_pending = []
+        for pred in self.pending_predictions:
+            bars_elapsed = current_bar - pred['bar_idx']
+
+            if bars_elapsed >= self.prediction_lookforward:
+                # Prediction is mature, validate it
+                price_change = current_price - pred['price']
+                prediction = pred['prediction']
+
+                self.prediction_results['total'] += 1
+
+                if prediction > 0:  # Bullish prediction
+                    self.prediction_results['bullish_total'] += 1
+                    if price_change > 0:  # Price went up - correct
+                        self.prediction_results['correct'] += 1
+                        self.prediction_results['bullish_correct'] += 1
+                elif prediction < 0:  # Bearish prediction
+                    self.prediction_results['bearish_total'] += 1
+                    if price_change < 0:  # Price went down - correct
+                        self.prediction_results['correct'] += 1
+                        self.prediction_results['bearish_correct'] += 1
+            else:
+                # Keep for later validation
+                still_pending.append(pred)
+
+        self.pending_predictions = still_pending
+
+    def get_prediction_stats(self):
+        """
+        Get ML prediction accuracy statistics.
+        Returns dict with accuracy metrics.
+        """
+        stats = self.prediction_results.copy()
+
+        # Calculate accuracy percentages
+        if stats['total'] > 0:
+            stats['accuracy_pct'] = (stats['correct'] / stats['total']) * 100
+        else:
+            stats['accuracy_pct'] = 0
+
+        if stats['bullish_total'] > 0:
+            stats['bullish_accuracy_pct'] = (stats['bullish_correct'] / stats['bullish_total']) * 100
+        else:
+            stats['bullish_accuracy_pct'] = 0
+
+        if stats['bearish_total'] > 0:
+            stats['bearish_accuracy_pct'] = (stats['bearish_correct'] / stats['bearish_total']) * 100
+        else:
+            stats['bearish_accuracy_pct'] = 0
+
+        # Prediction bias (how often model predicts bullish vs bearish)
+        total_directional = stats['bullish_total'] + stats['bearish_total']
+        if total_directional > 0:
+            stats['bullish_bias_pct'] = (stats['bullish_total'] / total_directional) * 100
+        else:
+            stats['bullish_bias_pct'] = 50
+
+        return stats
 
     def _check_entry(self, signal_changed):
         """Check for entry conditions."""
@@ -682,6 +788,18 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.position.size < 0 and signal_changed and self.signal == 1:
             self._close_position("SIGNAL FLIP TO BULLISH")
             return
+
+        # RSI threshold exit
+        if self.p.use_rsi_exit:
+            rsi_val = self.rsi_exit[0]
+            # Exit long when RSI crosses above overbought threshold
+            if self.position.size > 0 and rsi_val >= self.p.rsi_overbought:
+                self._close_position(f"RSI OVERBOUGHT ({rsi_val:.1f})")
+                return
+            # Exit short when RSI crosses below oversold threshold
+            if self.position.size < 0 and rsi_val <= self.p.rsi_oversold:
+                self._close_position(f"RSI OVERSOLD ({rsi_val:.1f})")
+                return
 
         # Stop loss
         if self.p.use_stop_loss:

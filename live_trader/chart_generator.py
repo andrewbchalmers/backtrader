@@ -305,7 +305,9 @@ class ChartGenerator:
 
                 if simulated_position is None:
                     signal = self.strategy.get_entry_signal(current_df, self.params)
-                    if signal['signal']:
+                    # Only process BUY signals (SELL signals don't have stop_loss)
+                    is_buy = signal.get('signal_type', 'BUY') == 'BUY'
+                    if signal['signal'] and is_buy and 'stop_loss' in signal:
                         buy_signals.append((current_date, current_price))
                         simulated_position = {
                             'entry_price': signal['price'],

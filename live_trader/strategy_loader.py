@@ -108,6 +108,10 @@ class StrategyLoader:
         Run the actual ML strategy through backtrader to detect signals.
         Returns: {'signal': bool, 'signal_type': str, 'price': float, 'stop_loss': float, 'bars_ago': int}
         """
+        import gc
+        cerebro = None
+        result = {'signal': False}
+
         try:
             # Prepare data for backtrader
             bt_df = df.copy()
@@ -117,7 +121,7 @@ class StrategyLoader:
             required = ['open', 'high', 'low', 'close', 'volume']
             for col in required:
                 if col not in bt_df.columns:
-                    return {'signal': False}
+                    return result
 
             # Create cerebro instance
             cerebro = bt.Cerebro(stdstats=False)
@@ -139,8 +143,6 @@ class StrategyLoader:
             strategy_params['verbose'] = False
 
             # Create a signal-capturing wrapper strategy
-            captured_signals = []
-
             class SignalCaptureStrategy(self.strategy_class):
                 def __init__(self):
                     super().__init__()
@@ -191,7 +193,7 @@ class StrategyLoader:
                     if hasattr(stop_pct, '__float__'):
                         stop_pct = float(stop_pct)
 
-                    return {
+                    result = {
                         'signal': True,
                         'signal_type': 'BUY',
                         'price': sig['price'],
@@ -201,27 +203,34 @@ class StrategyLoader:
                         'bars_ago': bars_ago,
                         'prediction': sig.get('prediction', 0)
                     }
+                    break
 
-            # Check for recent sell signals
-            for sig in reversed(strat.captured_sells):
-                if sig['bar'] >= recent_threshold:
-                    bars_ago = total_bars - sig['bar']
-                    return {
-                        'signal': True,
-                        'signal_type': 'SELL',
-                        'price': sig['price'],
-                        'date': sig['date'],
-                        'bars_ago': bars_ago,
-                        'reason': sig.get('reason', 'EXIT')
-                    }
-
-            return {'signal': False}
+            # Check for recent sell signals (only if no buy signal found)
+            if not result['signal']:
+                for sig in reversed(strat.captured_sells):
+                    if sig['bar'] >= recent_threshold:
+                        bars_ago = total_bars - sig['bar']
+                        result = {
+                            'signal': True,
+                            'signal_type': 'SELL',
+                            'price': sig['price'],
+                            'date': sig['date'],
+                            'bars_ago': bars_ago,
+                            'reason': sig.get('reason', 'EXIT')
+                        }
+                        break
 
         except Exception as e:
-            print(f"❌ Error running ML strategy signal detection: {e}")
-            import traceback
-            traceback.print_exc()
-            return {'signal': False}
+            print(f"\n❌ Error running ML strategy signal detection: {e}")
+
+        finally:
+            # Clean up cerebro and force garbage collection
+            if cerebro is not None:
+                cerebro.runstop()
+                del cerebro
+            gc.collect()
+
+        return result
 
     def get_exit_signal(self, df, params, entry_price, current_stop):
         """
