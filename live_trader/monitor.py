@@ -42,7 +42,9 @@ class LiveTradingMonitor:
         self.market_open_notified_date = None  # Track when market open notification was sent
         self.current_timeframe = '1D'  # Default to daily bars
         self.ml_lock = threading.Lock()  # Prevent concurrent ML operations
-        self.pending_command = None  # Command to process between scan symbols
+        self.scan_thread = None  # Buy scanning thread
+        self.exit_thread = None  # Exit/sell scanning thread
+        self.scanning = False  # Flag to control scan loops
 
         # Clear any pending_exit flags from previous sessions
         self._clear_pending_exit_flags()
@@ -214,21 +216,6 @@ class LiveTradingMonitor:
             except Exception as e:
                 print(f" ERROR: {e}")
 
-            # Check for pending commands between symbols
-            if self.pending_command:
-                cmd = self.pending_command
-                self.pending_command = None
-                print(f"\n⏸️  Pausing scan to process: {cmd}")
-                if cmd.startswith("LAST "):
-                    self.handle_last_signal_query(cmd)
-                elif cmd.startswith("BACKTEST "):
-                    self.handle_backtest_query(cmd)
-                elif cmd.startswith("ANALYZE "):
-                    self.handle_analyze_query(cmd)
-                elif cmd.startswith("COMPARE "):
-                    self.handle_compare_query(cmd)
-                print(f"▶️  Resuming scan...\n")
-
             # Periodic garbage collection every 25 symbols
             if idx > 0 and idx % 25 == 0:
                 gc.collect()
@@ -239,24 +226,6 @@ class LiveTradingMonitor:
         scan_duration = time.time() - scan_start
         print(f"\r   Scanning: {total_to_scan}/{total_to_scan} - Done!          ")
         print(f"✅ Scan complete in {scan_duration:.1f}s - Found {buy_opportunities} buy opportunities")
-
-        # Scan ONLY held positions for SELL opportunities
-        if held_positions:
-            print(f"\nChecking {len(held_positions)} held positions for exits...")
-            for symbol in held_positions:
-                try:
-                    position = self.position_manager.get(symbol)
-
-                    # Skip if already sent exit alert (waiting for confirmation)
-                    if position and position.get('pending_exit'):
-                        print(f"⏳ {symbol}: Exit alert already sent, waiting for 'SOLD {symbol}' confirmation")
-                        continue
-
-                    self.check_exit(symbol)
-                except Exception as e:
-                    print(f"❌ Error checking exit for {symbol}: {e}")
-        else:
-            print("\nNo positions to check for exits")
 
     def _handle_reply(self, reply):
         """
@@ -280,26 +249,15 @@ class LiveTradingMonitor:
             self.handle_timeframe_query()
         elif reply.startswith("ADD "):
             self.handle_add_command(reply)
-        # Heavy commands - defer during active scan, process immediately when market closed
-        elif reply.startswith("LAST ") or reply.startswith("BACKTEST ") or reply.startswith("ANALYZE ") or reply.startswith("COMPARE "):
-            if self.is_market_hours():
-                # During market hours, defer to avoid interrupting scans
-                if self.pending_command is None:
-                    self.pending_command = reply
-                    print(f"⏳ Will process '{reply}' momentarily...")
-                else:
-                    print(f"⚠️ Already have a pending command, ignoring: {reply}")
-            else:
-                # Market closed - no scan running, process immediately
-                print(f"⏳ Processing '{reply}' now (market closed)...")
-                if reply.startswith("LAST "):
-                    self.handle_last_signal_query(reply)
-                elif reply.startswith("BACKTEST "):
-                    self.handle_backtest_query(reply)
-                elif reply.startswith("ANALYZE "):
-                    self.handle_analyze_query(reply)
-                elif reply.startswith("COMPARE "):
-                    self.handle_compare_query(reply)
+        # Commands that use ML - processed immediately on listener thread (ml_lock handles sync)
+        elif reply.startswith("LAST "):
+            self.handle_last_signal_query(reply)
+        elif reply.startswith("BACKTEST "):
+            self.handle_backtest_query(reply)
+        elif reply.startswith("ANALYZE "):
+            self.handle_analyze_query(reply)
+        elif reply.startswith("COMPARE "):
+            self.handle_compare_query(reply)
         else:
             print(f"⚠️  Unknown reply format: {reply}")
 
@@ -537,39 +495,125 @@ class LiveTradingMonitor:
         self.market_open_notified_date = today
         print(f"📢 Market open notification sent")
 
-    def run(self, scan_interval=15):
-        """Main loop - scan continuously during market hours"""
+    def _scan_loop(self, scan_interval):
+        """Background scanning loop - runs in separate thread"""
+        while self.scanning:
+            try:
+                if self.is_market_hours():
+                    # Send market open notification (once per day)
+                    self.send_market_open_notification()
+
+                    self.scan_for_opportunities()
+                    print(f"\n💤 Next scan in {scan_interval} minutes...")
+
+                    # Sleep in small increments to allow quick shutdown
+                    for _ in range(scan_interval * 60):
+                        if not self.scanning:
+                            break
+                        time.sleep(1)
+                else:
+                    print("Market closed. Sleeping...")
+                    # Sleep in small increments to allow quick shutdown
+                    for _ in range(300):
+                        if not self.scanning:
+                            break
+                        time.sleep(1)
+
+            except Exception as e:
+                print(f"❌ Error in scan loop: {e}")
+                time.sleep(60)
+
+        print("🛑 Scan loop stopped")
+
+    def _exit_scan_loop(self, exit_interval=60):
+        """Background exit scanning loop - checks held positions for sell signals"""
+        while self.scanning:
+            try:
+                if self.is_market_hours():
+                    held_positions = list(self.position_manager.list_all().keys())
+
+                    if held_positions:
+                        print(f"\n🔍 [EXIT] Checking {len(held_positions)} positions for exits...")
+                        for symbol in held_positions:
+                            if not self.scanning:
+                                break
+                            try:
+                                position = self.position_manager.get(symbol)
+
+                                # Skip if already sent exit alert (waiting for confirmation)
+                                if position and position.get('pending_exit'):
+                                    print(f"   ⏳ {symbol}: Exit alert pending, waiting for 'SOLD {symbol}'")
+                                    continue
+
+                                self.check_exit(symbol)
+                            except Exception as e:
+                                print(f"   ❌ Error checking exit for {symbol}: {e}")
+
+                        print(f"✅ [EXIT] Check complete. Next check in {exit_interval}s...")
+
+                    # Sleep in small increments to allow quick shutdown
+                    for _ in range(exit_interval):
+                        if not self.scanning:
+                            break
+                        time.sleep(1)
+                else:
+                    # Market closed - check less frequently
+                    for _ in range(300):
+                        if not self.scanning:
+                            break
+                        time.sleep(1)
+
+            except Exception as e:
+                print(f"❌ Error in exit scan loop: {e}")
+                time.sleep(60)
+
+        print("🛑 Exit scan loop stopped")
+
+    def run(self, scan_interval=15, exit_interval=60):
+        """Main entry point - starts scanning threads and keeps main thread alive
+
+        Args:
+            scan_interval: Minutes between buy scans (default 15)
+            exit_interval: Seconds between exit/sell checks (default 60)
+        """
         tf_config = self.TIMEFRAMES[self.current_timeframe]
         print(f"\n🚀 Live Trading Monitor Started")
         print(f"Watching {len(self.watchlist)} symbols")
         print(f"Active positions: {self.position_manager.get_summary()['count']}")
         print(f"Timeframe: {self.current_timeframe} ({tf_config['description']})")
-        print(f"Scan interval: {scan_interval} minutes")
+        print(f"Buy scan interval: {scan_interval} minutes")
+        print(f"Exit check interval: {exit_interval} seconds")
+        print(f"Threading: Buy scan, exit scan, and input all run independently")
         print(f"Reply listener: ACTIVE (responds instantly to your texts)\n")
 
+        # Start threads
+        self.scanning = True
+
+        # Buy scanning thread
+        self.scan_thread = threading.Thread(target=self._scan_loop, args=(scan_interval,), daemon=True)
+        self.scan_thread.start()
+        print("✓ Buy scan thread started")
+
+        # Exit scanning thread
+        self.exit_thread = threading.Thread(target=self._exit_scan_loop, args=(exit_interval,), daemon=True)
+        self.exit_thread.start()
+        print("✓ Exit scan thread started")
+
         try:
-            while True:
-                try:
-                    if self.is_market_hours():
-                        # Send market open notification (once per day)
-                        self.send_market_open_notification()
-
-                        self.scan_for_opportunities()
-                        print(f"\n💤 Next scan in {scan_interval} minutes...")
-                        time.sleep(scan_interval * 60)
-                    else:
-                        print("Market closed. Sleeping...")
-                        time.sleep(300)
-
-                except KeyboardInterrupt:
-                    print("\n👋 Monitor stopped")
-                    break
-                except Exception as e:
-                    print(f"❌ Error in main loop: {e}")
-                    time.sleep(60)
+            # Keep main thread alive for keyboard interrupt
+            while self.scanning:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\n👋 Stopping monitor...")
         finally:
-            # Stop the listener when exiting
+            # Stop all threads
+            self.scanning = False
+            if self.scan_thread:
+                self.scan_thread.join(timeout=5)
+            if self.exit_thread:
+                self.exit_thread.join(timeout=5)
             self.notifier.stop_listening()
+            print("👋 Monitor stopped")
 
     def handle_last_signal_query(self, reply):
         """

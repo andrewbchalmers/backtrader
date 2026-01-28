@@ -235,56 +235,222 @@ class StrategyLoader:
     def get_exit_signal(self, df, params, entry_price, current_stop):
         """
         Extract exit logic from strategy
-        Checks recent bars to catch stops that may have been hit when system was offline
+        For ML strategies, runs the actual strategy to detect exit signals.
 
         Returns: {'signal': bool, 'price': float, 'stop_type': str, 'new_stop': float, 'bars_ago': int}
         """
-        # For ML strategies, use simple percentage-based stop logic
-        # (The actual exit signals are captured during buy signal detection)
+        # For ML strategies, run the actual strategy exit logic
+        if self._is_ml_strategy:
+            return self._get_ml_exit_signal(df, params, entry_price, current_stop)
+
+        # Legacy: simple percentage-based stop logic
         stop_pct = params.get('stop_loss_pct', 0.05)
         if hasattr(stop_pct, '__float__'):
             stop_pct = float(stop_pct)
 
-        lookback_bars = params.get('exit_lookback_bars', 5)
-
-        # Check recent bars for stop hits (in reverse chronological order)
-        for i in range(lookback_bars):
-            idx = -(i + 1)
-
-            if abs(idx) > len(df):
-                break
-
-            close = df['Close'].iloc[idx]
-
-            # Percentage-based stop (from entry)
-            pct_stop = entry_price * (1 - stop_pct)
-
-            # Trailing stop (can't go below current_stop)
-            new_stop = max(pct_stop, current_stop)
-
-            # Check if price closed below stop
-            if close <= new_stop:
-                bars_ago = i
-                bar_date = df.index[idx].strftime('%Y-%m-%d') if hasattr(df.index[idx], 'strftime') else str(df.index[idx])
-
-                return {
-                    'signal': True,
-                    'price': close,
-                    'stop_type': 'STOP_LOSS',
-                    'new_stop': new_stop,
-                    'bars_ago': bars_ago,
-                    'bar_date': bar_date
-                }
-
-        # No stop hit, calculate new trailing stop
         close = df['Close'].iloc[-1]
         pct_stop = entry_price * (1 - stop_pct)
-
-        # Simple trailing: stop trails at stop_pct below highest close since entry
-        # For simplicity, just use the higher of pct_stop or current_stop
         new_stop = max(pct_stop, current_stop)
 
+        if close <= new_stop:
+            bar_date = df.index[-1].strftime('%Y-%m-%d') if hasattr(df.index[-1], 'strftime') else str(df.index[-1])
+            return {
+                'signal': True,
+                'price': close,
+                'stop_type': 'STOP_LOSS',
+                'new_stop': new_stop,
+                'bars_ago': 0,
+                'bar_date': bar_date
+            }
+
         return {'signal': False, 'new_stop': new_stop}
+
+    def _get_ml_exit_signal(self, df, params, entry_price, current_stop):
+        """
+        Run the ML strategy to detect exit signals for held positions.
+        Simulates holding a position and checks if strategy would exit.
+
+        Returns: {'signal': bool, 'price': float, 'stop_type': str, 'new_stop': float, 'bars_ago': int}
+        """
+        import gc
+        cerebro = None
+
+        stop_pct = params.get('stop_loss_pct', 0.05)
+        if hasattr(stop_pct, '__float__'):
+            stop_pct = float(stop_pct)
+
+        close = df['Close'].iloc[-1]
+        pct_stop = entry_price * (1 - stop_pct)
+        new_stop = max(pct_stop, current_stop)
+
+        result = {'signal': False, 'new_stop': new_stop}
+
+        try:
+            # Prepare data for backtrader
+            bt_df = df.copy()
+            bt_df.columns = [c.lower() for c in bt_df.columns]
+
+            required = ['open', 'high', 'low', 'close', 'volume']
+            for col in required:
+                if col not in bt_df.columns:
+                    return result
+
+            cerebro = bt.Cerebro(stdstats=False)
+
+            data = bt.feeds.PandasData(
+                dataname=bt_df,
+                datetime=None,
+                open='open',
+                high='high',
+                low='low',
+                close='close',
+                volume='volume'
+            )
+            cerebro.adddata(data)
+
+            strategy_params = params.copy()
+            strategy_params['verbose'] = False
+
+            # Create a strategy wrapper that simulates holding a position
+            parent_strategy_class = self.strategy_class
+            captured_entry_price = entry_price
+
+            class ExitSignalStrategy(parent_strategy_class):
+                def __init__(self):
+                    super().__init__()
+                    self.exit_signals = []
+                    self.simulated_position = False
+                    self.sim_entry_price = captured_entry_price
+                    self.sim_entry_bar = None
+
+                def _execute_buy(self):
+                    # Track when strategy would have entered
+                    if not self.simulated_position:
+                        self.simulated_position = True
+                        self.sim_entry_bar = len(self)
+                        self.entry_price = self.sim_entry_price
+                        self.entry_bar = self.sim_entry_bar
+
+                def _close_position(self, reason):
+                    # Capture exit signal
+                    if self.simulated_position:
+                        self.exit_signals.append({
+                            'bar': len(self),
+                            'date': self.data.datetime.date(0),
+                            'price': self.data.close[0],
+                            'reason': reason
+                        })
+                        self.simulated_position = False
+
+                def next(self):
+                    # Run parent logic but with simulated position
+                    if len(self) < 50:
+                        return
+
+                    if self.order:
+                        return
+
+                    self._store_features()
+                    label = self._calculate_label()
+                    self.label_array.append(label)
+
+                    if self.p.test_start_idx > 0 and len(self) < self.p.test_start_idx:
+                        return
+
+                    self.prediction = self._run_knn()
+                    signal_changed = self._update_signal()
+
+                    # Simulate having a position from the start
+                    # (we're checking if the strategy would exit our held position)
+                    if not self.simulated_position and len(self) > 100:
+                        # Simulate that we entered earlier
+                        self.simulated_position = True
+                        self.entry_price = self.sim_entry_price
+                        self.entry_bar = len(self) - 50  # Pretend we entered 50 bars ago
+
+                    # Check exit conditions if we have a simulated position
+                    if self.simulated_position:
+                        # Manually check exit conditions (can't use self.position)
+                        self._check_simulated_exit(signal_changed)
+
+                def _check_simulated_exit(self, signal_changed):
+                    """Check exit conditions for simulated position."""
+                    current_price = self.data.close[0]
+
+                    # Stop loss check
+                    if self.p.use_stop_loss:
+                        current_pnl_pct = (current_price - self.entry_price) / self.entry_price
+                        stop = float(self.p.stop_loss_pct)
+                        if current_pnl_pct <= -stop:
+                            self._close_position("STOP LOSS HIT")
+                            return
+
+                    # Dynamic exits (kernel-based)
+                    if self.p.use_dynamic_exits and hasattr(self, 'kernel_rq'):
+                        if len(self.kernel_rq) >= 2:
+                            was_bullish = self.kernel_rq.estimate[-2] < self.kernel_rq.estimate[-1]
+                            is_bearish = self.kernel_rq.estimate[-1] > self.kernel_rq.estimate[0]
+                            if was_bullish and is_bearish:
+                                self._close_position("KERNEL BEARISH CHANGE")
+                                return
+
+                    # Kernel line exit
+                    if self.p.use_kernel_exit and hasattr(self, 'kernel_rq'):
+                        kernel_val = self.kernel_rq.estimate[0]
+                        if current_price < kernel_val:
+                            self._close_position(f"PRICE BELOW KERNEL")
+                            return
+
+                    # Signal flip exit
+                    if signal_changed and self.signal == -1:
+                        self._close_position("SIGNAL FLIP TO BEARISH")
+                        return
+
+                    # RSI exit
+                    if self.p.use_rsi_exit and hasattr(self, 'rsi_exit'):
+                        rsi_val = self.rsi_exit[0]
+                        if rsi_val >= self.p.rsi_overbought:
+                            self._close_position(f"RSI OVERBOUGHT ({rsi_val:.1f})")
+                            return
+
+            cerebro.addstrategy(ExitSignalStrategy, **strategy_params)
+            cerebro.broker.setcash(1000000)
+            cerebro.broker.setcommission(commission=0.0)
+
+            results = cerebro.run()
+            strat = results[0]
+
+            # Check for recent exit signals (last 5 bars)
+            total_bars = len(bt_df)
+            recent_threshold = total_bars - 5
+
+            for sig in reversed(strat.exit_signals):
+                if sig['bar'] >= recent_threshold:
+                    bars_ago = total_bars - sig['bar']
+                    bar_date = sig['date'].strftime('%Y-%m-%d') if hasattr(sig['date'], 'strftime') else str(sig['date'])
+
+                    result = {
+                        'signal': True,
+                        'price': sig['price'],
+                        'stop_type': sig['reason'],
+                        'new_stop': new_stop,
+                        'bars_ago': bars_ago,
+                        'bar_date': bar_date
+                    }
+                    break
+
+        except Exception as e:
+            print(f"\n❌ Error running ML exit signal detection: {e}")
+            import traceback
+            traceback.print_exc()
+
+        finally:
+            if cerebro is not None:
+                cerebro.runstop()
+                del cerebro
+            gc.collect()
+
+        return result
 
     def _calculate_indicators(self, df, params):
         """Calculate common indicators"""
