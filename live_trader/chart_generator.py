@@ -396,6 +396,129 @@ class ChartGenerator:
 
         return buf
 
+    def generate_backtest_chart(self, symbol, df, test_start_idx, buy_signals, sell_signals,
+                                 period_label, interval='1d', results=None):
+        """
+        Generate a backtest chart showing price action with buy/sell signals
+
+        Args:
+            symbol: Stock ticker
+            df: Full DataFrame with OHLC data
+            test_start_idx: Index where test period starts
+            buy_signals: List of (date, price) tuples for buy signals
+            sell_signals: List of (date, price) tuples for sell signals
+            period_label: Period description (e.g., "1Y")
+            interval: Bar interval (e.g., '1d', '1h')
+            results: Optional dict with backtest results for annotation
+
+        Returns:
+            BytesIO: PNG image buffer
+        """
+        if df is None or len(df) == 0:
+            return None
+
+        # Get test period data
+        df_chart = df.iloc[test_start_idx:].copy()
+
+        if len(df_chart) == 0:
+            return None
+
+        # Create figure
+        fig, ax = plt.subplots(1, 1, figsize=(14, 8), facecolor='#1e1e1e')
+        ax.set_facecolor('#1e1e1e')
+        ax.tick_params(colors='white', which='both')
+        for spine in ax.spines.values():
+            spine.set_color('#404040')
+
+        # Plot price
+        ax.plot(df_chart.index, df_chart['close'],
+                label='Close', color='#00d4ff', linewidth=1.5, zorder=5)
+
+        # Plot buy signals
+        if buy_signals:
+            buy_dates = []
+            buy_prices = []
+            for date, price in buy_signals:
+                # Convert date to pandas timestamp for matching
+                if hasattr(date, 'strftime'):
+                    # Find matching index in df_chart
+                    mask = df_chart.index.date == date
+                    if mask.any():
+                        idx = df_chart.index[mask][0]
+                        buy_dates.append(idx)
+                        buy_prices.append(price)
+
+            if buy_dates:
+                ax.scatter(buy_dates, buy_prices, color='#00ff00', marker='^',
+                          s=150, label=f'BUY ({len(buy_dates)})', zorder=10,
+                          edgecolors='white', linewidths=1.5)
+
+        # Plot sell signals
+        if sell_signals:
+            sell_dates = []
+            sell_prices = []
+            for date, price in sell_signals:
+                if hasattr(date, 'strftime'):
+                    mask = df_chart.index.date == date
+                    if mask.any():
+                        idx = df_chart.index[mask][0]
+                        sell_dates.append(idx)
+                        sell_prices.append(price)
+
+            if sell_dates:
+                ax.scatter(sell_dates, sell_prices, color='#ff0000', marker='v',
+                          s=150, label=f'SELL ({len(sell_dates)})', zorder=10,
+                          edgecolors='white', linewidths=1.5)
+
+        # Title with results summary
+        title = f'{symbol} Backtest - {period_label}'
+        if results:
+            title += f" | Return: {results.get('total_return_pct', 0):+.1f}%"
+            title += f" | Win Rate: {results.get('win_rate', 0):.0f}%"
+            title += f" | {results.get('total_trades', 0)} trades"
+
+        ax.set_title(title, color='white', fontsize=14, fontweight='bold', pad=15)
+        ax.set_ylabel('Price ($)', color='white', fontsize=11)
+        ax.set_xlabel('Date', color='white', fontsize=11)
+
+        # Legend
+        ax.legend(loc='upper left', framealpha=0.9, facecolor='#2a2a2a',
+                 edgecolor='#404040', labelcolor='white', fontsize=10)
+
+        ax.grid(True, alpha=0.2, color='#404040')
+
+        # Format x-axis based on interval
+        if interval in ['1h', '4h']:
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
+        else:
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+
+        # Add annotation box with key stats
+        if results:
+            stats_text = (
+                f"Sharpe: {results.get('sharpe_ratio', 0):.2f}\n"
+                f"Max DD: {results.get('max_drawdown', 0):.1f}%\n"
+                f"vs SPY: {results.get('total_return_pct', 0) - results.get('spy_return', 0):+.1f}%"
+            )
+            props = dict(boxstyle='round,pad=0.5', facecolor='#2a2a2a',
+                        edgecolor='#404040', alpha=0.9)
+            ax.text(0.98, 0.02, stats_text, transform=ax.transAxes, fontsize=10,
+                   verticalalignment='bottom', horizontalalignment='right',
+                   color='white', bbox=props)
+
+        plt.tight_layout()
+
+        # Save to buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=100, facecolor='#1e1e1e',
+                    edgecolor='none', bbox_inches='tight')
+        buf.seek(0)
+        plt.close(fig)
+
+        return buf
+
     def generate_holdings_chart(self, positions, monitor):
         """
         Generate a chart showing all holdings with P&L

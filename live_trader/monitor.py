@@ -868,8 +868,29 @@ class LiveTradingMonitor:
 
             message = "\n".join(message_lines)
 
-            self.notifier.send_notification(title, message)
-            print(f"✓ Sent backtest results for {symbol}")
+            # Generate backtest chart with buy/sell signals
+            chart_buf = None
+            try:
+                chart_buf = self.chart_gen.generate_backtest_chart(
+                    symbol=symbol,
+                    df=results['chart_df'],
+                    test_start_idx=results['test_start_idx'],
+                    buy_signals=results['buy_signals'],
+                    sell_signals=results['sell_signals'],
+                    period_label=period,
+                    interval=results['interval'],
+                    results=results
+                )
+            except Exception as chart_error:
+                print(f"⚠️ Chart generation failed: {chart_error}")
+
+            # Send notification with chart if available
+            if chart_buf:
+                self.notifier.send_notification_with_image(title, message, chart_buf, f"{symbol}_backtest.png")
+                print(f"✓ Sent backtest results with chart for {symbol}")
+            else:
+                self.notifier.send_notification(title, message)
+                print(f"✓ Sent backtest results for {symbol} (no chart)")
 
         except Exception as e:
             print(f"❌ Backtest error: {e}")
@@ -1032,8 +1053,36 @@ class LiveTradingMonitor:
             strategy_params['verbose'] = False
             strategy_params['test_start_idx'] = test_start_idx
 
+            # Create a strategy wrapper that captures buy/sell signals
+            parent_strategy_class = self.strategy.strategy_class
+
+            class SignalCaptureStrategy(parent_strategy_class):
+                def __init__(self):
+                    super().__init__()
+                    self.buy_signals = []
+                    self.sell_signals = []
+
+                def _execute_buy(self):
+                    # Capture buy signal
+                    self.buy_signals.append({
+                        'date': self.data.datetime.date(0),
+                        'price': self.data.close[0],
+                        'bar': len(self)
+                    })
+                    super()._execute_buy()
+
+                def _close_position(self, reason):
+                    # Capture sell signal
+                    self.sell_signals.append({
+                        'date': self.data.datetime.date(0),
+                        'price': self.data.close[0],
+                        'reason': reason,
+                        'bar': len(self)
+                    })
+                    super()._close_position(reason)
+
             # Add strategy
-            cerebro.addstrategy(self.strategy.strategy_class, **strategy_params)
+            cerebro.addstrategy(SignalCaptureStrategy, **strategy_params)
 
             # Broker settings
             initial_cash = 10000
@@ -1152,6 +1201,10 @@ class LiveTradingMonitor:
             start_date_str = test_df.index[0].strftime('%Y-%m-%d')
             end_date_str = test_df.index[-1].strftime('%Y-%m-%d')
 
+            # Get captured buy/sell signals from strategy
+            buy_signals = [(sig['date'], sig['price']) for sig in strat.buy_signals]
+            sell_signals = [(sig['date'], sig['price']) for sig in strat.sell_signals]
+
             return {
                 'start_date': start_date_str,
                 'end_date': end_date_str,
@@ -1170,6 +1223,11 @@ class LiveTradingMonitor:
                 'avg_win': avg_win,
                 'avg_loss': avg_loss,
                 'final_value': final_value,
+                # Chart data
+                'chart_df': df,
+                'test_start_idx': test_start_idx,
+                'buy_signals': buy_signals,
+                'sell_signals': sell_signals,
             }
 
         except Exception as e:
