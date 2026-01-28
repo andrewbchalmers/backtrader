@@ -2,16 +2,12 @@
   "NFLX": {
     "entry_price": 109.13,
     "entry_date": "2025-12-11T00:00:00",
-    "stop_loss": 84.49700012207032,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-27"
+    "stop_loss": 84.49700012207032
   },
   "SOFI": {
     "entry_price": 26.87,
     "entry_date": "2025-01-06T00:00:00",
-    "stop_loss": 25.5265,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-27"
+    "stop_loss": 25.5265
   },
   "IDXX": {
     "entry_price": 713.72,
@@ -46,9 +42,7 @@
   "AMGN": {
     "entry_price": 349.32,
     "entry_date": "2026-01-22T11:35:47.449178",
-    "stop_loss": 313.528498840332,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-20"
+    "stop_loss": 313.528498840332
   },
   "JNJ": {
     "entry_price": 219.85,
@@ -78,9 +72,7 @@
   "TGRP": {
     "entry_price": 190.62,
     "entry_date": "2026-01-22T12:17:29.809838",
-    "stop_loss": 171.55800000000002,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-26"
+    "stop_loss": 171.55800000000002
   },
   "AMD": {
     "entry_price": 254.9,
@@ -90,9 +82,7 @@
   "DDOG": {
     "entry_price": 132.43,
     "entry_date": "2026-01-26T10:52:01.190821",
-    "stop_loss": 125.8085,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "stop_loss": 125.8085
   },
   "MDT": {
     "entry_price": 101.7,
@@ -112,8 +102,6 @@
   "STX": {
     "entry_price": 364.12,
     "entry_date": "2026-01-26T11:25:18.658368",
-    "stop_loss": 345.914,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "stop_loss": 345.914
   }
 }

@@ -278,6 +278,8 @@ class LiveTradingMonitor:
             self.handle_holdings_query()
         elif reply == "TIMEFRAME":
             self.handle_timeframe_query()
+        elif reply.startswith("ADD "):
+            self.handle_add_command(reply)
         # Heavy commands - defer during active scan, process immediately when market closed
         elif reply.startswith("LAST ") or reply.startswith("BACKTEST ") or reply.startswith("ANALYZE ") or reply.startswith("COMPARE "):
             if self.is_market_hours():
@@ -382,6 +384,55 @@ class LiveTradingMonitor:
         # Send confirmation with P&L
         self.notifier.send_position_confirmation(symbol, entry_price, current_price, "removed", pnl)
         print(f"✅ Auto-removed position from reply: {symbol} (P&L: {pnl:+.2f}%)")
+
+    def handle_add_command(self, reply):
+        """Handle 'ADD SYMBOL' command to add stock to watchlist"""
+        import os
+
+        parts = reply.split()
+        if len(parts) < 2:
+            print(f"⚠️  Invalid ADD format: {reply}")
+            self.notifier.send_notification("Invalid Command", "Usage: ADD <SYMBOL>")
+            return
+
+        symbol = parts[1].upper().strip()
+
+        # Get watchlist file path (in same directory as this module)
+        watchlist_file = os.path.join(os.path.dirname(__file__), 'watchlist.csv')
+
+        # Read current watchlist from file
+        existing_symbols = set()
+        try:
+            with open(watchlist_file, 'r') as f:
+                for line in f:
+                    s = line.strip()
+                    if s and not s.startswith('#'):
+                        existing_symbols.add(s.upper())
+        except FileNotFoundError:
+            existing_symbols = set()
+
+        # Check if already in watchlist
+        if symbol in existing_symbols:
+            msg = f"{symbol} is already in the watchlist"
+            print(f"ℹ️  {msg}")
+            self.notifier.send_notification("Already in Watchlist", msg)
+            return
+
+        # Add to file
+        try:
+            with open(watchlist_file, 'a') as f:
+                f.write(f"{symbol}\n")
+
+            # Also add to in-memory watchlist
+            if symbol not in self.watchlist:
+                self.watchlist.append(symbol)
+
+            print(f"✅ Added {symbol} to watchlist")
+            self.notifier.send_notification("Stock Added to Watchlist", f"{symbol} has been added to your watchlist")
+
+        except Exception as e:
+            print(f"❌ Error adding {symbol} to watchlist: {e}")
+            self.notifier.send_notification("Error", f"Failed to add {symbol}: {e}")
 
     def check_exit(self, symbol):
         """Check if held position should be exited"""

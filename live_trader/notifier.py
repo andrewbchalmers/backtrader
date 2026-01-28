@@ -182,7 +182,7 @@ class PushbulletNotifier:
 
                     # Valid commands must match exactly at the start
                     # Commands with arguments (space after keyword)
-                    command_prefixes = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'TIMEFRAME SET ', 'ANALYZE ', 'COMPARE ']
+                    command_prefixes = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'TIMEFRAME SET ', 'ANALYZE ', 'COMPARE ', 'ADD ']
                     # Exact match commands (no arguments)
                     exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME']
 
