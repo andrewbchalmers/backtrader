@@ -323,7 +323,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
     params = (
         # === General Settings ===
-        ('neighbors_count', 8),          # Number of neighbors for KNN
+        ('neighbors_count', 9),          # Number of neighbors for KNN
         ('max_bars_back', 2000),         # Maximum lookback for training data
         ('feature_count', 5),            # Number of features (2-5)
         ('trend_following_labels', False),  # False=mean-reversion labels, True=trend-following labels

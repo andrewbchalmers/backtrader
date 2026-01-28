@@ -2,22 +2,16 @@
   "NFLX": {
     "entry_price": 109.13,
     "entry_date": "2025-12-11T00:00:00",
-    "stop_loss": 84.49700012207032
+    "stop_loss": 84.49700012207032,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-01-28"
   },
   "SOFI": {
     "entry_price": 26.87,
     "entry_date": "2025-01-06T00:00:00",
-    "stop_loss": 25.5265
-  },
-  "IDXX": {
-    "entry_price": 713.72,
-    "entry_date": "2025-01-13T00:00:00",
-    "stop_loss": 678.034
-  },
-  "CLX": {
-    "entry_price": 109.27999877929688,
-    "entry_date": "2026-01-13T15:04:59.476370",
-    "stop_loss": 104.03524780273438
+    "stop_loss": 25.5265,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-01-28"
   },
   "TPL": {
     "entry_price": 323.6400146484375,
@@ -29,50 +23,20 @@
     "entry_date": "2026-01-14T10:38:07.701506",
     "stop_loss": 57.822941589355466
   },
-  "DLR": {
-    "entry_price": 162.32,
-    "entry_date": "2026-01-15T10:37:08.645708",
-    "stop_loss": 154.20399999999998
-  },
-  "PPL": {
-    "entry_price": 36.11,
-    "entry_date": "2026-01-16T10:43:39.149378",
-    "stop_loss": 34.89549942016602
-  },
   "AMGN": {
     "entry_price": 349.32,
     "entry_date": "2026-01-22T11:35:47.449178",
-    "stop_loss": 313.528498840332
+    "stop_loss": 331.854
   },
   "JNJ": {
     "entry_price": 219.85,
     "entry_date": "2026-01-22T11:55:16.224666",
     "stop_loss": 208.8575
   },
-  "LH": {
-    "entry_price": 270.94,
-    "entry_date": "2026-01-22T12:01:04.120765",
-    "stop_loss": 257.393
-  },
   "OKE": {
     "entry_price": 76.54,
     "entry_date": "2026-01-22T12:06:08.430624",
     "stop_loss": 72.71300000000001
-  },
-  "PNR": {
-    "entry_price": 108.61,
-    "entry_date": "2026-01-22T12:12:02.170314",
-    "stop_loss": 103.17949999999999
-  },
-  "STLD": {
-    "entry_price": 180.77,
-    "entry_date": "2026-01-22T12:15:08.287803",
-    "stop_loss": 171.7315
-  },
-  "TGRP": {
-    "entry_price": 190.62,
-    "entry_date": "2026-01-22T12:17:29.809838",
-    "stop_loss": 171.55800000000002
   },
   "AMD": {
     "entry_price": 254.9,
@@ -89,11 +53,6 @@
     "entry_date": "2026-01-26T11:05:00.607392",
     "stop_loss": 96.615
   },
-  "RL": {
-    "entry_price": 363.7,
-    "entry_date": "2026-01-26T11:16:56.795513",
-    "stop_loss": 345.515
-  },
   "RSG": {
     "entry_price": 219.63,
     "entry_date": "2026-01-26T11:18:49.713404",
@@ -103,5 +62,15 @@
     "entry_price": 364.12,
     "entry_date": "2026-01-26T11:25:18.658368",
     "stop_loss": 345.914
+  },
+  "TRGP": {
+    "entry_price": 198.93,
+    "entry_date": "2026-01-28T11:55:18.340826",
+    "stop_loss": 188.9835
+  },
+  "PFG": {
+    "entry_price": 93.98,
+    "entry_date": "2026-01-28T16:57:19.562188",
+    "stop_loss": 89.281
   }
 }

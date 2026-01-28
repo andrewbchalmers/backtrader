@@ -866,6 +866,35 @@ class LiveTradingMonitor:
                     f"  Loss: ${results['avg_loss']:.2f}",
                 ])
 
+            # Add ML stats if available
+            ml_stats = results.get('ml_stats', {})
+            ml_diag = results.get('ml_diagnostics', {})
+
+            if ml_stats.get('total', 0) > 0:
+                message_lines.extend([
+                    f"",
+                    f"🤖 ML Accuracy:",
+                    f"  Overall: {ml_stats.get('accuracy_pct', 0):.1f}%",
+                    f"  Bullish: {ml_stats.get('bullish_accuracy_pct', 0):.1f}% ({ml_stats.get('bullish_total', 0)} predictions)",
+                    f"  Bearish: {ml_stats.get('bearish_accuracy_pct', 0):.1f}% ({ml_stats.get('bearish_total', 0)} predictions)",
+                ])
+
+            if ml_diag.get('total_bars', 0) > 0:
+                message_lines.extend([
+                    f"",
+                    f"🔄 Signal Behavior:",
+                    f"  Signal Flips: {ml_diag.get('signal_changes', 0)}",
+                    f"  Bullish %: {ml_diag.get('bullish_pct', 0):.1f}%",
+                    f"  Bearish %: {ml_diag.get('bearish_pct', 0):.1f}%",
+                    f"  Neutral %: {ml_diag.get('neutral_pct', 0):.1f}%",
+                ])
+
+                # Add filter blocking stats if relevant
+                if ml_diag.get('entry_attempts', 0) > 0:
+                    blocked_by_kernel = ml_diag.get('kernel_block_pct', 0)
+                    if blocked_by_kernel > 0:
+                        message_lines.append(f"  Blocked by Kernel: {blocked_by_kernel:.1f}%")
+
             message = "\n".join(message_lines)
 
             # Generate backtest chart with buy/sell signals
@@ -886,8 +915,11 @@ class LiveTradingMonitor:
 
             # Send notification with chart if available
             if chart_buf:
-                self.notifier.send_notification_with_image(title, message, chart_buf, f"{symbol}_backtest.png")
-                print(f"✓ Sent backtest results with chart for {symbol}")
+                sent = self.notifier.send_notification_with_image(title, message, chart_buf, f"{symbol}_backtest.png")
+                if sent:
+                    print(f"✓ Sent backtest results for {symbol}")
+                else:
+                    print(f"❌ Failed to send backtest results for {symbol}")
             else:
                 self.notifier.send_notification(title, message)
                 print(f"✓ Sent backtest results for {symbol} (no chart)")
@@ -1205,6 +1237,17 @@ class LiveTradingMonitor:
             buy_signals = [(sig['date'], sig['price']) for sig in strat.buy_signals]
             sell_signals = [(sig['date'], sig['price']) for sig in strat.sell_signals]
 
+            # Get ML prediction stats and diagnostics
+            ml_stats = {}
+            ml_diagnostics = {}
+            try:
+                if hasattr(strat, 'get_prediction_stats'):
+                    ml_stats = strat.get_prediction_stats()
+                if hasattr(strat, 'get_diagnostics'):
+                    ml_diagnostics = strat.get_diagnostics()
+            except Exception as ml_err:
+                print(f"   ⚠️ Could not get ML stats: {ml_err}")
+
             return {
                 'start_date': start_date_str,
                 'end_date': end_date_str,
@@ -1228,6 +1271,9 @@ class LiveTradingMonitor:
                 'test_start_idx': test_start_idx,
                 'buy_signals': buy_signals,
                 'sell_signals': sell_signals,
+                # ML stats
+                'ml_stats': ml_stats,
+                'ml_diagnostics': ml_diagnostics,
             }
 
         except Exception as e:

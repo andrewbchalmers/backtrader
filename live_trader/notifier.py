@@ -56,47 +56,67 @@ class PushbulletNotifier:
             print(f"❌ Notification failed: {e}")
             return False
 
-    def send_notification_with_image(self, title, message, image_buffer, filename="chart.png"):
+    def send_notification_with_image(self, title, message, image_buffer, filename="chart.png", max_retries=3):
         """
-        Send push notification with an attached image
-        Auto-cleans old pushes to stay within free tier limits
+        Send push notification with an attached image.
+        Retries on transient network errors (SSL, connection, timeout).
 
         Args:
             title: Notification title
             message: Notification message
             image_buffer: BytesIO buffer containing PNG image
             filename: Filename for the attachment
+            max_retries: Number of retry attempts for transient errors
 
         Returns:
             bool: Success status
         """
-        try:
-            # Clean up old pushes before uploading new image
-            self._cleanup_old_pushes(keep_recent=100)
+        # Clean up old pushes before uploading new image
+        self._cleanup_old_pushes(keep_recent=100)
 
-            # Upload the file
-            file_data = self.pb.upload_file(image_buffer, filename)
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Reset buffer position before each attempt
+                image_buffer.seek(0)
 
-            # Send the file with message
-            push = self.pb.push_file(
-                **file_data,
-                title=title,
-                body=message
-            )
+                # Upload the file
+                file_data = self.pb.upload_file(image_buffer, filename)
 
-            print(f"✓ Notification with image sent: {title}")
-            return True
+                # Send the file with message
+                push = self.pb.push_file(
+                    **file_data,
+                    title=title,
+                    body=message
+                )
 
-        except Exception as e:
-            # If file upload fails (Pro required or limit hit), send text only
-            if "pushbullet_pro_required" in str(e) or "rate_limit" in str(e):
-                print(f"⚠️  Image upload failed (Pro required or limit hit), sending text only")
+                print(f"✓ Notification with image sent: {title}")
+                return True
+
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+
+                # Non-retryable errors — fall back to text immediately
+                if "pushbullet_pro_required" in error_str or "rate_limit" in error_str:
+                    print(f"⚠️  Image upload failed (Pro required or limit hit), sending text only")
+                    return self.send_notification(title, message)
+
+                # Retryable transient errors
+                transient = ("ssl" in error_str or "eof" in error_str
+                             or "connection" in error_str or "timeout" in error_str
+                             or "reset by peer" in error_str)
+
+                if transient and attempt < max_retries:
+                    wait = attempt * 2  # 2s, 4s
+                    print(f"⚠️  Upload attempt {attempt}/{max_retries} failed (transient error), retrying in {wait}s...")
+                    time.sleep(wait)
+                    continue
+
+                # Out of retries or non-transient error — fall back to text-only
+                print(f"❌ Notification with image failed after {attempt} attempt(s): {last_error}")
+                print(f"⚠️  Falling back to text-only notification")
                 return self.send_notification(title, message)
-            else:
-                print(f"❌ Notification with image failed: {e}")
-                import traceback
-                traceback.print_exc()
-                return False
 
     def start_listening(self, callback):
         """

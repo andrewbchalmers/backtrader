@@ -497,11 +497,23 @@ class ChartGenerator:
 
         # Add annotation box with key stats
         if results:
-            stats_text = (
-                f"Sharpe: {results.get('sharpe_ratio', 0):.2f}\n"
-                f"Max DD: {results.get('max_drawdown', 0):.1f}%\n"
-                f"vs SPY: {results.get('total_return_pct', 0) - results.get('spy_return', 0):+.1f}%"
-            )
+            stats_lines = [
+                f"Sharpe: {results.get('sharpe_ratio', 0):.2f}",
+                f"Max DD: {results.get('max_drawdown', 0):.1f}%",
+                f"vs SPY: {results.get('total_return_pct', 0) - results.get('spy_return', 0):+.1f}%",
+            ]
+
+            # Add ML stats if available
+            ml_stats = results.get('ml_stats', {})
+            ml_diag = results.get('ml_diagnostics', {})
+
+            if ml_stats.get('total', 0) > 0:
+                stats_lines.append(f"ML Acc: {ml_stats.get('accuracy_pct', 0):.1f}%")
+
+            if ml_diag.get('signal_changes', 0) > 0:
+                stats_lines.append(f"Sig Flips: {ml_diag.get('signal_changes', 0)}")
+
+            stats_text = "\n".join(stats_lines)
             props = dict(boxstyle='round,pad=0.5', facecolor='#2a2a2a',
                         edgecolor='#404040', alpha=0.9)
             ax.text(0.98, 0.02, stats_text, transform=ax.transAxes, fontsize=10,

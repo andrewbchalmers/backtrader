@@ -274,35 +274,62 @@ def print_walkforward_schedule(periods):
 # Data Management
 # ============================================================================
 
-def load_symbol_data(symbol, start_date, end_date):
-    """Download data for a specific date range."""
+def load_symbol_data(symbol, start_date, end_date, lookback_bars=0):
+    """
+    Download data for a specific date range, optionally with extra lookback
+    data before start_date for ML warmup.
+
+    Returns:
+        tuple: (df, test_start_idx) where test_start_idx is the bar index
+               where the actual period begins (after lookback warmup).
+               Returns (None, 0) on failure.
+    """
     try:
-        start = pd.to_datetime(start_date) - timedelta(days=5)
+        # Calculate how far back to go for lookback data
+        if lookback_bars > 0:
+            lookback_calendar_days = int(lookback_bars * 1.5) + 10
+            data_start = pd.to_datetime(start_date) - timedelta(days=lookback_calendar_days)
+        else:
+            data_start = pd.to_datetime(start_date) - timedelta(days=5)
+
         end = pd.to_datetime(end_date) + timedelta(days=5)
 
-        df = yf.download(symbol, start=start, end=end, progress=False)
+        df = yf.download(symbol, start=data_start, end=end, progress=False)
 
         if df.empty:
-            return None
+            return None, 0
 
         df.index = df.index.tz_localize(None)
         df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
         df.columns = ['open', 'high', 'low', 'close', 'volume']
 
-        df = df[(df.index >= pd.to_datetime(start_date)) &
-                (df.index <= pd.to_datetime(end_date))]
+        # Trim end to the period boundary
+        df = df[df.index <= pd.to_datetime(end_date)]
 
-        return df if len(df) > 50 else None  # Need more bars for ML
+        # Find where the actual period starts (after lookback)
+        period_mask = df.index >= pd.to_datetime(start_date)
+        if period_mask.any():
+            test_start_idx = int(period_mask.argmax())
+        else:
+            return None, 0
+
+        # Need enough bars in the actual period
+        period_bars = len(df) - test_start_idx
+        if period_bars < 50:
+            return None, 0
+
+        return df, test_start_idx
 
     except Exception:
-        return None
+        return None, 0
 
 
-def load_all_periods_data(symbols, periods):
-    """Load data for all symbols across all periods."""
+def load_all_periods_data(symbols, periods, lookback_bars=600):
+    """Load data for all symbols across all periods, with ML lookback warmup."""
     data_cache = {}
 
     print(f"\n📥 Downloading data for {len(symbols)} stocks across {len(periods)} periods...")
+    print(f"   ML lookback: {lookback_bars} bars before each period for training data warmup")
 
     total_downloads = len(symbols) * len(periods)
     download_count = 0
@@ -311,13 +338,15 @@ def load_all_periods_data(symbols, periods):
         data_cache[symbol] = {}
 
         for period_idx, (train_start, train_end, test_start, test_end) in enumerate(periods):
-            train_df = load_symbol_data(symbol, train_start, train_end)
-            test_df = load_symbol_data(symbol, test_start, test_end)
+            train_df, train_tsi = load_symbol_data(symbol, train_start, train_end, lookback_bars)
+            test_df, test_tsi = load_symbol_data(symbol, test_start, test_end, lookback_bars)
 
             if train_df is not None and test_df is not None:
                 data_cache[symbol][period_idx] = {
                     'train': train_df,
-                    'test': test_df
+                    'train_test_start_idx': train_tsi,
+                    'test': test_df,
+                    'test_test_start_idx': test_tsi,
                 }
 
             download_count += 1
@@ -513,14 +542,20 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
             if period_idx not in data_cache.get(symbol, {}):
                 continue
 
-            df = data_cache[symbol][period_idx][phase]
+            period_data = data_cache[symbol][period_idx]
+            df = period_data[phase]
+            test_start_idx = period_data.get(f'{phase}_test_start_idx', 0)
 
             if df is None or len(df) < 50:
                 continue
 
+            # Override test_start_idx so the ML model warms up before trading
+            run_params = dict(params)
+            run_params['test_start_idx'] = test_start_idx
+
             result = backtest_single_config(
                 symbol,
-                params,
+                run_params,
                 df,
                 config['initial_cash'],
                 config['commission']
@@ -575,7 +610,11 @@ def run_walkforward_optimization(config):
     print(f"   Test period: {config['test_period_months']} months")
     print(f"   COVID exclusion: {'Yes' if config['exclude_covid'] else 'No'}")
 
-    data_cache, valid_symbols = load_all_periods_data(symbols, periods)
+    # Calculate lookback from the largest max_bars_back in the param grid
+    max_bars_back_values = config['param_grid'].get('max_bars_back', [500])
+    lookback_bars = max(max_bars_back_values) + 100  # buffer for indicator warmup
+
+    data_cache, valid_symbols = load_all_periods_data(symbols, periods, lookback_bars)
 
     if not valid_symbols:
         print("\n❌ No valid data. Exiting.")

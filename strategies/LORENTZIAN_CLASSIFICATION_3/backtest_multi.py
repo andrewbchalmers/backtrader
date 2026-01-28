@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import csv
 from decimal import Decimal
+from datetime import datetime, timedelta
 
 
 # ============================================================================
@@ -138,8 +139,26 @@ class PortfolioValue(bt.Observer):
 def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=None, plot=False):
     """Run backtest for a single symbol and return results"""
     try:
-        # Download data
-        df = yf.download(symbol, period=period, interval="1d", progress=False)
+        # Calculate lookback bars needed for ML warmup
+        max_bars_back = strategy_params.get('max_bars_back', 2000) if strategy_params else 2000
+        lookback_bars = max_bars_back + 100  # buffer for indicator warmup
+
+        # Parse period to calendar days for the test window
+        period_days = {
+            '1m': 30, '3m': 90, '6m': 180,
+            '1y': 365, '2y': 730, '3y': 1095, '5y': 1825,
+        }
+        test_days = period_days.get(period, 730)
+
+        # Download extra lookback data before the test period
+        lookback_calendar_days = int(lookback_bars * 1.5) + 10  # trading days -> calendar days
+        total_calendar_days = test_days + lookback_calendar_days
+
+        data_end = datetime.now()
+        data_start = data_end - timedelta(days=total_calendar_days)
+        test_start = data_end - timedelta(days=test_days)
+
+        df = yf.download(symbol, start=data_start, end=data_end, interval="1d", progress=False)
 
         if df.empty:
             print(f"  {symbol}: No data available")
@@ -149,10 +168,27 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
         df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
         df.columns = ['open', 'high', 'low', 'close', 'volume']
 
-        # Download SPY for benchmark
-        start_date = df.index[0]
-        end_date = df.index[-1]
-        spy_df = yf.download('SPY', start=start_date, end=end_date, progress=False)
+        # Find where the test period starts
+        test_start_mask = df.index >= pd.Timestamp(test_start)
+        if test_start_mask.any():
+            actual_test_start_idx = int(test_start_mask.argmax())
+        else:
+            actual_test_start_idx = lookback_bars
+
+        # Set test_start_idx so the strategy accumulates training data before trading
+        run_params = dict(strategy_params) if strategy_params else {}
+        run_params['test_start_idx'] = actual_test_start_idx
+
+        # Test period data for SPY benchmark comparison
+        test_df = df.iloc[actual_test_start_idx:]
+        if test_df.empty or len(test_df) < 10:
+            print(f"  {symbol}: Insufficient test period data")
+            return None
+
+        # Download SPY for benchmark (test period only)
+        spy_start = test_df.index[0]
+        spy_end = test_df.index[-1]
+        spy_df = yf.download('SPY', start=spy_start, end=spy_end + timedelta(days=1), progress=False)
         spy_df.index = spy_df.index.tz_localize(None)
 
         # Calculate SPY buy-and-hold return
@@ -182,11 +218,8 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
         )
         cerebro.adddata(data)
 
-        # Add strategy with custom parameters
-        if strategy_params:
-            cerebro.addstrategy(Strategy, **strategy_params)
-        else:
-            cerebro.addstrategy(Strategy)
+        # Add strategy with test_start_idx set
+        cerebro.addstrategy(Strategy, **run_params)
 
         # Broker settings
         cerebro.broker.setcash(initial_cash)
