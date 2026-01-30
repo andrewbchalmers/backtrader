@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "USAR"
+symbol = "META"
 initial_cash = 10_000
 
 # Backtest date range (test period - trades will only occur within this range)

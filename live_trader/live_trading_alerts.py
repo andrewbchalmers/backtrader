@@ -26,7 +26,7 @@ STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION_3/lorentzian_classifi
 STRATEGY_CLASS = "LorentzianClassificationStrategy"
 STRATEGY_PARAMS = {
     # === General Settings ===
-    'neighbors_count': 10,
+    'neighbors_count': 9,
     'max_bars_back': 2000,
     'feature_count': 5,
 
