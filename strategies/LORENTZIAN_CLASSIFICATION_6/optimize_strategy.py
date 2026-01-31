@@ -85,7 +85,7 @@ CONFIG = {
         # ==================== ML SETTINGS ====================
         'neighbors_count': [8, 9],
         'max_bars_back': [1000],            # Keep fixed - needs lots of history
-        'feature_count': [5],
+        'feature_count': [8],
         'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
         'allow_reentry': [True],            # True=enter anytime signal favorable
         'min_prediction_strength': [10, 20, 30, 40],   # Normalized scale: 0-100
@@ -120,10 +120,36 @@ CONFIG = {
         'f5_param_a': [14],
         'f5_param_b': [1],
 
+        # ==================== FEATURE 6 (Volume-Price Divergence) ====================
+        'f6_type': ['VPD'],
+        'f6_param_a': [14],
+        'f6_param_b': [1],
+
+        # ==================== FEATURE 7 (Momentum Acceleration) ====================
+        'f7_type': ['MACC'],
+        'f7_param_a': [5],
+        'f7_param_b': [5],
+
+        # ==================== FEATURE 8 (OBV Trend) ====================
+        'f8_type': ['OBVT'],
+        'f8_param_a': [20],
+        'f8_param_b': [3],
+
+        # ==================== FEATURE 9 (Candle Structure) ====================
+        'f9_type': ['CS'],
+        'f9_param_a': [5],
+        'f9_param_b': [2],
+
+        # ==================== FEATURE 10 (Streak Pattern) ====================
+        'f10_type': ['STRK'],
+        'f10_param_a': [10],
+        'f10_param_b': [2],
+
         # ==================== FILTERS ====================
         'use_volatility_filter': [True],
         'use_regime_filter': [True],
-        'regime_threshold': [Decimal('-0.1')],
+        'regime_threshold': [Decimal('0'), Decimal('1')],  # 0=block bearish, 1=require bullish
+        'regime_period': ['weekly'],  # 'weekly' or 'monthly'
         'use_adx_filter': [False],
         'adx_threshold': [20],
         'use_ema_filter': [False],
@@ -518,8 +544,13 @@ PARAM_NAMES = [
     'f3_type', 'f3_param_a', 'f3_param_b',
     'f4_type', 'f4_param_a', 'f4_param_b',
     'f5_type', 'f5_param_a', 'f5_param_b',
+    'f6_type', 'f6_param_a', 'f6_param_b',
+    'f7_type', 'f7_param_a', 'f7_param_b',
+    'f8_type', 'f8_param_a', 'f8_param_b',
+    'f9_type', 'f9_param_a', 'f9_param_b',
+    'f10_type', 'f10_param_a', 'f10_param_b',
     # Filters
-    'use_volatility_filter', 'use_regime_filter', 'regime_threshold',
+    'use_volatility_filter', 'use_regime_filter', 'regime_threshold', 'regime_period',
     'use_adx_filter', 'adx_threshold', 'use_ema_filter', 'ema_period',
     'use_sma_filter', 'sma_period',
     # Kernel Settings
@@ -718,9 +749,16 @@ def run_walkforward_optimization(config):
         print(f"     F3: {params_dict['f3_type']}({params_dict['f3_param_a']}) - Normalized Volatility")
         print(f"     F4: {params_dict['f4_type']}({params_dict['f4_param_a']}) - Price Position")
         print(f"     F5: {params_dict['f5_type']}({params_dict['f5_param_a']}) - Efficiency Ratio")
+        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak'}
+        for _fi in range(6, 11):
+            _ft = params_dict.get(f'f{_fi}_type')
+            if _ft:
+                print(f"     F{_fi}: {_ft}({params_dict[f'f{_fi}_param_a']},{params_dict[f'f{_fi}_param_b']}) - {_fn.get(_ft, _ft)}")
         print(f"   Filters:")
         print(f"     Volatility:            {'ON' if params_dict['use_volatility_filter'] else 'OFF'}")
-        print(f"     Regime:                {'ON' if params_dict['use_regime_filter'] else 'OFF'}")
+        r_thr = params_dict.get('regime_threshold', 0)
+        r_desc = "block bearish" if r_thr == 0 else "require bullish" if r_thr >= 1 else f"thr={r_thr}"
+        print(f"     Regime:                {'ON' if params_dict['use_regime_filter'] else 'OFF'} (monthly H/L, {r_desc})")
         print(f"     Kernel:                {'ON' if params_dict['use_kernel_filter'] else 'OFF'}")
         print(f"   Exit:")
         print(f"     Bars to Hold:          {params_dict['bars_to_hold']}")
@@ -930,11 +968,20 @@ def print_walkforward_results(df_results):
     print(f"   f4_param_a:               {params['f4_param_a']}")
     print(f"   f5_type:                  {params['f5_type']} (Efficiency Ratio)")
     print(f"   f5_param_a:               {params['f5_param_a']}")
+    fnames = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
+              'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern'}
+    for fi in range(6, 11):
+        ft_key = f'f{fi}_type'
+        if ft_key in params:
+            print(f"   {ft_key}:{'  ' if fi < 10 else ' '}               {params[ft_key]} ({fnames.get(params[ft_key], params[ft_key])})")
+            print(f"   f{fi}_param_a:{'  ' if fi < 10 else ' '}            {params[f'f{fi}_param_a']}")
+            print(f"   f{fi}_param_b:{'  ' if fi < 10 else ' '}            {params[f'f{fi}_param_b']}")
 
     print("\n🔹 FILTERS:")
     print(f"   use_volatility_filter:    {params['use_volatility_filter']}")
     print(f"   use_regime_filter:        {params['use_regime_filter']}")
     print(f"   regime_threshold:         {params['regime_threshold']}")
+    print(f"   regime_period:            {params['regime_period']}")
     print(f"   use_kernel_filter:        {params['use_kernel_filter']}")
     print(f"   kernel_lookback:          {params['kernel_lookback']}")
 
@@ -982,10 +1029,19 @@ def print_walkforward_results(df_results):
     print(f"    'f5_type': '{params['f5_type']}',")
     print(f"    'f5_param_a': {params['f5_param_a']},")
     print(f"    'f5_param_b': {params['f5_param_b']},")
+    _cpnames = {6: 'Volume-Price Divergence', 7: 'Momentum Acceleration', 8: 'OBV Trend',
+                9: 'Candle Structure', 10: 'Streak Pattern'}
+    for _fi in range(6, 11):
+        if f'f{_fi}_type' in params:
+            print(f"\n    # Feature {_fi} ({_cpnames.get(_fi, '')})")
+            print(f"    'f{_fi}_type': '{params[f'f{_fi}_type']}',")
+            print(f"    'f{_fi}_param_a': {params[f'f{_fi}_param_a']},")
+            print(f"    'f{_fi}_param_b': {params[f'f{_fi}_param_b']},")
     print("\n    # Filters")
     print(f"    'use_volatility_filter': {params['use_volatility_filter']},")
     print(f"    'use_regime_filter': {params['use_regime_filter']},")
     print(f"    'regime_threshold': Decimal('{params['regime_threshold']}'),")
+    print(f"    'regime_period': '{params['regime_period']}',")
     print(f"    'use_adx_filter': {params['use_adx_filter']},")
     print(f"    'adx_threshold': {params['adx_threshold']},")
     print(f"    'use_ema_filter': {params['use_ema_filter']},")

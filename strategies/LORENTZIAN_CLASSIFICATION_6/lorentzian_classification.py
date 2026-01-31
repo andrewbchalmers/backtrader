@@ -388,6 +388,175 @@ class VolatilityContractionRatio(bt.Indicator):
         self.lines.vcr[0] = percentile * 2 - 1
 
 
+class VolumePriceDivergence(bt.Indicator):
+    """
+    Pearson correlation between price deltas and volume deltas over a window.
+    Captures whether volume confirms or contradicts price direction.
+    Output: [-1, 1] (naturally bounded by correlation).
+    """
+    lines = ('vpd',)
+    params = (('period', 14), ('smoothing', 1))
+
+    def __init__(self):
+        self.addminperiod(self.p.period + 1)
+
+    def next(self):
+        n = self.p.period
+        sum_xy = 0.0
+        sum_x2 = 0.0
+        sum_y2 = 0.0
+        for i in range(n):
+            pd_ = self.data.close[-i] - self.data.close[-i - 1]
+            vd_ = self.data.volume[-i] - self.data.volume[-i - 1]
+            sum_xy += pd_ * vd_
+            sum_x2 += pd_ * pd_
+            sum_y2 += vd_ * vd_
+        denom = math.sqrt(sum_x2) * math.sqrt(sum_y2)
+        if denom > 0:
+            self.lines.vpd[0] = sum_xy / denom
+        else:
+            self.lines.vpd[0] = 0.0
+
+
+class CandleStructure(bt.Indicator):
+    """
+    Average signed body-to-range ratio over a window, tanh-scaled.
+    Captures candle conviction (full bodies) vs indecision (dojis/wicks).
+    Output: tanh(avg * sensitivity) → [-1, 1].
+    """
+    lines = ('cs',)
+    params = (('period', 5), ('sensitivity', 2.0))
+
+    def __init__(self):
+        self.addminperiod(self.p.period)
+
+    def next(self):
+        total = 0.0
+        for i in range(self.p.period):
+            body = self.data.close[-i] - self.data.open[-i]
+            rng = self.data.high[-i] - self.data.low[-i]
+            if rng > 0:
+                total += body / rng
+        avg = total / self.p.period
+        self.lines.cs[0] = math.tanh(avg * self.p.sensitivity)
+
+
+class MomentumAcceleration(bt.Indicator):
+    """
+    Second derivative of price: ROC now vs ROC lagged, ATR-normalized.
+    Captures whether momentum is accelerating or decelerating.
+    Output: tanh(acceleration) → [-1, 1].
+    """
+    lines = ('macc',)
+    params = (('roc_period', 5), ('lag', 5))
+
+    def __init__(self):
+        self.atr = bt.indicators.ATR(self.data, period=14)
+        self.addminperiod(self.p.roc_period + self.p.lag + 14)
+
+    def next(self):
+        rp = self.p.roc_period
+        lag = self.p.lag
+        c = self.data.close
+
+        if c[-rp] != 0 and c[-lag - rp] != 0:
+            roc_now = (c[0] / c[-rp]) - 1
+            roc_prev = (c[-lag] / c[-lag - rp]) - 1
+            atr_pct = self.atr[0] / c[0] if c[0] > 0 else 1e-8
+            atr_pct = max(atr_pct, 1e-8)
+            accel = (roc_now - roc_prev) / atr_pct
+            self.lines.macc[0] = math.tanh(accel)
+        else:
+            self.lines.macc[0] = 0.0
+
+
+class OBVTrend(bt.Indicator):
+    """
+    Z-score of cumulative On-Balance Volume vs its own SMA.
+    Captures sustained money inflow/outflow relative to recent norms.
+    Output: clamp(z / z_divisor, -1, 1).
+    """
+    lines = ('obvt',)
+    params = (('period', 20), ('z_divisor', 3.0))
+
+    def __init__(self):
+        self.obv = 0.0
+        self.obv_history = deque(maxlen=500)  # large buffer for warmup
+        self.addminperiod(self.p.period + 1)
+
+    def next(self):
+        if len(self) > 1:
+            if self.data.close[0] > self.data.close[-1]:
+                self.obv += self.data.volume[0]
+            elif self.data.close[0] < self.data.close[-1]:
+                self.obv -= self.data.volume[0]
+
+        self.obv_history.append(self.obv)
+
+        if len(self.obv_history) >= self.p.period:
+            arr = list(self.obv_history)[-self.p.period:]
+            mean_obv = sum(arr) / len(arr)
+            sq_sum = sum((x - mean_obv) ** 2 for x in arr)
+            std_obv = math.sqrt(sq_sum / len(arr))
+            if std_obv > 0:
+                z = (self.obv - mean_obv) / std_obv
+                self.lines.obvt[0] = max(-1.0, min(1.0, z / self.p.z_divisor))
+            else:
+                self.lines.obvt[0] = 0.0
+        else:
+            self.lines.obvt[0] = 0.0
+
+
+class StreakPattern(bt.Indicator):
+    """
+    Consecutive up/down close streak length × average bar magnitude.
+    Captures behavioral serial correlation and streak exhaustion.
+    Output: direction × norm_len × (0.5 + 0.5 × norm_mag) → [-1, 1].
+    """
+    lines = ('strk',)
+    params = (('max_streak', 10), ('atr_mult', 1.5))
+
+    def __init__(self):
+        self.atr = bt.indicators.ATR(self.data, period=14)
+        self.addminperiod(self.p.max_streak + 14)
+
+    def next(self):
+        max_s = self.p.max_streak
+        streak_len = 0
+        streak_sum = 0.0
+        streak_dir = 0
+
+        for i in range(max_s):
+            if self.data.close[-i] > self.data.close[-i - 1]:
+                d = 1
+            elif self.data.close[-i] < self.data.close[-i - 1]:
+                d = -1
+            else:
+                d = 0
+
+            if i == 0:
+                streak_dir = d
+                if d == 0:
+                    break
+            if d == streak_dir and d != 0:
+                streak_len += 1
+                streak_sum += abs(self.data.close[-i] / self.data.close[-i - 1] - 1)
+            else:
+                break
+
+        if streak_len == 0:
+            self.lines.strk[0] = 0.0
+            return
+
+        norm_len = streak_len / max_s
+        avg_move = streak_sum / streak_len
+        atr_pct = self.atr[0] / self.data.close[0] if self.data.close[0] > 0 else 1e-8
+        atr_pct = max(atr_pct, 1e-8)
+        norm_mag = min(1.0, avg_move / (atr_pct * self.p.atr_mult))
+
+        self.lines.strk[0] = streak_dir * norm_len * (0.5 + 0.5 * norm_mag)
+
+
 class RationalQuadraticKernel(bt.Indicator):
     """
     Nadaraya-Watson Kernel Regression using Rational Quadratic Kernel.
@@ -484,36 +653,66 @@ class VolatilityFilter(bt.Indicator):
         self.lines.filter[0] = 1.0 if self.atr_min[0] <= self.atr_max[0] else 0.0
 
 
-class RegimeFilter(bt.Indicator):
+class MarketRegimeDetector(bt.Indicator):
     """
-    Regime filter using Ehlers Super Smoother and highpass filter.
-    Detects trending vs ranging market conditions.
+    Market Regime Detector based on previous period's high/low.
+
+    Inspired by RWCS_LTD's "Market Regime Detector" (TradingView).
+    Uses the previous period's high and low as reference levels:
+      - Bullish:   close > previous period's high  → regime =  1
+      - Bearish:   close < previous period's low   → regime = -1
+      - Reverting: close between prev high and low  → regime =  0
+
+    Period can be 'weekly' or 'monthly' (controlled by regime_period param).
     """
-    lines = ('filter', 'klmf')
+    lines = ('regime',)
     params = (
-        ('threshold', -0.1),
+        ('period', 'weekly'),  # 'weekly' or 'monthly'
     )
 
     def __init__(self):
-        self.addminperiod(50)  # Need warmup for the filter
+        self.prev_high = None
+        self.prev_low = None
+        self.curr_high = None
+        self.curr_low = None
+        self.curr_period = None
+
+    def _get_period_key(self, dt):
+        if self.p.period == 'weekly':
+            return dt.isocalendar()[:2]  # (year, week_number)
+        else:
+            return (dt.year, dt.month)
 
     def next(self):
-        # Simplified regime detection using price momentum
-        if len(self) < 50:
-            self.lines.filter[0] = 1.0
-            self.lines.klmf[0] = 0.0
+        dt = self.data.datetime.date(0)
+        period_key = self._get_period_key(dt)
+
+        if self.curr_period is None:
+            self.curr_period = period_key
+            self.curr_high = self.data.high[0]
+            self.curr_low = self.data.low[0]
+        elif period_key != self.curr_period:
+            # New period — previous period is now complete
+            self.prev_high = self.curr_high
+            self.prev_low = self.curr_low
+            self.curr_period = period_key
+            self.curr_high = self.data.high[0]
+            self.curr_low = self.data.low[0]
+        else:
+            self.curr_high = max(self.curr_high, self.data.high[0])
+            self.curr_low = min(self.curr_low, self.data.low[0])
+
+        if self.prev_high is None:
+            self.lines.regime[0] = 0.0
             return
 
-        # Calculate simple momentum-based regime
-        # Using rate of change as proxy for regime
-        prices = [self.data.close[-i] for i in range(min(20, len(self)))]
-        if len(prices) >= 20:
-            momentum = (prices[0] - prices[-1]) / prices[-1] if prices[-1] != 0 else 0
-            self.lines.klmf[0] = momentum
-            self.lines.filter[0] = 1.0 if momentum > self.p.threshold else 0.0
+        close = self.data.close[0]
+        if close > self.prev_high:
+            self.lines.regime[0] = 1.0    # Bullish
+        elif close < self.prev_low:
+            self.lines.regime[0] = -1.0   # Bearish
         else:
-            self.lines.filter[0] = 1.0
-            self.lines.klmf[0] = 0.0
+            self.lines.regime[0] = 0.0    # Reverting
 
 
 # =============================================================================
@@ -576,10 +775,36 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('f5_param_a', 10),              # ER period
         ('f5_param_b', 1),               # Not used
 
+        # === Feature 6 (Volume-Price Divergence) ===
+        ('f6_type', 'VPD'),
+        ('f6_param_a', 14),             # Correlation window
+        ('f6_param_b', 1),              # Smoothing (1=none)
+
+        # === Feature 7 (Candle Structure) ===
+        ('f7_type', 'CS'),
+        ('f7_param_a', 5),              # Averaging window
+        ('f7_param_b', 2),              # Sensitivity (tanh scaling)
+
+        # === Feature 8 (Momentum Acceleration) ===
+        ('f8_type', 'MACC'),
+        ('f8_param_a', 5),              # ROC period
+        ('f8_param_b', 5),              # Lag for comparison
+
+        # === Feature 9 (OBV Trend) ===
+        ('f9_type', 'OBVT'),
+        ('f9_param_a', 20),             # SMA/StdDev period
+        ('f9_param_b', 3),              # Z-score divisor
+
+        # === Feature 10 (Streak Pattern) ===
+        ('f10_type', 'STRK'),
+        ('f10_param_a', 10),            # Max streak length
+        ('f10_param_b', 2),             # ATR multiplier for magnitude
+
         # === Filters ===
         ('use_volatility_filter', True),
         ('use_regime_filter', True),
-        ('regime_threshold', -0.1),
+        ('regime_threshold', 0),  # 0=block bearish, 1=require bullish
+        ('regime_period', 'weekly'),  # 'weekly' or 'monthly'
         ('use_adx_filter', False),
         ('adx_threshold', 20),
         ('use_ema_filter', False),
@@ -654,9 +879,17 @@ class LorentzianClassificationStrategy(bt.Strategy):
             (self.p.f3_type, self.p.f3_param_a, self.p.f3_param_b),
             (self.p.f4_type, self.p.f4_param_a, self.p.f4_param_b),
             (self.p.f5_type, self.p.f5_param_a, self.p.f5_param_b),
+            (self.p.f6_type, self.p.f6_param_a, self.p.f6_param_b),
+            (self.p.f7_type, self.p.f7_param_a, self.p.f7_param_b),
+            (self.p.f8_type, self.p.f8_param_a, self.p.f8_param_b),
+            (self.p.f9_type, self.p.f9_param_a, self.p.f9_param_b),
+            (self.p.f10_type, self.p.f10_param_a, self.p.f10_param_b),
         ]
 
-        for i, (ftype, param_a, param_b) in enumerate(feature_configs[:self.p.feature_count]):
+        actual_count = min(self.p.feature_count, len(feature_configs))
+        if self.p.feature_count > len(feature_configs) and self.p.verbose:
+            print(f"WARNING: feature_count={self.p.feature_count} but only {len(feature_configs)} feature slots defined. Using {len(feature_configs)}.")
+        for i, (ftype, param_a, param_b) in enumerate(feature_configs[:actual_count]):
             feature = self._create_feature(ftype, param_a, param_b)
             self.features.append(feature)
 
@@ -685,6 +918,16 @@ class LorentzianClassificationStrategy(bt.Strategy):
             return MeanReversionZScore(self.data, period=param_a)
         elif ftype == 'VCR':
             return VolatilityContractionRatio(self.data, bb_period=param_a, lookback=param_b)
+        elif ftype == 'VPD':
+            return VolumePriceDivergence(self.data, period=param_a, smoothing=param_b)
+        elif ftype == 'CS':
+            return CandleStructure(self.data, period=param_a, sensitivity=param_b)
+        elif ftype == 'MACC':
+            return MomentumAcceleration(self.data, roc_period=param_a, lag=param_b)
+        elif ftype == 'OBVT':
+            return OBVTrend(self.data, period=param_a, z_divisor=param_b)
+        elif ftype == 'STRK':
+            return StreakPattern(self.data, max_streak=param_a, atr_mult=param_b)
         else:
             raise ValueError(f"Unknown feature type: {ftype}")
 
@@ -694,9 +937,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.p.use_volatility_filter:
             self.volatility_filter = VolatilityFilter(self.data)
 
-        # Regime filter
+        # Regime filter (previous period high/low breakout detector)
         if self.p.use_regime_filter:
-            self.regime_filter = RegimeFilter(self.data, threshold=self.p.regime_threshold)
+            self.regime_filter = MarketRegimeDetector(self.data, period=self.p.regime_period)
 
         # ADX filter
         if self.p.use_adx_filter:
@@ -810,6 +1053,16 @@ class LorentzianClassificationStrategy(bt.Strategy):
             'entries_blocked_by_sma': 0,
         }
 
+        # Regime diagnostics
+        self.regime_diagnostics = {
+            'bullish_bars': 0,
+            'bearish_bars': 0,
+            'reverting_bars': 0,
+            'trades_in_bullish': 0,
+            'trades_in_bearish': 0,
+            'trades_in_reverting': 0,
+        }
+
     def _get_lorentzian_distance(self, idx):
         """
         Calculate Lorentzian distance between current features and historical features.
@@ -848,6 +1101,16 @@ class LorentzianClassificationStrategy(bt.Strategy):
             return feature.zscore[0]
         elif hasattr(feature, 'vcr'):
             return feature.vcr[0]
+        elif hasattr(feature, 'vpd'):
+            return feature.vpd[0]
+        elif hasattr(feature, 'cs'):
+            return feature.cs[0]
+        elif hasattr(feature, 'macc'):
+            return feature.macc[0]
+        elif hasattr(feature, 'obvt'):
+            return feature.obvt[0]
+        elif hasattr(feature, 'strk'):
+            return feature.strk[0]
         return 0.0
 
     def _store_features(self):
@@ -1041,9 +1304,11 @@ class LorentzianClassificationStrategy(bt.Strategy):
             if self.volatility_filter.filter[0] <= 0:
                 return False
 
-        # Regime filter
+        # Regime filter (monthly high/low breakout)
+        # regime: 1=bullish, 0=reverting, -1=bearish
+        # threshold=0: blocks bearish only; threshold=1: requires bullish
         if self.p.use_regime_filter:
-            if self.regime_filter.filter[0] <= 0:
+            if self.regime_filter.regime[0] < self.p.regime_threshold:
                 return False
 
         # ADX filter
@@ -1199,6 +1464,16 @@ class LorentzianClassificationStrategy(bt.Strategy):
         else:
             self.prediction_diagnostics['neutral_predictions'] += 1
 
+        # === Regime Diagnostics ===
+        if self.p.use_regime_filter:
+            regime_val = self.regime_filter.regime[0]
+            if regime_val > 0.5:
+                self.regime_diagnostics['bullish_bars'] += 1
+            elif regime_val < -0.5:
+                self.regime_diagnostics['bearish_bars'] += 1
+            else:
+                self.regime_diagnostics['reverting_bars'] += 1
+
         # === ML Prediction Accuracy Tracking ===
         # Validate old predictions that have matured
         self._validate_predictions()
@@ -1318,6 +1593,18 @@ class LorentzianClassificationStrategy(bt.Strategy):
             diag['kernel_block_pct'] = diag['ema_block_pct'] = diag['sma_block_pct'] = 0
 
         return diag
+
+    def get_regime_diagnostics(self):
+        """Get market regime distribution and trade-regime breakdown."""
+        rd = self.regime_diagnostics.copy()
+        total = rd['bullish_bars'] + rd['bearish_bars'] + rd['reverting_bars']
+        if total > 0:
+            rd['bullish_pct'] = (rd['bullish_bars'] / total) * 100
+            rd['bearish_pct'] = (rd['bearish_bars'] / total) * 100
+            rd['reverting_pct'] = (rd['reverting_bars'] / total) * 100
+        else:
+            rd['bullish_pct'] = rd['bearish_pct'] = rd['reverting_pct'] = 0
+        return rd
 
     def _check_entry(self, signal_changed):
         """Check for entry conditions."""
@@ -1497,11 +1784,22 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.entry_prediction = abs(self.raw_prediction)
             self.entry_norm_prediction = abs(self.prediction)
 
+            # Track regime at entry
+            if self.p.use_regime_filter:
+                r = self.regime_filter.regime[0]
+                if r > 0.5: self.regime_diagnostics['trades_in_bullish'] += 1
+                elif r < -0.5: self.regime_diagnostics['trades_in_bearish'] += 1
+                else: self.regime_diagnostics['trades_in_reverting'] += 1
+
             if self.p.verbose:
                 band = self._get_prediction_band(self.entry_norm_prediction)
+                regime_str = ""
+                if self.p.use_regime_filter:
+                    r = self.regime_filter.regime[0]
+                    regime_str = f" | Regime: {'BULL' if r > 0.5 else 'BEAR' if r < -0.5 else 'REVERT'}"
                 print(f"BUY SIGNAL: {self.data.datetime.date(0)} | "
                       f"Prediction: {self.prediction:.1f} (raw: {self.raw_prediction:.2f}) [{band}] | "
-                      f"Price: ${self.data.close[0]:.2f}")
+                      f"Price: ${self.data.close[0]:.2f}{regime_str}")
 
     def _execute_short(self):
         """Execute short sell order (go short)."""
@@ -1513,11 +1811,22 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.entry_prediction = abs(self.raw_prediction)
             self.entry_norm_prediction = abs(self.prediction)
 
+            # Track regime at entry
+            if self.p.use_regime_filter:
+                r = self.regime_filter.regime[0]
+                if r > 0.5: self.regime_diagnostics['trades_in_bullish'] += 1
+                elif r < -0.5: self.regime_diagnostics['trades_in_bearish'] += 1
+                else: self.regime_diagnostics['trades_in_reverting'] += 1
+
             if self.p.verbose:
                 band = self._get_prediction_band(self.entry_norm_prediction)
+                regime_str = ""
+                if self.p.use_regime_filter:
+                    r = self.regime_filter.regime[0]
+                    regime_str = f" | Regime: {'BULL' if r > 0.5 else 'BEAR' if r < -0.5 else 'REVERT'}"
                 print(f"SHORT SIGNAL: {self.data.datetime.date(0)} | "
                       f"Prediction: {self.prediction:.1f} (raw: {self.raw_prediction:.2f}) [{band}] | "
-                      f"Price: ${self.data.close[0]:.2f}")
+                      f"Price: ${self.data.close[0]:.2f}{regime_str}")
 
     def _close_position(self, reason):
         """Close current position (long or short)."""

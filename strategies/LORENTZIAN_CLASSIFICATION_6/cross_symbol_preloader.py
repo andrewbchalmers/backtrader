@@ -56,7 +56,7 @@ def compute_feature_numpy(df, ftype, param_a, param_b):
     Pure numpy reimplementation of each feature type.
     Returns 1D array with NaN for warmup bars.
 
-    Supported types: RSM, VA, MTD, ZS, ER, RSI, ADX, ATRR, PP, VCR
+    Supported types: RSM, VA, MTD, ZS, ER, RSI, ADX, ATRR, PP, VCR, VPD, CS, MACC, OBVT, STRK
     """
     close = df['close'].values.astype(float)
     high = df['high'].values.astype(float)
@@ -276,6 +276,121 @@ def compute_feature_numpy(df, ftype, param_a, param_b):
                         count_below += 1
             percentile = count_below / total if total > 0 else 0.5
             out[i] = percentile * 2 - 1
+
+    elif ftype == 'VPD':
+        # Volume-Price Divergence - Pearson correlation of price/volume deltas
+        period = param_a
+        warmup = period + 1
+        for i in range(warmup, n):
+            sum_xy = 0.0
+            sum_x2 = 0.0
+            sum_y2 = 0.0
+            for j in range(period):
+                idx = i - j
+                pd_ = close[idx] - close[idx - 1]
+                vd_ = volume[idx] - volume[idx - 1]
+                sum_xy += pd_ * vd_
+                sum_x2 += pd_ * pd_
+                sum_y2 += vd_ * vd_
+            denom = np.sqrt(sum_x2) * np.sqrt(sum_y2)
+            if denom > 0:
+                out[i] = sum_xy / denom
+            else:
+                out[i] = 0.0
+
+    elif ftype == 'CS':
+        # Candle Structure - avg signed body/range ratio, tanh-scaled
+        period = param_a
+        sensitivity = param_b if param_b > 0 else 2.0
+        open_ = df['open'].values.astype(float)
+        for i in range(period - 1, n):
+            total = 0.0
+            for j in range(period):
+                idx = i - j
+                body = close[idx] - open_[idx]
+                rng = high[idx] - low[idx]
+                if rng > 0:
+                    total += body / rng
+            avg = total / period
+            out[i] = np.tanh(avg * sensitivity)
+
+    elif ftype == 'MACC':
+        # Momentum Acceleration - 2nd derivative of ROC, ATR-normalized
+        roc_period = param_a
+        lag = param_b
+        atr = compute_atr_numpy(high, low, close, 14)
+        warmup = roc_period + lag + 14
+        for i in range(warmup, n):
+            if close[i - roc_period] != 0 and close[i - lag - roc_period] != 0:
+                roc_now = (close[i] / close[i - roc_period]) - 1
+                roc_prev = (close[i - lag] / close[i - lag - roc_period]) - 1
+                atr_pct = atr[i] / close[i] if close[i] > 0 and not np.isnan(atr[i]) else 1e-8
+                atr_pct = max(atr_pct, 1e-8)
+                accel = (roc_now - roc_prev) / atr_pct
+                out[i] = np.tanh(accel)
+            else:
+                out[i] = 0.0
+
+    elif ftype == 'OBVT':
+        # OBV Trend - Z-score of cumulative OBV vs its SMA
+        period = param_a
+        z_divisor = param_b if param_b > 0 else 3.0
+        # Compute cumulative OBV
+        obv = np.zeros(n)
+        for i in range(1, n):
+            if close[i] > close[i - 1]:
+                obv[i] = obv[i - 1] + volume[i]
+            elif close[i] < close[i - 1]:
+                obv[i] = obv[i - 1] - volume[i]
+            else:
+                obv[i] = obv[i - 1]
+        # Z-score of OBV over rolling window
+        for i in range(period, n):
+            window = obv[i - period + 1:i + 1]
+            mean_obv = np.mean(window)
+            std_obv = np.std(window)
+            if std_obv > 0:
+                z = (obv[i] - mean_obv) / std_obv
+                out[i] = max(-1.0, min(1.0, z / z_divisor))
+            else:
+                out[i] = 0.0
+
+    elif ftype == 'STRK':
+        # Streak Pattern - consecutive up/down streak length × magnitude
+        max_streak = param_a
+        atr_mult = param_b if param_b > 0 else 1.5
+        atr = compute_atr_numpy(high, low, close, 14)
+        warmup = max_streak + 14
+        for i in range(warmup, n):
+            streak_len = 0
+            streak_sum = 0.0
+            streak_dir = 0
+            for j in range(max_streak):
+                idx = i - j
+                if close[idx] > close[idx - 1]:
+                    d = 1
+                elif close[idx] < close[idx - 1]:
+                    d = -1
+                else:
+                    d = 0
+                if j == 0:
+                    streak_dir = d
+                    if d == 0:
+                        break
+                if d == streak_dir and d != 0:
+                    streak_len += 1
+                    streak_sum += abs(close[idx] / close[idx - 1] - 1)
+                else:
+                    break
+            if streak_len == 0 or streak_dir == 0:
+                out[i] = 0.0
+                continue
+            norm_len = streak_len / max_streak
+            avg_move = streak_sum / streak_len
+            atr_pct = atr[i] / close[i] if close[i] > 0 and not np.isnan(atr[i]) else 1e-8
+            atr_pct = max(atr_pct, 1e-8)
+            norm_mag = min(1.0, avg_move / (atr_pct * atr_mult))
+            out[i] = streak_dir * norm_len * (0.5 + 0.5 * norm_mag)
 
     return out
 
@@ -544,13 +659,14 @@ def seed_strategy(strategy):
             sector = get_ticker_sector(target_symbol) or 'Unknown'
             print(f"CROSS-SYMBOL: Target={target_symbol}, Sector={sector}, Peers={etfs}")
 
-    # Feature configs from strategy params
+    # Feature configs from strategy params (max 10 feature slots defined)
     feature_configs = []
-    for fi in range(1, feature_count + 1):
+    for fi in range(1, min(feature_count, 10) + 1):
         ftype = str(getattr(strategy.p, f'f{fi}_type'))
         pa = int(getattr(strategy.p, f'f{fi}_param_a'))
         pb = int(getattr(strategy.p, f'f{fi}_param_b'))
         feature_configs.append((ftype, pa, pb))
+    feature_count = len(feature_configs)
 
     # Label settings
     lookahead = int(strategy.p.label_lookahead)

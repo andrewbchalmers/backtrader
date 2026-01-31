@@ -21,12 +21,12 @@ from datetime import datetime, timedelta
 # ============================================================================
 STRATEGY_PARAMS = {
     # General Settings
-    'neighbors_count': 9,
-    'max_bars_back': 2000,
-    'feature_count': 5,
+    'neighbors_count': 24,
+    'max_bars_back': 13000,
+    'feature_count': 8,
 
     # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
-    'trend_following_labels': True,
+    'trend_following_labels': False,
 
     # Re-entry Mode: True=enter anytime signal is favorable, False=only enter on signal flip
     'allow_reentry': True,
@@ -64,10 +64,36 @@ STRATEGY_PARAMS = {
     'f5_param_a': 10,
     'f5_param_b': 1,
 
+    # Feature 6: Volume-Price Divergence
+    'f6_type': 'VPD',
+    'f6_param_a': 14,
+    'f6_param_b': 1,
+
+    # Feature 7: Momentum Acceleration
+    'f7_type': 'MACC',
+    'f7_param_a': 5,
+    'f7_param_b': 5,
+
+    # Feature 8: OBV Trend
+    'f8_type': 'OBVT',
+    'f8_param_a': 20,
+    'f8_param_b': 3,
+
+    # Feature 9: Candle Structure (available for optimizer)
+    'f9_type': 'CS',
+    'f9_param_a': 5,
+    'f9_param_b': 2,
+
+    # Feature 10: Streak Pattern (available for optimizer)
+    'f10_type': 'STRK',
+    'f10_param_a': 10,
+    'f10_param_b': 2,
+
     # Filters
     'use_volatility_filter': True,
     'use_regime_filter': True,
-    'regime_threshold': 0.0,
+    'regime_threshold': 1,
+    'regime_period': 'weekly',  # 'weekly' or 'monthly'
     'use_adx_filter': False,
     'adx_threshold': 20,
     'use_ema_filter': False,
@@ -528,9 +554,23 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
         print(f"    - F3: {strategy_params.get('f3_type', 'MTD')}({strategy_params.get('f3_param_a', 5)},{strategy_params.get('f3_param_b', 60)}) - Multi-Timeframe Divergence")
         print(f"    - F4: {strategy_params.get('f4_type', 'ZS')}({strategy_params.get('f4_param_a', 50)}) - Mean Reversion Z-Score")
         print(f"    - F5: {strategy_params.get('f5_type', 'ER')}({strategy_params.get('f5_param_a', 10)}) - Efficiency Ratio")
+        fc = strategy_params.get('feature_count', 5)
+        if fc > 5:
+            fnames = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
+                      'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern',
+                      'RSM': 'RSM', 'VA': 'VA', 'MTD': 'MTD', 'ZS': 'Z-Score', 'ER': 'ER',
+                      'RSI': 'RSI', 'ADX': 'ADX', 'ATRR': 'ATR Ratio', 'PP': 'Price Position', 'VCR': 'Vol Contraction'}
+            for fi in range(6, min(fc + 1, 11)):
+                ft = strategy_params.get(f'f{fi}_type', '?')
+                pa = strategy_params.get(f'f{fi}_param_a', 0)
+                pb = strategy_params.get(f'f{fi}_param_b', 0)
+                print(f"    - F{fi}: {ft}({pa},{pb}) - {fnames.get(ft, ft)}")
         print(f"  Filters:")
         print(f"    - Volatility: {'ON' if strategy_params.get('use_volatility_filter', True) else 'OFF'}")
-        print(f"    - Regime: {'ON' if strategy_params.get('use_regime_filter', True) else 'OFF'}")
+        regime_thr = strategy_params.get('regime_threshold', 0)
+        regime_per = strategy_params.get('regime_period', 'weekly')
+        regime_desc = "block bearish" if regime_thr == 0 else "require bullish" if regime_thr >= 1 else f"threshold={regime_thr}"
+        print(f"    - Regime: {'ON' if strategy_params.get('use_regime_filter', True) else 'OFF'} ({regime_per} H/L, {regime_desc})")
         print(f"    - ADX: {'ON' if strategy_params.get('use_adx_filter', False) else 'OFF'}")
         print(f"    - EMA: {'ON' if strategy_params.get('use_ema_filter', False) else 'OFF'}")
         print(f"    - SMA: {'ON' if strategy_params.get('use_sma_filter', False) else 'OFF'}")

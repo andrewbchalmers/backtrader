@@ -79,7 +79,7 @@ CONFIG = {
         # ML Settings
         'neighbors_count': 9,
         'max_bars_back': 500,
-        'feature_count': 5,
+        'feature_count': 8,
         'trend_following_labels': False,
         'allow_reentry': True,
         'min_prediction_strength': 15,          # Normalized scale: 0-100
@@ -114,10 +114,36 @@ CONFIG = {
         'f5_param_a': 14,
         'f5_param_b': 1,
 
+        # Feature 6 (Volume-Price Divergence)
+        'f6_type': 'VPD',
+        'f6_param_a': 14,
+        'f6_param_b': 1,
+
+        # Feature 7 (Momentum Acceleration)
+        'f7_type': 'MACC',
+        'f7_param_a': 5,
+        'f7_param_b': 5,
+
+        # Feature 8 (OBV Trend)
+        'f8_type': 'OBVT',
+        'f8_param_a': 20,
+        'f8_param_b': 3,
+
+        # Feature 9 (Candle Structure)
+        'f9_type': 'CS',
+        'f9_param_a': 5,
+        'f9_param_b': 2,
+
+        # Feature 10 (Streak Pattern)
+        'f10_type': 'STRK',
+        'f10_param_a': 10,
+        'f10_param_b': 2,
+
         # Filters
         'use_volatility_filter': True,
         'use_regime_filter': True,
-        'regime_threshold': Decimal('-0.1'),
+        'regime_threshold': 0,  # 0=block bearish, 1=require bullish
+        'regime_period': 'weekly',  # 'weekly' or 'monthly'
         'use_adx_filter': False,
         'adx_threshold': 20,
         'use_ema_filter': False,

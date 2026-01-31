@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "SOFI"
+symbol = "WMB"
 initial_cash = 10_000
 
 # Load peer universe from classification CSV (fallback to default ETFs)
@@ -109,16 +109,16 @@ except FileNotFoundError:
     pass
 
 # Backtest date range (test period - trades will only occur within this range)
-start_date = "2024-01-01"  # Start of test period
+start_date = "2025-01-01"  # Start of test period
 end_date = "2026-01-20"    # End of test period
 timeframe = "1d"           # Bar timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d
 
 # Strategy parameters - Trend Features configuration
 strategy_params = {
     # General Settings
-    'neighbors_count': 9,
-    'max_bars_back': 2000,
-    'feature_count': 5,
+    'neighbors_count': 24,
+    'max_bars_back': 13000,
+    'feature_count': 10,
 
     # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
     # Mean-reversion works better with oscillators (RSI, CCI), trend-following with trend features (ADX, ER)
@@ -130,10 +130,10 @@ strategy_params = {
 
     # Minimum prediction strength to trade (normalized scale: 0-100)
     # Predictions are rolling-percentile normalized. 20 = above 60th percentile.
-    'min_prediction_strength': 15,
+    'min_prediction_strength': 30,
 
     # Label Settings
-    'label_lookahead': 12,            # Bars to look forward (default 4, try 8-12)
+    'label_lookahead': 8,            # Bars to look forward (default 4, try 8-12)
     'label_dead_zone': 0.5,         # Min ATR move for label (default 0.5, try 0.25)
     'use_magnitude_labels': True,    # True=continuous, False=binary +1/-1
 
@@ -162,10 +162,36 @@ strategy_params = {
     'f5_param_a': 10,
     'f5_param_b': 1,
 
+    # Feature 6: Volume-Price Divergence
+    'f6_type': 'VPD',
+    'f6_param_a': 14,
+    'f6_param_b': 1,
+
+    # Feature 7: Momentum Acceleration
+    'f7_type': 'MACC',
+    'f7_param_a': 5,
+    'f7_param_b': 5,
+
+    # Feature 8: OBV Trend
+    'f8_type': 'OBVT',
+    'f8_param_a': 20,
+    'f8_param_b': 3,
+
+    # Feature 9: Candle Structure (available for optimizer)
+    'f9_type': 'CS',
+    'f9_param_a': 5,
+    'f9_param_b': 2,
+
+    # Feature 10: Streak Pattern (available for optimizer)
+    'f10_type': 'STRK',
+    'f10_param_a': 10,
+    'f10_param_b': 2,
+
     # Filters
     'use_volatility_filter': True,
     'use_regime_filter': True,
-    'regime_threshold': -0.1,
+    'regime_threshold': 1,
+    'regime_period': 'monthly',  # 'weekly' or 'monthly'
     'use_adx_filter': False,
     'adx_threshold': 20,
     'use_ema_filter': False,
@@ -174,7 +200,7 @@ strategy_params = {
     'sma_period': 200,
 
     # Kernel Settings
-    'use_kernel_filter': True,
+    'use_kernel_filter': False,
     'use_kernel_smoothing': False,
     'kernel_lookback': 20,
     'kernel_rel_weight': 8.0,
@@ -186,13 +212,13 @@ strategy_params = {
     'bars_to_hold': 10000,
 
     # RSI Exit Settings
-    'use_rsi_exit': True,        # Enable RSI threshold exits
+    'use_rsi_exit': False,        # Enable RSI threshold exits
     'rsi_exit_period': 14,        # RSI period for exit signals
     'rsi_overbought': 70,         # Exit longs when RSI >= this
     'rsi_oversold': 30,           # Exit shorts when RSI <= this
 
     # Kernel Exit Settings
-    'use_kernel_exit': False,      # Exit when price crosses below kernel line
+    'use_kernel_exit': True,      # Exit when price crosses below kernel line
 
     # Risk Management
     'position_size_pct': Decimal('0.95'),
@@ -405,9 +431,24 @@ print(f"    - F2: {strategy_params['f2_type']}({strategy_params['f2_param_a']}) 
 print(f"    - F3: {strategy_params['f3_type']}({strategy_params['f3_param_a']},{strategy_params['f3_param_b']}) - Multi-Timeframe Divergence")
 print(f"    - F4: {strategy_params['f4_type']}({strategy_params['f4_param_a']}) - Mean Reversion Z-Score")
 print(f"    - F5: {strategy_params['f5_type']}({strategy_params['f5_param_a']}) - Efficiency Ratio")
+fc = strategy_params['feature_count']
+if fc > 5:
+    feature_names = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
+                     'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern',
+                     'RSM': 'Relative Strength Momentum', 'VA': 'Volume Anomaly',
+                     'MTD': 'Multi-Timeframe Divergence', 'ZS': 'Z-Score', 'ER': 'Efficiency Ratio',
+                     'RSI': 'RSI', 'ADX': 'ADX', 'ATRR': 'ATR Ratio', 'PP': 'Price Position', 'VCR': 'Volatility Contraction'}
+    for fi in range(6, min(fc + 1, 11)):
+        ft = strategy_params.get(f'f{fi}_type', '?')
+        pa = strategy_params.get(f'f{fi}_param_a', 0)
+        pb = strategy_params.get(f'f{fi}_param_b', 0)
+        print(f"    - F{fi}: {ft}({pa},{pb}) - {feature_names.get(ft, ft)}")
 print(f"  Filters:")
 print(f"    - Volatility: {'ON' if strategy_params['use_volatility_filter'] else 'OFF'}")
-print(f"    - Regime: {'ON' if strategy_params['use_regime_filter'] else 'OFF'} (threshold: {strategy_params['regime_threshold']})")
+regime_thr = strategy_params['regime_threshold']
+regime_per = strategy_params.get('regime_period', 'weekly')
+regime_desc = "block bearish" if regime_thr == 0 else "require bullish" if regime_thr >= 1 else f"threshold={regime_thr}"
+print(f"    - Regime: {'ON' if strategy_params['use_regime_filter'] else 'OFF'} ({regime_per} H/L, {regime_desc})")
 print(f"    - ADX: {'ON' if strategy_params['use_adx_filter'] else 'OFF'}")
 print(f"    - EMA({strategy_params['ema_period']}): {'ON' if strategy_params['use_ema_filter'] else 'OFF'}")
 print(f"    - SMA({strategy_params['sma_period']}): {'ON' if strategy_params['use_sma_filter'] else 'OFF'}")
@@ -657,6 +698,23 @@ if hasattr(strat, 'get_percentile_band_stats'):
                 print(f"   {band:>8s}  {b['trades']:6d}  {b['win_rate']:5.1f}%  {b['avg_pnl_pct']:+7.2f}%  {b['total_pnl_pct']:+8.2f}%")
             else:
                 print(f"   {band:>8s}  {0:6d}      -         -          -")
+
+# Regime Diagnostics
+if hasattr(strat, 'get_regime_diagnostics') and strategy_params.get('use_regime_filter', False):
+    rd = strat.get_regime_diagnostics()
+    total_regime_bars = rd['bullish_bars'] + rd['bearish_bars'] + rd['reverting_bars']
+    if total_regime_bars > 0:
+        rp = strategy_params.get('regime_period', 'weekly')
+        print(f"\n🌍 Market Regime Distribution (previous {rp[:-2] if rp.endswith('ly') else rp}'s high/low):")
+        print(f"   Bullish  (close > prev {rp} high): {rd['bullish_bars']:5d} bars ({rd['bullish_pct']:5.1f}%)")
+        print(f"   Bearish  (close < prev {rp} low):  {rd['bearish_bars']:5d} bars ({rd['bearish_pct']:5.1f}%)")
+        print(f"   Reverting (between):               {rd['reverting_bars']:5d} bars ({rd['reverting_pct']:5.1f}%)")
+        total_trades = rd['trades_in_bullish'] + rd['trades_in_bearish'] + rd['trades_in_reverting']
+        if total_trades > 0:
+            print(f"\n   Trades by Regime:")
+            print(f"   Bullish:   {rd['trades_in_bullish']}")
+            print(f"   Bearish:   {rd['trades_in_bearish']}")
+            print(f"   Reverting: {rd['trades_in_reverting']}")
 
 print("="*70 + "\n")
 
