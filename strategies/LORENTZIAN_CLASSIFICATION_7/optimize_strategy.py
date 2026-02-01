@@ -83,16 +83,16 @@ CONFIG = {
     # Parameter grid for Lorentzian Classification - Trend Features
     'param_grid': {
         # ==================== ML SETTINGS ====================
-        'neighbors_count': [8, 24],
-        'max_bars_back': [2000],            # Keep fixed - needs lots of history
-        'feature_count': [10, 11],
+        'neighbors_count': [7],
+        'max_bars_back': [4000],            # Keep fixed - needs lots of history
+        'feature_count': [9],
         'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
         'allow_reentry': [True],            # True=enter anytime signal favorable
-        'min_prediction_strength': [20, 30, 40],   # Normalized scale: 0-100
+        'min_prediction_strength': [20],   # Normalized scale: 0-100
 
         # ==================== LABEL SETTINGS ====================
-        'label_lookahead': [6, 12],
-        'label_dead_zone': [0.25, 0.5],
+        'label_lookahead': [4],
+        'label_dead_zone': [0.2],
         'use_magnitude_labels': [True],
 
         # ==================== FEATURE 1 (RSI - Momentum) ====================
@@ -151,18 +151,18 @@ CONFIG = {
         'f11_param_b': [1],
 
         # ==================== FILTERS ====================
-        'use_volatility_filter': [True, False],
-        'use_regime_filter': [True, False],
+        'use_volatility_filter': [True],
+        'use_regime_filter': [True],
         'regime_threshold': [Decimal('1')],  # 0=block bearish, 1=require bullish
         'regime_period': ['weekly'],  # 'weekly' or 'monthly'
         'use_regime_direction': [True],  # True=allow reverting-from-bearish when threshold=1
-        'regime_stability_min': [0.0, 0.1],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
-        'use_adx_filter': [False],
-        'adx_threshold': [20],
+        'regime_stability_min': [0.0],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
+        'use_adx_filter': [True],
+        'adx_threshold': [14],
         'use_ema_filter': [False],
-        'ema_period': [50],
+        'ema_period': [25, 50],
         'use_sma_filter': [False],
-        'sma_period': [200],
+        'sma_period': [100, 200],
 
         # ==================== KERNEL SETTINGS ====================
         'use_kernel_filter': [False],

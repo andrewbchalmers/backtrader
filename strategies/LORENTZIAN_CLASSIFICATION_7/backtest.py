@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "AMZN"
+symbol = "GOOG"
 initial_cash = 10_000
 
 # Load peer universe from classification CSV (fallback to default ETFs)
@@ -116,9 +116,9 @@ timeframe = "1d"           # Bar timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d
 # Strategy parameters - Trend Features configuration
 strategy_params = {
     # General Settings
-    'neighbors_count': 8,
+    'neighbors_count': 7,
     'max_bars_back': 13000,
-    'feature_count': 10,
+    'feature_count': 9,
 
     # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
     # Mean-reversion works better with oscillators (RSI, CCI), trend-following with trend features (ADX, ER)
@@ -130,11 +130,11 @@ strategy_params = {
 
     # Minimum prediction strength to trade (normalized scale: 0-100)
     # Predictions are rolling-percentile normalized. 20 = above 60th percentile.
-    'min_prediction_strength': 30,
+    'min_prediction_strength': 20,
 
     # Label Settings
-    'label_lookahead': 8,            # Bars to look forward (default 4, try 8-12)
-    'label_dead_zone': 0.5,         # Min ATR move for label (default 0.5, try 0.25)
+    'label_lookahead': 4,            # Bars to look forward (default 4, try 8-12)
+    'label_dead_zone': 0.2,         # Min ATR move for label (default 0.5, try 0.25)
     'use_magnitude_labels': True,    # True=continuous, False=binary +1/-1
 
     # Feature 1: Relative Strength Momentum
@@ -198,9 +198,9 @@ strategy_params = {
     'regime_threshold': 1,
     'regime_period': 'weekly',  # 'weekly' or 'monthly'
     'use_regime_direction': True,  # True=allow reverting-from-bearish when threshold=1
-    'regime_stability_min': 0.1,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
-    'use_adx_filter': False,
-    'adx_threshold': 20,
+    'regime_stability_min': 0.0,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
+    'use_adx_filter': True,
+    'adx_threshold': 14,
     'use_ema_filter': False,
     'ema_period': 50,
     'use_sma_filter': False,

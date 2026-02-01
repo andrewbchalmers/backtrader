@@ -157,21 +157,15 @@ class EfficiencyRatio(bt.Indicator):
             self.lines.er[0] = 0
             return
 
-        # Direction: net price change over period
-        direction = abs(self.data.close[0] - self.data.close[-self.p.period])
+        closes = np.array(self.data.close.get(size=self.p.period + 1))
+        direction = abs(closes[-1] - closes[0])
+        volatility = float(np.sum(np.abs(np.diff(closes))))
 
-        # Volatility: sum of absolute bar-to-bar changes
-        volatility = 0.0
-        for i in range(self.p.period):
-            volatility += abs(self.data.close[-i] - self.data.close[-i-1])
-
-        # Efficiency Ratio
         if volatility > 0:
             er = direction / volatility
         else:
             er = 0
 
-        # Normalize to -1 to 1 (ER naturally ranges 0 to 1)
         self.lines.er[0] = er * 2 - 1
 
 
@@ -200,30 +194,38 @@ class RelativeStrengthMomentum(bt.Indicator):
         mp = self.p.momentum_period
         lb = self.p.lookback
 
-        # Current momentum_period-day return
         if self.data.close[-mp] == 0:
             self.lines.rsm[0] = 0.0
             return
         current_ret = (self.data.close[0] / self.data.close[-mp]) - 1
 
-        # Build distribution of momentum_period-day returns over lookback window
-        count_below = 0
-        total = 0
-        for i in range(1, lb):
-            past_idx = -i
-            older_idx = -i - mp
-            if len(self) + older_idx < 0:
-                break
-            past_price = self.data.close[past_idx]
-            older_price = self.data.close[older_idx]
-            if older_price == 0:
-                continue
-            hist_ret = (past_price / older_price) - 1
-            total += 1
-            if hist_ret < current_ret:
-                count_below += 1
+        total_needed = lb + mp
+        if len(self) < total_needed:
+            self.lines.rsm[0] = 0.0
+            return
 
+        closes = np.array(self.data.close.get(size=total_needed))
+        # closes[-1] = current bar, closes[0] = oldest
+        # Historical mp-day returns: recent[j] / older[j] - 1
+        # For i=1..lb-1: numerator=closes[-(i+1)], denominator=closes[-(i+1)-mp]
+        # recent prices (excluding current bar): closes[mp:-1]
+        # older prices: closes[:-mp-1]
+        recent = closes[mp:-1]
+        older = closes[:len(recent)]
+
+        valid_mask = older != 0
+        if not np.any(valid_mask):
+            self.lines.rsm[0] = 0.0
+            return
+
+        hist_rets = np.empty(len(recent))
+        hist_rets[valid_mask] = (recent[valid_mask] / older[valid_mask]) - 1
+        hist_rets[~valid_mask] = np.nan
+
+        valid_rets = hist_rets[~np.isnan(hist_rets)]
+        total = len(valid_rets)
         if total > 0:
+            count_below = int(np.sum(valid_rets < current_ret))
             percentile = count_below / total
         else:
             percentile = 0.5
@@ -324,13 +326,9 @@ class MeanReversionZScore(bt.Indicator):
         self.addminperiod(self.p.period)
 
     def next(self):
-        # Calculate standard deviation manually over the period
         mean = self.sma[0]
-        sq_sum = 0.0
-        for i in range(self.p.period):
-            diff = self.data.close[-i] - mean
-            sq_sum += diff * diff
-        std = math.sqrt(sq_sum / self.p.period)
+        closes = np.array(self.data.close.get(size=self.p.period))
+        std = float(np.sqrt(np.mean((closes - mean) ** 2)))
 
         if std > 0:
             z = (self.data.close[0] - mean) / std
@@ -361,24 +359,28 @@ class VolatilityContractionRatio(bt.Indicator):
         self.addminperiod(self.p.bb_period + self.p.lookback)
 
     def next(self):
-        # Current BB width (normalized by midline)
         mid = self.bb.mid[0]
-        if mid > 0:
-            current_width = (self.bb.top[0] - self.bb.bot[0]) / mid
-        else:
+        if mid <= 0:
             self.lines.vcr[0] = 0.0
             return
 
-        # Build distribution of BB widths over lookback
-        count_below = 0
-        total = 0
-        for i in range(1, self.p.lookback):
-            hist_mid = self.bb.mid[-i]
-            if hist_mid > 0:
-                hist_width = (self.bb.top[-i] - self.bb.bot[-i]) / hist_mid
-                total += 1
-                if hist_width < current_width:
-                    count_below += 1
+        current_width = (self.bb.top[0] - self.bb.bot[0]) / mid
+        lb = self.p.lookback
+
+        tops = np.array(self.bb.top.get(size=lb))
+        bots = np.array(self.bb.bot.get(size=lb))
+        mids = np.array(self.bb.mid.get(size=lb))
+
+        # Exclude current bar (last element), use historical only
+        hist_mids = mids[:-1]
+        valid = hist_mids > 0
+        if not np.any(valid):
+            self.lines.vcr[0] = 0.0
+            return
+
+        hist_widths = (tops[:-1][valid] - bots[:-1][valid]) / hist_mids[valid]
+        count_below = int(np.sum(hist_widths < current_width))
+        total = len(hist_widths)
 
         if total > 0:
             percentile = count_below / total
@@ -402,15 +404,16 @@ class VolumePriceDivergence(bt.Indicator):
 
     def next(self):
         n = self.p.period
-        sum_xy = 0.0
-        sum_x2 = 0.0
-        sum_y2 = 0.0
-        for i in range(n):
-            pd_ = self.data.close[-i] - self.data.close[-i - 1]
-            vd_ = self.data.volume[-i] - self.data.volume[-i - 1]
-            sum_xy += pd_ * vd_
-            sum_x2 += pd_ * pd_
-            sum_y2 += vd_ * vd_
+        closes = np.array(self.data.close.get(size=n + 1))
+        volumes = np.array(self.data.volume.get(size=n + 1))
+
+        price_deltas = np.diff(closes)
+        vol_deltas = np.diff(volumes)
+
+        sum_xy = float(np.dot(price_deltas, vol_deltas))
+        sum_x2 = float(np.dot(price_deltas, price_deltas))
+        sum_y2 = float(np.dot(vol_deltas, vol_deltas))
+
         denom = math.sqrt(sum_x2) * math.sqrt(sum_y2)
         if denom > 0:
             self.lines.vpd[0] = sum_xy / denom
@@ -431,13 +434,17 @@ class CandleStructure(bt.Indicator):
         self.addminperiod(self.p.period)
 
     def next(self):
-        total = 0.0
-        for i in range(self.p.period):
-            body = self.data.close[-i] - self.data.open[-i]
-            rng = self.data.high[-i] - self.data.low[-i]
-            if rng > 0:
-                total += body / rng
-        avg = total / self.p.period
+        n = self.p.period
+        closes = np.array(self.data.close.get(size=n))
+        opens = np.array(self.data.open.get(size=n))
+        highs = np.array(self.data.high.get(size=n))
+        lows = np.array(self.data.low.get(size=n))
+
+        bodies = closes - opens
+        ranges = highs - lows
+        safe_ranges = np.where(ranges > 0, ranges, 1.0)
+        ratios = np.where(ranges > 0, bodies / safe_ranges, 0.0)
+        avg = float(np.mean(ratios))
         self.lines.cs[0] = math.tanh(avg * self.p.sensitivity)
 
 
@@ -494,10 +501,10 @@ class OBVTrend(bt.Indicator):
         self.obv_history.append(self.obv)
 
         if len(self.obv_history) >= self.p.period:
-            arr = list(self.obv_history)[-self.p.period:]
-            mean_obv = sum(arr) / len(arr)
-            sq_sum = sum((x - mean_obv) ** 2 for x in arr)
-            std_obv = math.sqrt(sq_sum / len(arr))
+            start_idx = len(self.obv_history) - self.p.period
+            arr = np.array(list(self.obv_history)[start_idx:])
+            mean_obv = float(np.mean(arr))
+            std_obv = float(np.sqrt(np.mean((arr - mean_obv) ** 2)))
             if std_obv > 0:
                 z = (self.obv - mean_obv) / std_obv
                 self.lines.obvt[0] = max(-1.0, min(1.0, z / self.p.z_divisor))
@@ -579,25 +586,23 @@ class ChoppinessIndex(bt.Indicator):
     def next(self):
         p = self.p.period
 
-        # Sum of ATR over period
-        atr_sum = 0.0
-        for i in range(p):
-            atr_val = self.atr[-i]
-            if atr_val == atr_val:  # not NaN
-                atr_sum += atr_val
+        atr_vals = np.array(self.atr.get(size=p))
+        # Filter NaN
+        valid_mask = ~np.isnan(atr_vals)
+        if not np.any(valid_mask):
+            self.lines.chop[0] = 0.0
+            return
+        atr_sum = float(np.sum(atr_vals[valid_mask]))
 
-        # Highest high and lowest low over period
-        highest = max(self.data.high[-i] for i in range(p))
-        lowest = min(self.data.low[-i] for i in range(p))
+        highs = np.array(self.data.high.get(size=p))
+        lows = np.array(self.data.low.get(size=p))
+        highest = float(np.max(highs))
+        lowest = float(np.min(lows))
 
         rng = highest - lowest
         if rng > 0 and atr_sum > 0:
-            # Classic Choppiness Index: 0-100 scale
-            # High = choppy, Low = trending
             chop_raw = 100.0 * math.log10(atr_sum / rng) / math.log10(p)
-            # Clamp to [0, 100]
             chop_raw = max(0.0, min(100.0, chop_raw))
-            # Normalize to [-1, 1]: invert so trending=+1, choppy=-1
             self.lines.chop[0] = -1.0 * (chop_raw / 50.0 - 1.0)
         else:
             self.lines.chop[0] = 0.0
@@ -989,42 +994,53 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # ATR for label normalization (dead zone + magnitude labels)
         self.label_atr = bt.indicators.ATR(self.data, period=14)
 
+    # Map feature type to its output line name for O(1) value retrieval
+    _FEATURE_LINE_NAMES = {
+        'RSI': 'nrsi', 'ADX': 'nadx', 'ATRR': 'atr_ratio', 'PP': 'position',
+        'ER': 'er', 'RSM': 'rsm', 'VA': 'va', 'MTD': 'mtd', 'ZS': 'zscore',
+        'VCR': 'vcr', 'VPD': 'vpd', 'CS': 'cs', 'MACC': 'macc',
+        'OBVT': 'obvt', 'STRK': 'strk', 'CHOP': 'chop',
+    }
+
     def _create_feature(self, ftype, param_a, param_b):
         """Create a feature indicator based on type."""
         if ftype == 'RSI':
-            return NormalizedRSI(self.data, period=param_a, smoothing=param_b)
+            feature = NormalizedRSI(self.data, period=param_a, smoothing=param_b)
         elif ftype == 'ADX':
-            return NormalizedADX(self.data, period=param_a)
+            feature = NormalizedADX(self.data, period=param_a)
         elif ftype == 'ATRR':
-            return ATRRatio(self.data, period=param_a)
+            feature = ATRRatio(self.data, period=param_a)
         elif ftype == 'PP':
-            return PricePosition(self.data, period=param_a)
+            feature = PricePosition(self.data, period=param_a)
         elif ftype == 'ER':
-            return EfficiencyRatio(self.data, period=param_a)
+            feature = EfficiencyRatio(self.data, period=param_a)
         elif ftype == 'RSM':
-            return RelativeStrengthMomentum(self.data, momentum_period=param_a, lookback=param_b)
+            feature = RelativeStrengthMomentum(self.data, momentum_period=param_a, lookback=param_b)
         elif ftype == 'VA':
-            return VolumeAnomaly(self.data, period=param_a)
+            feature = VolumeAnomaly(self.data, period=param_a)
         elif ftype == 'MTD':
-            return MultiTimeframeDivergence(self.data, short_period=param_a, long_period=param_b)
+            feature = MultiTimeframeDivergence(self.data, short_period=param_a, long_period=param_b)
         elif ftype == 'ZS':
-            return MeanReversionZScore(self.data, period=param_a)
+            feature = MeanReversionZScore(self.data, period=param_a)
         elif ftype == 'VCR':
-            return VolatilityContractionRatio(self.data, bb_period=param_a, lookback=param_b)
+            feature = VolatilityContractionRatio(self.data, bb_period=param_a, lookback=param_b)
         elif ftype == 'VPD':
-            return VolumePriceDivergence(self.data, period=param_a, smoothing=param_b)
+            feature = VolumePriceDivergence(self.data, period=param_a, smoothing=param_b)
         elif ftype == 'CS':
-            return CandleStructure(self.data, period=param_a, sensitivity=param_b)
+            feature = CandleStructure(self.data, period=param_a, sensitivity=param_b)
         elif ftype == 'MACC':
-            return MomentumAcceleration(self.data, roc_period=param_a, lag=param_b)
+            feature = MomentumAcceleration(self.data, roc_period=param_a, lag=param_b)
         elif ftype == 'OBVT':
-            return OBVTrend(self.data, period=param_a, z_divisor=param_b)
+            feature = OBVTrend(self.data, period=param_a, z_divisor=param_b)
         elif ftype == 'STRK':
-            return StreakPattern(self.data, max_streak=param_a, atr_mult=param_b)
+            feature = StreakPattern(self.data, max_streak=param_a, atr_mult=param_b)
         elif ftype == 'CHOP':
-            return ChoppinessIndex(self.data, period=param_a, unused=param_b)
+            feature = ChoppinessIndex(self.data, period=param_a, unused=param_b)
         else:
             raise ValueError(f"Unknown feature type: {ftype}")
+
+        feature._line_name = self._FEATURE_LINE_NAMES[ftype]
+        return feature
 
     def _init_filters(self):
         """Initialize filter indicators."""
@@ -1169,6 +1185,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
         Lorentzian distance: sum of log(1 + |x_i - y_i|) for each feature
 
         This metric reduces the influence of outliers compared to Euclidean distance.
+
+        Note: This per-sample method is kept for compatibility but the main KNN
+        path uses vectorized batch computation via numpy in _run_knn().
         """
         distance = 0.0
         for i, feature in enumerate(self.features):
@@ -1180,39 +1199,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
     def _get_feature_value(self, feature):
         """Get the current value from a feature indicator."""
-        if hasattr(feature, 'nrsi'):
-            return feature.nrsi[0]
-        elif hasattr(feature, 'nadx'):
-            return feature.nadx[0]
-        elif hasattr(feature, 'atr_ratio'):
-            return feature.atr_ratio[0]
-        elif hasattr(feature, 'position'):
-            return feature.position[0]
-        elif hasattr(feature, 'er'):
-            return feature.er[0]
-        elif hasattr(feature, 'rsm'):
-            return feature.rsm[0]
-        elif hasattr(feature, 'va'):
-            return feature.va[0]
-        elif hasattr(feature, 'mtd'):
-            return feature.mtd[0]
-        elif hasattr(feature, 'zscore'):
-            return feature.zscore[0]
-        elif hasattr(feature, 'vcr'):
-            return feature.vcr[0]
-        elif hasattr(feature, 'vpd'):
-            return feature.vpd[0]
-        elif hasattr(feature, 'cs'):
-            return feature.cs[0]
-        elif hasattr(feature, 'macc'):
-            return feature.macc[0]
-        elif hasattr(feature, 'obvt'):
-            return feature.obvt[0]
-        elif hasattr(feature, 'strk'):
-            return feature.strk[0]
-        elif hasattr(feature, 'chop'):
-            return feature.chop[0]
-        return 0.0
+        return getattr(feature.lines, feature._line_name)[0]
 
     def _store_features(self):
         """Store current feature values in arrays."""
@@ -1294,28 +1281,51 @@ class LorentzianClassificationStrategy(bt.Strategy):
         1. Only sample every 4th bar for chronological spacing
         2. Maintain sliding window of k neighbors
         3. Use 75th percentile distance reset to prevent runaway
+
+        Performance: distances are computed in batch via numpy, then the
+        sequential neighbor selection operates on pre-computed scalars.
         """
         if len(self.label_array) < self.p.neighbors_count:
             return 0
 
+        n_features = len(self.features)
+        size_loop = min(self.p.max_bars_back - 1, len(self.label_array) - 1)
+        for fi in range(n_features):
+            size_loop = min(size_loop, len(self.feature_arrays[fi]))
+        if size_loop <= 0:
+            return 0
+
+        # Build historical feature matrix: shape (size_loop, n_features)
+        hist_matrix = np.empty((size_loop, n_features))
+        for fi in range(n_features):
+            fa = self.feature_arrays[fi]
+            hist_matrix[:, fi] = list(fa)[:size_loop]
+
+        # Current feature vector: shape (n_features,)
+        current_vec = np.empty(n_features)
+        for fi, feature in enumerate(self.features):
+            current_vec[fi] = self._get_feature_value(feature)
+
+        # Vectorized Lorentzian distance: log(1 + |current - historical|) summed over features
+        all_distances = np.sum(np.log1p(np.abs(current_vec - hist_matrix)), axis=1)
+
+        # Labels for the same range
+        labels_arr = list(self.label_array)
+
+        # Sequential neighbor selection (preserves original algorithm behavior)
         distances = []
         predictions = []
         last_distance = -1.0
 
-        size_loop = min(self.p.max_bars_back - 1, len(self.label_array) - 1)
-
         for i in range(size_loop):
-            d = self._get_lorentzian_distance(i)
+            d = all_distances[i]
 
-            # Only consider every 4th bar (chronological spacing)
             if d >= last_distance and (i % 4) != 0:
                 last_distance = d
                 distances.append(d)
-                predictions.append(self.label_array[i])
+                predictions.append(labels_arr[i])
 
-                # Maintain k-nearest neighbors
                 if len(predictions) > self.p.neighbors_count:
-                    # Reset distance threshold to 75th percentile
                     sorted_dist = sorted(distances)
                     idx_75 = int(self.p.neighbors_count * 3 / 4)
                     if idx_75 < len(sorted_dist):
@@ -1347,10 +1357,11 @@ class LorentzianClassificationStrategy(bt.Strategy):
             return 0.0
 
         # Percentile rank: fraction of history values below current
-        count_below = sum(1 for h in history if h < raw)
-        count_equal = sum(1 for h in history if h == raw)
+        arr = np.fromiter(history, dtype=np.float64, count=len(history))
+        count_below = int(np.sum(arr < raw))
+        count_equal = int(np.sum(arr == raw))
         # Mid-rank method: ties get average rank
-        percentile = (count_below + 0.5 * count_equal) / len(history)
+        percentile = (count_below + 0.5 * count_equal) / len(arr)
 
         # Map [0, 1] -> [-100, +100]
         return (percentile * 2.0 - 1.0) * 100.0
