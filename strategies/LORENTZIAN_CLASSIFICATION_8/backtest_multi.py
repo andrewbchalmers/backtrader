@@ -112,7 +112,7 @@ STRATEGY_PARAMS = {
     'use_regime_direction': True,  # True=allow reverting-from-bearish when threshold=1
     'regime_stability_min': 0.0,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
     'regime_stability_window': 60,  # Bars to look back for regime flip counting
-    'regime_max_flips': 10,  # Number of flips at which stability = 0 (higher = more permissive)
+    'regime_max_flips': 8,  # Number of flips at which stability = 0 (higher = more permissive)
     'use_adx_filter': True,
     'adx_threshold': 14,
     'use_ema_filter': False,
@@ -139,7 +139,7 @@ STRATEGY_PARAMS = {
     'rsi_oversold': 30,
 
     # Kernel Exit Settings
-    'use_kernel_exit': True,
+    'use_kernel_exit': False,
 
     # ATR Trailing Stop Exit Settings
     'use_trailing_atr_exit': True,    # Enable ATR-based trailing stop exit
@@ -165,6 +165,17 @@ STRATEGY_PARAMS = {
     'cross_symbol_auto_peers': True,
     'cross_symbol_target_symbol': '',
     'cross_symbol_max_peers': 7,
+
+    # Fundamental Data Filter
+    'use_fundamental_filter': True,             # Master switch for fundamental filtering
+    'fundamental_quality_weight': 0.2,           # Weight for quality score in combined
+    'fundamental_momentum_weight': 0.3,          # Weight for growth momentum in combined
+    'min_trending_probability': 20,              # Minimum combined score to trade (0-100)
+    'close_before_earnings': True,              # Close positions before earnings
+    'earnings_blackout_before': 5,               # Days before earnings to block trades
+    'earnings_blackout_after': 2,                # Days after earnings to block trades
+    'min_quality_score': 50,                  # Minimum quality score (0 = disabled)
+    'min_momentum_score': 50,
 }
 
 CSV_FILE = '../sp500_2024.csv'
@@ -243,6 +254,7 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
         run_params = dict(strategy_params) if strategy_params else {}
         run_params['test_start_idx'] = actual_test_start_idx
         run_params['cross_symbol_target_symbol'] = symbol
+        run_params['fundamental_symbol'] = symbol  # For fundamental data lookup
 
         # Test period data for SPY benchmark comparison
         test_df = df.iloc[actual_test_start_idx:]
@@ -291,7 +303,8 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
         cerebro.broker.setcommission(commission=0.0)
 
         # Analyzers
-        cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
+        cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe",
+                            timeframe=bt.TimeFrame.Days, riskfreerate=0.0)
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="dd")
         cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
         cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
@@ -618,6 +631,14 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
                 print(f"    - ETFs: {strategy_params.get('cross_symbol_etfs', 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA')}")
             print(f"    - Lookback Years: {strategy_params.get('cross_symbol_lookback_years', 5)}")
             print(f"    - Regime Balancing: {'ON' if strategy_params.get('use_regime_balancing', False) else 'OFF'}")
+        print(f"  Fundamental Filter:")
+        print(f"    - Enabled: {'ON' if strategy_params.get('use_fundamental_filter', False) else 'OFF'}")
+        if strategy_params.get('use_fundamental_filter', False):
+            print(f"    - Quality Weight: {strategy_params.get('fundamental_quality_weight', 0.4)}")
+            print(f"    - Momentum Weight: {strategy_params.get('fundamental_momentum_weight', 0.6)}")
+            print(f"    - Min Trending Prob: {strategy_params.get('min_trending_probability', 50)}")
+            print(f"    - Close Before Earnings: {'ON' if strategy_params.get('close_before_earnings', False) else 'OFF'}")
+            print(f"    - Blackout Window: {strategy_params.get('earnings_blackout_before', 5)} days before / {strategy_params.get('earnings_blackout_after', 2)} days after")
     print()
 
     results = []
@@ -653,19 +674,22 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
     print("AGGREGATE RESULTS")
     print(f"{'='*70}")
 
-    total_initial = len(results) * initial_cash
-    total_final = df_results['final_value'].sum()
-    total_return = total_final - total_initial
+    stocks_traded = len(df_results[df_results['return_pct'] != 0])
+    traded_df = df_results[df_results['return_pct'] != 0]
+    total_pnl = df_results['final_value'].sum() - len(results) * initial_cash
+    total_return_pct = df_results['return_pct'].sum()
     avg_return_pct = df_results['return_pct'].mean()
+    avg_traded_return = traded_df['return_pct'].mean() if stocks_traded > 0 else 0
     avg_spy_return = df_results['spy_return'].mean()
 
-    print(f"\n  Portfolio Performance:")
+    print(f"\n  Portfolio Performance (${initial_cash:,.0f} per stock):")
     print(f"   Stocks Tested:         {len(results)}")
-    print(f"   Total Initial Value:   ${total_initial:,.2f}")
-    print(f"   Total Final Value:     ${total_final:,.2f}")
-    print(f"   Total Return:          ${total_return:,.2f} ({(total_return/total_initial)*100:.2f}%)")
+    print(f"   Stocks Traded:         {stocks_traded} ({stocks_traded/len(results)*100:.0f}%)")
+    print(f"   Total PnL:             ${total_pnl:,.2f}")
+    print(f"   Total Return:          {total_return_pct:.2f}%")
     print(f"   Avg Return per Stock:  {avg_return_pct:.2f}%")
-    print(f"   Avg SPY Return:        {avg_spy_return:.2f}%")
+    print(f"   Avg Return (traded):   {avg_traded_return:.2f}%")
+    print(f"   SPY Return (period):   {avg_spy_return:.2f}%")
     print(f"   Avg Outperformance:    {df_results['outperformance'].mean():.2f}%")
     print(f"   Stocks Beat SPY:       {len(df_results[df_results['outperformance'] > 0])} ({len(df_results[df_results['outperformance'] > 0])/len(results)*100:.1f}%)")
 

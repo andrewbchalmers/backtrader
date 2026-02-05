@@ -200,7 +200,7 @@ strategy_params = {
     'use_regime_direction': True,  # True=allow reverting-from-bearish when threshold=1
     'regime_stability_min': 0.0,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
     'regime_stability_window': 60,  # Bars to look back for regime flip counting
-    'regime_max_flips': 10,  # Number of flips at which stability = 0 (higher = more permissive)
+    'regime_max_flips': 8,  # Number of flips at which stability = 0 (higher = more permissive)
     'use_adx_filter': True,
     'adx_threshold': 14,
     'use_ema_filter': False,
@@ -253,6 +253,20 @@ strategy_params = {
     'cross_symbol_auto_peers': True,
     'cross_symbol_target_symbol': symbol,
     'cross_symbol_max_peers': 7,
+
+    # Fundamental / Earnings Settings
+    'use_fundamental_filter': True,         # Master switch for fundamental filtering
+    'fundamental_symbol': symbol,            # Symbol for fundamental data (auto-detected if empty)
+    'fundamental_quality_weight': 0.2,       # Weight for quality score in combined
+    'fundamental_momentum_weight': 0.3,      # Weight for growth momentum in combined
+    'earnings_blackout_before': 5,           # Days before earnings to block trades
+    'earnings_blackout_after': 2,            # Days after earnings to block trades
+    'close_before_earnings': True,           # Close positions before blackout starts
+    'min_trending_probability': 50,          # Minimum combined score to trade (0-100)
+    'full_position_threshold': 70,           # Score >= this gets full position
+    'reduced_position_pct': Decimal('0.75'), # Position size when score 50-70
+    'min_quality_score': 30,                  # Minimum quality score (0 = disabled)
+    'min_momentum_score': 30,                 # Minimum momentum score (0 = disabled)
 
     # Backtest control (set by script - do not modify)
     'test_start_idx': 0,  # Will be set automatically
@@ -407,7 +421,8 @@ cerebro.broker.setcash(initial_cash)
 cerebro.broker.setcommission(commission=0.0)
 
 # Analyzers
-cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
+cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe",
+                    timeframe=bt.TimeFrame.Days, riskfreerate=0.0)
 cerebro.addanalyzer(bt.analyzers.DrawDown, _name="dd")
 cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
 cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
@@ -495,6 +510,19 @@ if strategy_params.get('use_cross_symbol_training', False):
         print(f"    - ETFs: {strategy_params.get('cross_symbol_etfs', 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA')}")
     print(f"    - Lookback Years: {strategy_params.get('cross_symbol_lookback_years', 5)}")
     print(f"    - Regime Balancing: {'ON' if strategy_params.get('use_regime_balancing', False) else 'OFF'}")
+print(f"  Fundamental / Earnings:")
+print(f"    - Enabled: {'ON' if strategy_params.get('use_fundamental_filter', False) else 'OFF'}")
+if strategy_params.get('use_fundamental_filter', False):
+    print(f"    - Symbol: {strategy_params.get('fundamental_symbol', symbol)}")
+    print(f"    - Earnings Blackout: -{strategy_params.get('earnings_blackout_before', 5)}/+{strategy_params.get('earnings_blackout_after', 2)} days")
+    print(f"    - Close Before Earnings: {'ON' if strategy_params.get('close_before_earnings', True) else 'OFF'}")
+    print(f"    - Min Trending Prob: {strategy_params.get('min_trending_probability', 50)}")
+    print(f"    - Full Position At: {strategy_params.get('full_position_threshold', 70)}")
+    print(f"    - Reduced Position: {float(strategy_params.get('reduced_position_pct', Decimal('0.75')))*100:.0f}%")
+    if strategy_params.get('min_quality_score', 0) > 0:
+        print(f"    - Min Quality Score: {strategy_params.get('min_quality_score')}")
+    if strategy_params.get('min_momentum_score', 0) > 0:
+        print(f"    - Min Momentum Score: {strategy_params.get('min_momentum_score')}")
 print()
 
 results = cerebro.run()
@@ -745,6 +773,33 @@ if hasattr(strat, 'get_regime_diagnostics') and strategy_params.get('use_regime_
             if rd['trades_in_reverting'] > 0:
                 print(f"     - Improving (buy):  {rd['trades_in_reverting_improving']}")
                 print(f"     - Declining (buy):  {rd['trades_in_reverting_declining']}")
+
+# Fundamental Analysis Summary
+if strategy_params.get('use_fundamental_filter', False) and hasattr(strat, 'fundamental_provider') and strat.fundamental_provider is not None:
+    print(f"\n📊 Fundamental Analysis Summary:")
+    fund = strat.fundamental_provider
+    # Use last close price and today's date for current scores
+    from datetime import date
+    last_price = float(strat.data.close[0]) if len(strat.data) > 0 else None
+    summary = fund.get_summary(as_of_date=date.today(), price=last_price)
+    print(f"   Symbol: {summary['symbol']}")
+    print(f"   Quality Score:     {summary['quality_score']:.1f}/100")
+    print(f"   Momentum Score:    {summary['momentum_score']:.1f}/100")
+    print(f"   Trending Prob:     {summary['trending_probability']:.1f}/100")
+    print(f"   Quarters Mapped:   {summary['quarters_mapped']}")
+
+    # Show next earnings date
+    next_earnings = fund.get_next_earnings_date(date.today())
+    if next_earnings:
+        days_until = fund.days_until_earnings(date.today())
+        print(f"   Next Earnings:     {next_earnings.date()} ({days_until} days)")
+    else:
+        print(f"   Next Earnings:     Unknown")
+
+    days_since = fund.days_since_earnings(date.today())
+    if days_since is not None:
+        confidence = fund.get_confidence_multiplier(date.today())
+        print(f"   Days Since Last:   {days_since} (confidence: {confidence:.2f})")
 
 print("="*70 + "\n")
 

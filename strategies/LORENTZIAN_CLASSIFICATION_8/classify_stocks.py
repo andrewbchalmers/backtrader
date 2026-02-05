@@ -190,13 +190,91 @@ CONFIG = {
         # Other
         'verbose': False,
         'test_start_idx': 0,
+
+        # Fundamental / Earnings Settings (disabled by default for classification)
+        # Enable to filter stocks by fundamentals during classification
+        'use_fundamental_filter': False,
+        'fundamental_symbol': '',  # Auto-detected per stock
+        'earnings_blackout_before': 5,
+        'earnings_blackout_after': 2,
+        'close_before_earnings': True,
+        'min_trending_probability': 50,
+        'full_position_threshold': 70,
+        'reduced_position_pct': Decimal('0.75'),
+        'min_quality_score': 0,
+        'min_momentum_score': 0,
     },
+
+    # Fundamental data collection (for output, not filtering)
+    'collect_fundamentals': True,
 }
 
 
 # ============================================================================
 # Stock Characteristics
 # ============================================================================
+
+def get_fundamental_scores(symbols, collect_fundamentals=True, characteristics=None):
+    """
+    Fetch fundamental scores (quality, momentum, trending probability) for each symbol.
+
+    Args:
+        symbols: List of ticker symbols
+        collect_fundamentals: Whether to collect fundamental scores
+        characteristics: Dict of symbol -> {price, ...} from get_stock_characteristics()
+
+    Returns dict: symbol -> {quality_score, momentum_score, trending_probability,
+                             days_until_earnings, days_since_earnings}
+    """
+    if not collect_fundamentals:
+        return {}
+
+    print(f"\n📈 Fetching fundamental scores for {len(symbols)} symbols...")
+    scores = {}
+
+    default_scores = {
+        'quality_score': 0,
+        'momentum_score': 0,
+        'trending_probability': 0,
+        'days_until_earnings': None,
+        'days_since_earnings': None,
+        'has_earnings_data': False,
+    }
+
+    try:
+        from fundamental_data import FundamentalCache
+        from datetime import date
+        today = date.today()
+    except ImportError:
+        print("   ⚠️  fundamental_data.py not found, skipping fundamental scores")
+        return {s: dict(default_scores) for s in symbols}
+
+    for i, symbol in enumerate(symbols):
+        try:
+            provider = FundamentalCache.get_provider(symbol, lookback_years=5, verbose=False)
+            # Get current price for valuation metrics
+            price = None
+            if characteristics and symbol in characteristics:
+                price = characteristics[symbol].get('price')
+            scores[symbol] = {
+                'quality_score': provider.get_quality_score(today, price=price),
+                'momentum_score': provider.get_growth_momentum_score(today),
+                'trending_probability': provider.get_trending_probability(today, price=price),
+                'days_until_earnings': provider.days_until_earnings(today),
+                'days_since_earnings': provider.days_since_earnings(today),
+                'has_earnings_data': provider._earnings_dates is not None and not provider._earnings_dates.empty,
+            }
+        except Exception:
+            scores[symbol] = dict(default_scores)
+
+        if (i + 1) % 25 == 0:
+            print(f"   Progress: {i + 1}/{len(symbols)} ({(i + 1) / len(symbols) * 100:.0f}%)")
+
+    valid = sum(1 for s in scores.values() if s['quality_score'] > 0)
+    print(f"   ✓ Fetched fundamental scores for {valid}/{len(symbols)} symbols")
+
+    return scores
+
 
 def get_stock_characteristics(symbols):
     """
@@ -437,6 +515,9 @@ def run_stock_classification(config):
     # Fetch stock characteristics (one-time)
     characteristics = get_stock_characteristics(symbols)
 
+    # Fetch fundamental scores (one-time)
+    fundamental_scores = get_fundamental_scores(symbols, config.get('collect_fundamentals', True), characteristics)
+
     # Download data for all periods
     lookback_bars = config['strategy_params'].get('max_bars_back', 500) + 100
     data_cache, valid_symbols = load_all_periods_data(symbols, periods, lookback_bars)
@@ -554,6 +635,7 @@ def run_stock_classification(config):
             train_r = train_results.get(symbol, {})
             test_r = test_results.get(symbol, {})
             chars = characteristics.get(symbol, {})
+            fund_scores = fundamental_scores.get(symbol, {})
 
             all_detail_rows.append({
                 'period': period_idx + 1,
@@ -584,6 +666,13 @@ def run_stock_classification(config):
                 'trailing_pe': chars.get('trailing_pe', 0),
                 'dividend_yield': chars.get('dividend_yield', 0),
                 'hist_volatility': volatilities.get(symbol, 0),
+                # Fundamental scores
+                'quality_score': fund_scores.get('quality_score', 0),
+                'momentum_score': fund_scores.get('momentum_score', 0),
+                'trending_probability': fund_scores.get('trending_probability', 0),
+                'days_until_earnings': fund_scores.get('days_until_earnings'),
+                'days_since_earnings': fund_scores.get('days_since_earnings'),
+                'has_earnings_data': fund_scores.get('has_earnings_data', False),
             })
 
     df_results = pd.DataFrame(all_tier_rows)
@@ -802,6 +891,57 @@ def print_classification_summary(df_results, df_detail, tier_history, config):
             print(f"\n  ✓ Best market cap group: {best_cap}")
         else:
             print("\n  No market cap data available.")
+
+    # --- 6b. Fundamental Score Analysis ---
+    print("\n" + "-" * 70)
+    print("6b. FUNDAMENTAL SCORE ANALYSIS")
+    print("-" * 70)
+
+    if not df_detail.empty and 'trending_probability' in df_detail.columns:
+        df_with_fund = df_detail[df_detail['trending_probability'] > 0].copy()
+        if not df_with_fund.empty:
+            def fund_group(prob):
+                if prob >= 70:
+                    return 'High (>=70)'
+                elif prob >= 50:
+                    return 'Medium (50-70)'
+                else:
+                    return 'Low (<50)'
+
+            df_with_fund['fund_group'] = df_with_fund['trending_probability'].apply(fund_group)
+
+            fund_stats = df_with_fund.groupby('fund_group').agg(
+                n_entries=('symbol', 'count'),
+                avg_trending_prob=('trending_probability', 'mean'),
+                avg_quality=('quality_score', 'mean'),
+                avg_momentum=('momentum_score', 'mean'),
+                avg_tier=('tier', 'mean'),
+                avg_oos_return=('test_return', 'mean'),
+                avg_oos_sharpe=('test_sharpe', 'mean'),
+            )
+
+            sort_order = {'High (>=70)': 0, 'Medium (50-70)': 1, 'Low (<50)': 2}
+            fund_stats = fund_stats.loc[sorted(fund_stats.index, key=lambda x: sort_order.get(x, 99))]
+
+            print(f"\n  {'Group':<15s}  {'N':>4s}  {'AvgProb':>7s}  {'Quality':>7s}  {'Momentum':>8s}  {'AvgTier':>7s}  {'OOS Ret':>8s}")
+            print(f"  {'-' * 15}  {'----':>4s}  {'-------':>7s}  {'-------':>7s}  {'--------':>8s}  {'-------':>7s}  {'--------':>8s}")
+            for group, row in fund_stats.iterrows():
+                print(f"  {group:<15s}  {row['n_entries']:4.0f}  {row['avg_trending_prob']:7.1f}  {row['avg_quality']:7.1f}  {row['avg_momentum']:8.1f}  {row['avg_tier']:7.2f}  {row['avg_oos_return']:+7.2f}%")
+
+            # Correlation between fundamental score and OOS performance
+            if len(df_with_fund) > 10:
+                corr_ret = df_with_fund['trending_probability'].corr(df_with_fund['test_return'])
+                corr_tier = df_with_fund['trending_probability'].corr(df_with_fund['tier'])
+                print(f"\n  Correlation Analysis:")
+                print(f"    Trending Prob vs OOS Return: {corr_ret:+.3f}")
+                print(f"    Trending Prob vs Tier:       {corr_tier:+.3f} (negative = higher prob → better tier)")
+
+            best_fund = fund_stats['avg_tier'].idxmin()
+            print(f"\n  ✓ Best fundamental group: {best_fund}")
+        else:
+            print("\n  No fundamental score data available.")
+    else:
+        print("\n  Fundamental scores not collected.")
 
     # --- 7. Stock Screener Criteria ---
     print("\n" + "=" * 70)

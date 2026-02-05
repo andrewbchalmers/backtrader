@@ -86,7 +86,7 @@ CONFIG = {
         'neighbors_count': [5],
         'max_bars_back': [5000],            # Keep fixed - needs lots of history
         'feature_count': [9],
-        'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
+        'trend_following_labels': [True],  # False=mean-reversion, True=trend-following
         'allow_reentry': [True],            # True=enter anytime signal favorable
         'min_prediction_strength': [20],   # Normalized scale: 0-100
 
@@ -156,9 +156,9 @@ CONFIG = {
         'regime_threshold': [Decimal('1')],  # 0=block bearish, 1=require bullish
         'regime_period': ['weekly'],  # 'weekly' or 'monthly'
         'use_regime_direction': [True],  # True=allow reverting-from-bearish when threshold=1
-        'regime_stability_min': [0.0, 0.1],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
+        'regime_stability_min': [0.0],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
         'regime_stability_window': [60],  # Bars to look back for regime flip counting
-        'regime_max_flips': [8, 10],  # Number of flips at which stability = 0 (higher = more permissive)
+        'regime_max_flips': [8],  # Number of flips at which stability = 0 (higher = more permissive)
         'use_adx_filter': [True],
         'adx_threshold': [14],
         'use_ema_filter': [False],
@@ -210,6 +210,20 @@ CONFIG = {
         'cross_symbol_auto_peers': [True],
         'cross_symbol_target_symbol': [''],
         'cross_symbol_max_peers': [7],
+
+        # ==================== FUNDAMENTAL DATA FILTER ====================
+        'use_fundamental_filter': [True],
+        'fundamental_symbol': [''],
+        'fundamental_quality_weight': [0.2],
+        'fundamental_momentum_weight': [0.3],
+        'earnings_blackout_before': [5],
+        'earnings_blackout_after': [2],
+        'close_before_earnings': [True],
+        'full_position_threshold': [50],
+        'reduced_position_pct': [Decimal('0.75')],
+        'min_trending_probability': [20],
+        'min_quality_score': [0],
+        'min_momentum_score': [0],
     }
 }
 
@@ -441,7 +455,8 @@ def backtest_single_config(symbol, params, df, initial_cash, commission):
         cerebro.broker.setcash(initial_cash)
         cerebro.broker.setcommission(commission=commission)
 
-        cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
+        cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe",
+                            timeframe=bt.TimeFrame.Days, riskfreerate=0.0)
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="dd")
         cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
         cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
@@ -502,7 +517,8 @@ def aggregate_results(stock_results, params):
 
     n_stocks = len(stock_results)
 
-    avg_return = sum(r['return_pct'] for r in stock_results) / n_stocks
+    sum_return = sum(r['return_pct'] for r in stock_results)
+    avg_return = sum_return / n_stocks
     avg_sharpe = sum(r['sharpe'] for r in stock_results) / n_stocks
     avg_calmar = sum(r['calmar'] for r in stock_results) / n_stocks
     avg_sqn = sum(r['sqn'] for r in stock_results) / n_stocks
@@ -514,6 +530,7 @@ def aggregate_results(stock_results, params):
     avg_expectancy = sum(r['expectancy'] for r in stock_results) / n_stocks
 
     winning_stocks = sum(1 for r in stock_results if r['return_pct'] > 0)
+    stocks_traded = sum(1 for r in stock_results if r['return_pct'] != 0)
     stock_win_rate = (winning_stocks / n_stocks) * 100
 
     if avg_sharpe > 0 and avg_return > 0 and avg_drawdown > 0:
@@ -522,6 +539,7 @@ def aggregate_results(stock_results, params):
         composite_score = 0
 
     result = {
+        'sum_return_pct': sum_return,
         'avg_return_pct': avg_return,
         'avg_sharpe': avg_sharpe,
         'avg_calmar': avg_calmar,
@@ -533,6 +551,7 @@ def aggregate_results(stock_results, params):
         'avg_profit_factor': avg_profit_factor,
         'avg_expectancy': avg_expectancy,
         'stocks_tested': n_stocks,
+        'stocks_traded': stocks_traded,
         'winning_stocks': winning_stocks,
         'stock_win_rate': stock_win_rate,
         'composite_score': composite_score,
@@ -588,6 +607,13 @@ PARAM_NAMES = [
     'use_cross_symbol_training', 'cross_symbol_etfs',
     'cross_symbol_lookback_years', 'use_regime_balancing',
     'cross_symbol_auto_peers', 'cross_symbol_target_symbol', 'cross_symbol_max_peers',
+    # Fundamental Data Filter
+    'use_fundamental_filter', 'fundamental_symbol',
+    'fundamental_quality_weight', 'fundamental_momentum_weight',
+    'earnings_blackout_before', 'earnings_blackout_after',
+    'close_before_earnings', 'min_trending_probability',
+    'full_position_threshold', 'reduced_position_pct',
+    'min_quality_score', 'min_momentum_score',
 ]
 
 
@@ -811,11 +837,12 @@ def run_walkforward_optimization(config):
         print(f"     Bars to Hold:          {params_dict['bars_to_hold']}")
 
         print(f"\n   In-Sample Performance:")
-        print(f"     Return:                {best_train_perf['avg_return_pct']:7.2f}%")
+        print(f"     Total Return (sum):    {best_train_perf['sum_return_pct']:7.2f}%")
+        print(f"     Avg Return per Stock:  {best_train_perf['avg_return_pct']:7.2f}%")
         print(f"     Sharpe:                {best_train_perf['avg_sharpe']:7.3f}")
         print(f"     Calmar:                {best_train_perf['avg_calmar']:7.3f}")
         print(f"     Max Drawdown:          {best_train_perf['avg_max_drawdown']:7.2f}%")
-        print(f"     Total Trades:          {int(best_train_perf['total_trades'])} across {int(best_train_perf['stocks_tested'])} stocks")
+        print(f"     Total Trades:          {int(best_train_perf['total_trades'])} across {int(best_train_perf['stocks_tested'])} stocks ({int(best_train_perf['stocks_traded'])} traded)")
         print(f"     Avg Trades/Stock:      {best_train_perf['total_trades']/best_train_perf['stocks_tested']:.1f}")
         print(f"     Win Rate:              {best_train_perf['avg_win_rate']:7.1f}%")
         print(f"     RR Ratio:              {best_train_perf['avg_rr_ratio']:7.2f}")
@@ -834,15 +861,16 @@ def run_walkforward_optimization(config):
         if best_params_tuple in test_results:
             test_performance = test_results[best_params_tuple]
 
-            degradation = best_train_perf['avg_return_pct'] - test_performance['avg_return_pct']
-            degradation_pct = (degradation / best_train_perf['avg_return_pct'] * 100) if best_train_perf['avg_return_pct'] != 0 else 0
+            degradation = best_train_perf['sum_return_pct'] - test_performance['sum_return_pct']
+            degradation_pct = (degradation / best_train_perf['sum_return_pct'] * 100) if best_train_perf['sum_return_pct'] != 0 else 0
 
             print(f"\n   Out-of-Sample Performance:")
-            print(f"     Return:                {test_performance['avg_return_pct']:7.2f}%")
+            print(f"     Total Return (sum):    {test_performance['sum_return_pct']:7.2f}%")
+            print(f"     Avg Return per Stock:  {test_performance['avg_return_pct']:7.2f}%")
             print(f"     Sharpe:                {test_performance['avg_sharpe']:7.3f}")
             print(f"     Calmar:                {test_performance['avg_calmar']:7.3f}")
             print(f"     Max Drawdown:          {test_performance['avg_max_drawdown']:7.2f}%")
-            print(f"     Total Trades:          {int(test_performance['total_trades'])} across {int(test_performance['stocks_tested'])} stocks")
+            print(f"     Total Trades:          {int(test_performance['total_trades'])} across {int(test_performance['stocks_tested'])} stocks ({int(test_performance['stocks_traded'])} traded)")
             print(f"     Avg Trades/Stock:      {test_performance['total_trades']/test_performance['stocks_tested']:.1f}")
             print(f"     Win Rate:              {test_performance['avg_win_rate']:7.1f}%")
             print(f"     RR Ratio:              {test_performance['avg_rr_ratio']:7.2f}")
@@ -851,7 +879,7 @@ def run_walkforward_optimization(config):
             print(f"     Stock Win Rate:        {test_performance['stock_win_rate']:7.1f}% ({int(test_performance['winning_stocks'])}/{int(test_performance['stocks_tested'])})")
 
             print(f"\n   Performance Comparison:")
-            print(f"     Return Degradation:    {degradation_pct:+.1f}% ({best_train_perf['avg_return_pct']:.2f}% → {test_performance['avg_return_pct']:.2f}%)")
+            print(f"     Return Degradation:    {degradation_pct:+.1f}% ({best_train_perf['sum_return_pct']:.2f}% → {test_performance['sum_return_pct']:.2f}%)")
 
             if test_performance['total_trades'] == 0:
                 print(f"     ⚠️  WARNING: No trades in out-of-sample period!")
@@ -869,13 +897,15 @@ def run_walkforward_optimization(config):
                 'train_end': train_end,
                 'test_start': test_start,
                 'test_end': test_end,
-                'in_sample_return': best_train_perf['avg_return_pct'],
+                'in_sample_return': best_train_perf['sum_return_pct'],
+                'in_sample_avg_return': best_train_perf['avg_return_pct'],
                 'in_sample_sharpe': best_train_perf['avg_sharpe'],
                 'in_sample_drawdown': best_train_perf['avg_max_drawdown'],
                 'in_sample_trades': best_train_perf['total_trades'],
                 'in_sample_win_rate': best_train_perf['avg_win_rate'],
                 'in_sample_profit_factor': best_train_perf['avg_profit_factor'],
-                'out_sample_return': test_performance['avg_return_pct'],
+                'out_sample_return': test_performance['sum_return_pct'],
+                'out_sample_avg_return': test_performance['avg_return_pct'],
                 'out_sample_sharpe': test_performance['avg_sharpe'],
                 'out_sample_drawdown': test_performance['avg_max_drawdown'],
                 'out_sample_trades': test_performance['total_trades'],
@@ -911,14 +941,16 @@ def print_walkforward_results(df_results):
     for _, row in df_results.iterrows():
         print(f"\nPeriod {int(row['period'])}: {row['test_start']} to {row['test_end']}")
         print(f"  In-Sample (Train):")
-        print(f"    Return:          {row['in_sample_return']:7.2f}%")
+        print(f"    Total Return:    {row['in_sample_return']:7.2f}%")
+        print(f"    Avg Return:      {row['in_sample_avg_return']:7.2f}%")
         print(f"    Sharpe:          {row['in_sample_sharpe']:7.3f}")
         print(f"    Drawdown:        {row['in_sample_drawdown']:7.2f}%")
         print(f"    Trades:          {int(row['in_sample_trades'])}")
         print(f"    Win Rate:        {row['in_sample_win_rate']:7.1f}%")
 
         print(f"  Out-of-Sample (Test):")
-        print(f"    Return:          {row['out_sample_return']:7.2f}%")
+        print(f"    Total Return:    {row['out_sample_return']:7.2f}%")
+        print(f"    Avg Return:      {row['out_sample_avg_return']:7.2f}%")
         print(f"    Sharpe:          {row['out_sample_sharpe']:7.3f}")
         print(f"    Drawdown:        {row['out_sample_drawdown']:7.2f}%")
         print(f"    Trades:          {int(row['out_sample_trades'])}")
@@ -933,6 +965,7 @@ def print_walkforward_results(df_results):
     print("AGGREGATE OUT-OF-SAMPLE PERFORMANCE")
     print("="*70)
 
+    sum_oos_return = df_results['out_sample_return'].sum()
     avg_oos_return = df_results['out_sample_return'].mean()
     avg_oos_sharpe = df_results['out_sample_sharpe'].mean()
     avg_oos_drawdown = df_results['out_sample_drawdown'].mean()
@@ -941,13 +974,14 @@ def print_walkforward_results(df_results):
     avg_oos_pf = df_results['out_sample_profit_factor'].mean()
     avg_degradation = df_results['return_degradation_pct'].mean()
 
-    print(f"\nAverage Out-of-Sample Performance:")
-    print(f"  Return:          {avg_oos_return:7.2f}%")
-    print(f"  Sharpe Ratio:    {avg_oos_sharpe:7.3f}")
-    print(f"  Max Drawdown:    {avg_oos_drawdown:7.2f}%")
-    print(f"  Avg Trades:      {avg_oos_trades:7.1f}")
-    print(f"  Win Rate:        {avg_oos_win_rate:7.1f}%")
-    print(f"  Profit Factor:   {avg_oos_pf:7.2f}")
+    print(f"\nOut-of-Sample Performance (across {len(df_results)} periods):")
+    print(f"  Total Return (sum):  {sum_oos_return:7.2f}%")
+    print(f"  Avg Return/Period:   {avg_oos_return:7.2f}%")
+    print(f"  Sharpe Ratio:        {avg_oos_sharpe:7.3f}")
+    print(f"  Max Drawdown:        {avg_oos_drawdown:7.2f}%")
+    print(f"  Avg Trades:          {avg_oos_trades:7.1f}")
+    print(f"  Win Rate:            {avg_oos_win_rate:7.1f}%")
+    print(f"  Profit Factor:       {avg_oos_pf:7.2f}")
     print(f"\nAverage Return Degradation: {avg_degradation:+.1f}%")
 
     if abs(avg_degradation) > 30:
@@ -965,6 +999,7 @@ def print_walkforward_results(df_results):
     annualized_return = avg_oos_return * (12 / test_period_months)
 
     print(f"\nExpected Performance (based on out-of-sample results):")
+    print(f"  Total Return (all periods):    {sum_oos_return:.2f}%")
     print(f"  Per Test Period ({test_period_months} months): ~{avg_oos_return:.2f}%")
     print(f"  Annualized (estimated):       ~{annualized_return:.2f}%")
     print(f"  Sharpe Ratio:                  {avg_oos_sharpe:.2f}")
@@ -1049,6 +1084,18 @@ def print_walkforward_results(df_results):
     if params.get('use_trailing_atr_exit', False):
         print(f"   trailing_atr_mult:        {params['trailing_atr_mult']}")
         print(f"   trailing_atr_warmup:      {params['trailing_atr_warmup']}")
+
+    print("\n🔹 FUNDAMENTAL DATA FILTER:")
+    print(f"   use_fundamental_filter:   {params.get('use_fundamental_filter', False)}")
+    if params.get('use_fundamental_filter', False):
+        print(f"   fundamental_quality_weight:  {params.get('fundamental_quality_weight', 0.4)}")
+        print(f"   fundamental_momentum_weight: {params.get('fundamental_momentum_weight', 0.6)}")
+        print(f"   earnings_blackout_before: {params.get('earnings_blackout_before', 5)}")
+        print(f"   earnings_blackout_after:  {params.get('earnings_blackout_after', 2)}")
+        print(f"   close_before_earnings:    {params.get('close_before_earnings', False)}")
+        print(f"   min_trending_probability: {params.get('min_trending_probability', 50)}")
+        print(f"   full_position_threshold:  {params.get('full_position_threshold', 70)}")
+        print(f"   reduced_position_pct:     {params.get('reduced_position_pct', Decimal('0.75'))}")
 
     print("\n" + "="*70)
     print("COPY-PASTE READY PARAMETER DICT")
@@ -1137,6 +1184,19 @@ def print_walkforward_results(df_results):
     print("\n    # Other")
     print(f"    'verbose': False,")
     print(f"    'test_start_idx': {params['test_start_idx']},")
+    print("\n    # Fundamental Data Filter")
+    print(f"    'use_fundamental_filter': {params.get('use_fundamental_filter', False)},")
+    if params.get('use_fundamental_filter', False):
+        print(f"    'fundamental_quality_weight': {params.get('fundamental_quality_weight', 0.4)},")
+        print(f"    'fundamental_momentum_weight': {params.get('fundamental_momentum_weight', 0.6)},")
+        print(f"    'earnings_blackout_before': {params.get('earnings_blackout_before', 5)},")
+        print(f"    'earnings_blackout_after': {params.get('earnings_blackout_after', 2)},")
+        print(f"    'close_before_earnings': {params.get('close_before_earnings', False)},")
+        print(f"    'min_trending_probability': {params.get('min_trending_probability', 50)},")
+        print(f"    'full_position_threshold': {params.get('full_position_threshold', 70)},")
+        print(f"    'reduced_position_pct': Decimal('{params.get('reduced_position_pct', Decimal('0.75'))}'),")
+        print(f"    'min_quality_score': {params.get('min_quality_score', 0)},")
+        print(f"    'min_momentum_score': {params.get('min_momentum_score', 0)},")
     print("}")
     print("\n" + "="*70 + "\n")
 

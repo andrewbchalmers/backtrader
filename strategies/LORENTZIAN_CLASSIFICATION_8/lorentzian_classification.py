@@ -964,6 +964,32 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('cross_symbol_auto_peers', True),
         ('cross_symbol_target_symbol', ''),
         ('cross_symbol_max_peers', 7),
+
+        # === Fundamental / Earnings Settings ===
+        ('use_fundamental_filter', False),          # Master switch for fundamental filtering
+        ('fundamental_quality_weight', 0.4),        # Weight for quality score in combined
+        ('fundamental_momentum_weight', 0.6),       # Weight for growth momentum in combined
+
+        # Earnings Blackout
+        ('earnings_blackout_before', 5),            # Days before earnings to block trades
+        ('earnings_blackout_after', 2),             # Days after earnings to block trades
+        ('close_before_earnings', True),            # Close positions before blackout starts
+
+        # Score Thresholds
+        ('min_trending_probability', 50),           # Minimum combined score to trade (0-100)
+        ('full_position_threshold', 70),            # Score >= this gets full position
+        ('reduced_position_pct', Decimal('0.75')),  # Position size when score 50-70
+
+        # Staleness Handling
+        ('max_days_since_earnings', 100),           # Max days before confidence decays significantly
+        ('staleness_decay_rate', 0.005),            # Confidence decay per day after earnings
+
+        # Individual Component Thresholds (optional hard filters)
+        ('min_quality_score', 0),                   # Minimum quality score (0 = disabled)
+        ('min_momentum_score', 0),                  # Minimum momentum score (0 = disabled)
+
+        # Fundamental data symbol override (empty = auto-detect from data feed)
+        ('fundamental_symbol', ''),
     )
 
     def __init__(self):
@@ -972,6 +998,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self._init_filters()
         self._init_kernels()
         self._init_state()
+        self._init_fundamentals()
 
     def _init_features(self):
         """Initialize feature indicators."""
@@ -1194,6 +1221,110 @@ class LorentzianClassificationStrategy(bt.Strategy):
             'trades_in_reverting_improving': 0,
             'trades_in_reverting_declining': 0,
         }
+
+    def _init_fundamentals(self):
+        """Initialize fundamental data provider if enabled."""
+        self.fundamental_provider = None
+        self._cached_fundamental_date = None
+        self._cached_trending_prob = None
+        self._cached_quality_score = None
+        self._cached_momentum_score = None
+        self._cached_confidence = None
+
+        if not self.p.use_fundamental_filter:
+            return
+
+        try:
+            from fundamental_data import FundamentalCache
+
+            # Get symbol from params or data feed name
+            symbol = self.p.fundamental_symbol
+            if not symbol:
+                # Try to extract from data feed name
+                data_name = self.data._name if hasattr(self.data, '_name') else ''
+                if data_name:
+                    symbol = data_name.split('_')[0].upper()
+                else:
+                    if self.p.verbose:
+                        print("FUNDAMENTAL: Could not determine symbol, disabling filter")
+                    return
+
+            self.fundamental_provider = FundamentalCache.get_provider(
+                symbol,
+                lookback_years=5,
+                verbose=self.p.verbose
+            )
+
+            if self.p.verbose:
+                summary = self.fundamental_provider.get_summary()
+                print(f"FUNDAMENTAL: Loaded data for {symbol}")
+                print(f"  Quality Score: {summary['quality_score']:.1f}")
+                print(f"  Momentum Score: {summary['momentum_score']:.1f}")
+                print(f"  Trending Probability: {summary['trending_probability']:.1f}")
+                print(f"  Has Earnings Dates: {summary['has_earnings_dates']}")
+
+        except ImportError:
+            if self.p.verbose:
+                print("FUNDAMENTAL: fundamental_data.py not found, disabling filter")
+        except Exception as e:
+            if self.p.verbose:
+                print(f"FUNDAMENTAL: Error loading data: {e}")
+
+    def _get_fundamental_scores(self, current_date):
+        """Get fundamental scores with caching (scores only change on earnings dates)."""
+        if self.fundamental_provider is None:
+            return None, None, None, None
+
+        # Check cache - fundamental scores don't change intra-day
+        if self._cached_fundamental_date == current_date:
+            return (self._cached_trending_prob, self._cached_quality_score,
+                    self._cached_momentum_score, self._cached_confidence)
+
+        # Calculate fresh scores
+        self._cached_fundamental_date = current_date
+        current_price = float(self.data.close[0])
+        self._cached_quality_score = self.fundamental_provider.get_quality_score(current_date, price=current_price)
+        self._cached_momentum_score = self.fundamental_provider.get_growth_momentum_score(current_date)
+        self._cached_trending_prob = self.fundamental_provider.get_trending_probability(
+            current_date,
+            quality_weight=self.p.fundamental_quality_weight,
+            momentum_weight=self.p.fundamental_momentum_weight,
+            price=current_price
+        )
+        self._cached_confidence = self.fundamental_provider.get_confidence_multiplier(current_date)
+
+        return (self._cached_trending_prob, self._cached_quality_score,
+                self._cached_momentum_score, self._cached_confidence)
+
+    def _check_earnings_blackout(self, current_date):
+        """Check if current date is in earnings blackout window."""
+        if self.fundamental_provider is None:
+            return False
+
+        return self.fundamental_provider.is_in_earnings_blackout(
+            current_date,
+            self.p.earnings_blackout_before,
+            self.p.earnings_blackout_after
+        )
+
+    def _check_earnings_exit(self):
+        """Close position if we're about to enter earnings blackout window."""
+        if not self.p.use_fundamental_filter or not self.p.close_before_earnings:
+            return False
+
+        if not self.position or self.fundamental_provider is None:
+            return False
+
+        current_date = self.data.datetime.date(0)
+        days_until = self.fundamental_provider.days_until_earnings(current_date)
+
+        if days_until is not None and 0 < days_until <= self.p.earnings_blackout_before:
+            if self.p.verbose:
+                print(f"EARNINGS EXIT: Closing position {days_until} days before earnings on {current_date}")
+            self._close_position("EARNINGS BLACKOUT APPROACHING")
+            return True
+
+        return False
 
     def _get_lorentzian_distance(self, idx):
         """
@@ -1459,6 +1590,37 @@ class LorentzianClassificationStrategy(bt.Strategy):
             if self.adx[0] < self.p.adx_threshold:
                 return False
 
+        # Fundamental filter
+        if self.p.use_fundamental_filter and self.fundamental_provider is not None:
+            current_date = self.data.datetime.date(0)
+
+            # Check earnings blackout
+            if self._check_earnings_blackout(current_date):
+                if self.p.verbose:
+                    print(f"FILTER BLOCKED: Earnings blackout on {current_date}")
+                return False
+
+            # Check combined score threshold
+            trending_prob, quality, momentum, _ = self._get_fundamental_scores(current_date)
+
+            if trending_prob is not None and trending_prob < self.p.min_trending_probability:
+                if self.p.verbose:
+                    print(f"FILTER BLOCKED: Trending probability {trending_prob:.1f} < {self.p.min_trending_probability}")
+                return False
+
+            # Optional individual score checks
+            if self.p.min_quality_score > 0 and quality is not None:
+                if quality < self.p.min_quality_score:
+                    if self.p.verbose:
+                        print(f"FILTER BLOCKED: Quality score {quality:.1f} < {self.p.min_quality_score}")
+                    return False
+
+            if self.p.min_momentum_score > 0 and momentum is not None:
+                if momentum < self.p.min_momentum_score:
+                    if self.p.verbose:
+                        print(f"FILTER BLOCKED: Momentum score {momentum:.1f} < {self.p.min_momentum_score}")
+                    return False
+
         return True
 
     def _check_ema_uptrend(self):
@@ -1553,6 +1715,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
         # Skip if order pending
         if self.order:
+            return
+
+        # Check for earnings exit (close position before earnings blackout)
+        if self._check_earnings_exit():
             return
 
         # Store features (always do this to build training data)
@@ -2109,10 +2275,39 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.order = self.buy(size=abs(self.position.size))
 
     def _calculate_position_size(self):
-        """Calculate position size based on available cash.
-        Uses 95% of target to leave margin for gap-up between signal and fill."""
+        """Calculate position size based on available cash and fundamental score.
+        Uses 95% of target to leave margin for gap-up between signal and fill.
+        Scales position based on fundamental trending probability if enabled."""
         cash = self.broker.getcash()
-        position_value = cash * float(self.p.position_size_pct)
+        base_position_value = cash * float(self.p.position_size_pct)
+
+        # Apply fundamental score scaling
+        position_multiplier = 1.0
+
+        if self.p.use_fundamental_filter and self.fundamental_provider is not None:
+            current_date = self.data.datetime.date(0)
+            trending_prob, _, _, confidence = self._get_fundamental_scores(current_date)
+
+            if trending_prob is not None:
+                if trending_prob >= self.p.full_position_threshold:
+                    # Full position for high-scoring stocks
+                    position_multiplier = 1.0
+                elif trending_prob >= self.p.min_trending_probability:
+                    # Reduced position for acceptable but not stellar stocks
+                    position_multiplier = float(self.p.reduced_position_pct)
+                else:
+                    # Should not reach here (filter would block), but safety
+                    position_multiplier = 0.0
+
+                # Apply confidence decay for stale data
+                if confidence is not None:
+                    position_multiplier *= confidence
+
+                if self.p.verbose and position_multiplier < 1.0:
+                    print(f"POSITION SIZING: Trending prob {trending_prob:.1f}, "
+                          f"confidence {confidence:.2f}, multiplier {position_multiplier:.2f}")
+
+        position_value = base_position_value * position_multiplier
         size = int(position_value / self.data.close[0] * 0.95)
         return max(0, size)
 

@@ -4,84 +4,84 @@
     "entry_date": "2025-12-11T00:00:00",
     "stop_loss": 84.49700012207032,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-28"
+    "exit_alerted_date": "2026-02-04"
   },
   "SOFI": {
     "entry_price": 26.87,
     "entry_date": "2025-01-06T00:00:00",
     "stop_loss": 25.5265,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-29"
+    "exit_alerted_date": "2026-02-04"
   },
   "JNJ": {
     "entry_price": 219.85,
     "entry_date": "2026-01-22T11:55:16.224666",
-    "stop_loss": 208.8575
+    "stop_loss": 208.8575,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-04"
   },
   "OKE": {
     "entry_price": 76.54,
     "entry_date": "2026-01-22T12:06:08.430624",
     "stop_loss": 72.71300000000001,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-29"
+    "exit_alerted_date": "2026-02-02"
   },
   "AMD": {
     "entry_price": 254.9,
     "entry_date": "2026-01-22T12:49:39.647545",
     "stop_loss": 242.155,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-29"
+    "exit_alerted_date": "2026-02-04"
   },
   "STX": {
     "entry_price": 364.12,
     "entry_date": "2026-01-26T11:25:18.658368",
     "stop_loss": 345.914,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "exit_alerted_date": "2026-02-04"
   },
   "TRGP": {
     "entry_price": 198.93,
     "entry_date": "2026-01-28T11:55:18.340826",
-    "stop_loss": 188.9835,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-29"
+    "stop_loss": 188.9835
   },
   "PFG": {
     "entry_price": 93.98,
     "entry_date": "2026-01-28T16:57:19.562188",
     "stop_loss": 89.281
   },
-  "ADI": {
-    "entry_price": 317.49,
-    "entry_date": "2026-01-29T10:46:05.126667",
-    "stop_loss": 301.6155,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-29"
-  },
   "BIIB": {
     "entry_price": 175.66,
     "entry_date": "2026-01-29T10:50:58.988109",
     "stop_loss": 166.87699999999998,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-21"
+    "exit_alerted_date": "2026-02-04"
   },
   "CSCO": {
     "entry_price": 78.79,
     "entry_date": "2026-01-29T11:00:24.518222",
-    "stop_loss": 74.8505,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-01-23"
+    "stop_loss": 74.8505
   },
   "DVN": {
     "entry_price": 41.0,
     "entry_date": "2026-01-29T11:05:19.326853",
     "stop_loss": 38.949999999999996,
     "pending_exit": true,
-    "exit_alerted_date": "2026-01-26"
+    "exit_alerted_date": "2026-01-28"
   },
   "AMCR": {
     "entry_price": 43.95,
     "entry_date": "2026-01-29T16:45:01.128014",
-    "stop_loss": 41.7525
+    "stop_loss": 41.7525,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-02"
+  },
+  "AAPL": {
+    "entry_price": 276.9,
+    "entry_date": "2026-02-04T10:44:02.846726",
+    "stop_loss": 263.05499999999995,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-01-30"
   }
 }
