@@ -49,6 +49,19 @@ class LiveTradingMonitor:
         # Clear any pending_exit flags from previous sessions
         self._clear_pending_exit_flags()
 
+        # Pre-fetch sector data for cross-symbol peer selection
+        if self.params.get('use_cross_symbol_training') and self.params.get('cross_symbol_auto_peers'):
+            try:
+                from cross_symbol_preloader import prefetch_sectors
+                peer_symbols = self.params.get('cross_symbol_etfs', '').split(',')
+                print(f"Pre-fetching sector data for {len(peer_symbols)} peer universe symbols...")
+                sector_map = prefetch_sectors(peer_symbols)
+                print(f"Sectors found: {len(sector_map)}")
+                for sector, members in sorted(sector_map.items(), key=lambda x: -len(x[1])):
+                    print(f"  {sector}: {len(members)} stocks")
+            except Exception as e:
+                print(f"⚠️  Sector prefetch failed: {e}")
+
         # Import chart generator
         from chart_generator import ChartGenerator
         self.chart_gen = ChartGenerator(strategy_loader, strategy_params)
@@ -186,15 +199,11 @@ class LiveTradingMonitor:
                     print(" skipped (no data)")
                     continue
 
-                # Limit to 1000 bars - balance between ML accuracy and scan speed
-                if len(df) > 1000:
-                    df = df.iloc[-1000:]
-
                 print(f" {len(df)} bars...", end='', flush=True)
 
                 # Run ML signal detection (with lock to prevent concurrent operations)
                 with self.ml_lock:
-                    buy_signal = self.strategy.get_entry_signal(df, self.params)
+                    buy_signal = self.strategy.get_entry_signal(df, self.params, symbol=symbol)
 
                 # Clean up dataframe after use
                 del df
@@ -407,7 +416,7 @@ class LiveTradingMonitor:
 
         current_price = df['Close'].iloc[-1]
 
-        sell_signal = self.strategy.get_exit_signal(df, self.params, entry_price, current_stop)
+        sell_signal = self.strategy.get_exit_signal(df, self.params, entry_price, current_stop, symbol=symbol)
 
         if sell_signal['signal']:
             # Check if stop was hit in the past
@@ -463,7 +472,7 @@ class LiveTradingMonitor:
 
         if not is_open:
             print(f"Market closed (ET time: {now_et.strftime('%I:%M %p')})")
-
+        #c  creturn True
         return is_open
 
     def send_market_open_notification(self):
@@ -718,7 +727,7 @@ class LiveTradingMonitor:
             # Not holding - run ML strategy to detect recent signals
             print(f"📊 Running ML strategy signal detection for {symbol}...")
             with self.ml_lock:
-                signal = self.strategy.get_entry_signal(df, self.params)
+                signal = self.strategy.get_entry_signal(df, self.params, symbol=symbol)
 
             if signal.get('signal'):
                 signal_type = signal.get('signal_type', 'BUY')
@@ -895,6 +904,22 @@ class LiveTradingMonitor:
                     if blocked_by_kernel > 0:
                         message_lines.append(f"  Blocked by Kernel: {blocked_by_kernel:.1f}%")
 
+            # Add exposure stats
+            time_in_market = results.get('time_in_market_pct', 0)
+            tradeable_q = results.get('tradeable_quarters', 0)
+            total_q = results.get('total_quarters', 0)
+
+            message_lines.extend([
+                f"",
+                f"⏱️ Exposure:",
+                f"  Time in Market: {time_in_market:.1f}%",
+            ])
+
+            if total_q > 0:
+                message_lines.append(
+                    f"  Tradeable Quarters: {tradeable_q}/{total_q} ({(tradeable_q/total_q)*100:.0f}%)"
+                )
+
             message = "\n".join(message_lines)
 
             # Generate backtest chart with buy/sell signals
@@ -908,7 +933,8 @@ class LiveTradingMonitor:
                     sell_signals=results['sell_signals'],
                     period_label=period,
                     interval=results['interval'],
-                    results=results
+                    results=results,
+                    earnings_data=results.get('earnings_data', [])
                 )
             except Exception as chart_error:
                 print(f"⚠️ Chart generation failed: {chart_error}")
@@ -1005,6 +1031,17 @@ class LiveTradingMonitor:
 
             df.columns = [c.lower() for c in df.columns]
 
+            # Remove duplicate columns (keep first)
+            df = df.loc[:, ~df.columns.duplicated()]
+
+            # Fix zero-range bars (high == low) to prevent division-by-zero
+            # in backtrader's ADX indicator which divides by ATR internally
+            zero_range = df['high'] == df['low']
+            if zero_range.any():
+                epsilon = df['close'][zero_range] * 1e-6
+                df.loc[zero_range, 'high'] = df.loc[zero_range, 'high'] + epsilon
+                df.loc[zero_range, 'low'] = df.loc[zero_range, 'low'] - epsilon
+
             # Find test start index based on the requested test period
             # For intraday, calculate based on number of bars we want to test
             total_bars = len(df)
@@ -1032,32 +1069,42 @@ class LiveTradingMonitor:
 
             print(f"   Got {len(df)} bars ({interval}), test period starts at bar {test_start_idx}")
 
-            # Fetch SPY for benchmark (use same interval for fair comparison)
-            if interval in ['1m', '5m', '15m', '30m', '1h', '4h']:
-                spy_df = yf.download('SPY', period=period, interval=interval, progress=False)
-            else:
-                spy_df = yf.download('SPY', start=test_start.strftime('%Y-%m-%d'),
-                                    end=end_date.strftime('%Y-%m-%d'), progress=False)
-            spy_df.index = spy_df.index.tz_localize(None)
+            # Calculate SPY return over the test period
+            spy_return = 0
+            try:
+                # Get the actual test date range from the stock data
+                test_start_date = df.index[test_start_idx]
+                test_end_date = df.index[-1]
 
-            # Handle multi-level columns from yfinance
-            if isinstance(spy_df.columns, pd.MultiIndex):
-                spy_df.columns = spy_df.columns.get_level_values(0)
-
-            # Calculate SPY return over equivalent test period
-            if len(spy_df) > test_start_idx:
-                spy_test_df = spy_df.iloc[test_start_idx:]
-                if len(spy_test_df) > 0:
-                    spy_start = float(spy_test_df['Close'].iloc[0])
-                    spy_end = float(spy_test_df['Close'].iloc[-1])
-                    spy_return = ((spy_end / spy_start) - 1) * 100
+                # Fetch SPY for just the test period dates
+                if interval in ['1m', '5m', '15m', '30m', '1h', '4h']:
+                    spy_df = yf.download('SPY', period=period, interval=interval, progress=False)
                 else:
-                    spy_return = 0
-            elif len(spy_df) > 0:
-                spy_start = float(spy_df['Close'].iloc[0])
-                spy_end = float(spy_df['Close'].iloc[-1])
-                spy_return = ((spy_end / spy_start) - 1) * 100
-            else:
+                    spy_df = yf.download('SPY', start=test_start_date.strftime('%Y-%m-%d'),
+                                        end=(test_end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                                        interval=interval, progress=False)
+
+                if not spy_df.empty:
+                    spy_df.index = spy_df.index.tz_localize(None)
+
+                    # Handle multi-level columns from yfinance
+                    if isinstance(spy_df.columns, pd.MultiIndex):
+                        spy_df.columns = spy_df.columns.get_level_values(0)
+
+                    spy_df.columns = [c.lower() for c in spy_df.columns]
+                    spy_df = spy_df.loc[:, ~spy_df.columns.duplicated()]
+
+                    # For intraday, filter to test date range
+                    if interval in ['1m', '5m', '15m', '30m', '1h', '4h']:
+                        spy_df = spy_df[(spy_df.index >= test_start_date) & (spy_df.index <= test_end_date)]
+
+                    if len(spy_df) > 1 and 'close' in spy_df.columns:
+                        spy_start_price = float(spy_df['close'].iloc[0])
+                        spy_end_price = float(spy_df['close'].iloc[-1])
+                        if spy_start_price > 0:
+                            spy_return = ((spy_end_price / spy_start_price) - 1) * 100
+            except Exception as spy_err:
+                print(f"   ⚠️ Could not calculate SPY benchmark: {spy_err}")
                 spy_return = 0
 
         except Exception as e:
@@ -1084,6 +1131,10 @@ class LiveTradingMonitor:
             strategy_params = self.params.copy()
             strategy_params['verbose'] = False
             strategy_params['test_start_idx'] = test_start_idx
+
+            # Set per-symbol params for cross-symbol training and fundamentals
+            strategy_params['cross_symbol_target_symbol'] = symbol
+            strategy_params['fundamental_symbol'] = symbol
 
             # Create a strategy wrapper that captures buy/sell signals
             parent_strategy_class = self.strategy.strategy_class
@@ -1248,6 +1299,69 @@ class LiveTradingMonitor:
             except Exception as ml_err:
                 print(f"   ⚠️ Could not get ML stats: {ml_err}")
 
+            # Calculate time in market from buy/sell signals (post-backtest, read-only)
+            test_bars_count = len(test_values)
+            time_in_market_pct = 0.0
+            if test_bars_count > 0 and strat.buy_signals and strat.sell_signals:
+                bars_in_position = 0
+                buy_bars = sorted([s['bar'] for s in strat.buy_signals])
+                sell_bars = sorted([s['bar'] for s in strat.sell_signals])
+
+                for buy_bar in buy_bars:
+                    matching_sells = [s for s in sell_bars if s > buy_bar]
+                    if matching_sells:
+                        sell_bar = matching_sells[0]
+                        start = max(buy_bar, test_start_idx)
+                        end = sell_bar
+                        if end > start:
+                            bars_in_position += (end - start)
+
+                if test_bars_count > 0:
+                    time_in_market_pct = (bars_in_position / test_bars_count) * 100
+
+            # Count tradeable quarters from fundamental data (only within test period)
+            tradeable_quarters = 0
+            total_quarters = 0
+            earnings_data = []  # List of (date, score) tuples
+            test_period_start = test_df.index[0]
+            test_period_end = test_df.index[-1]
+
+            if (hasattr(strat, 'fundamental_provider') and
+                strat.fundamental_provider is not None and
+                strategy_params.get('use_fundamental_filter', False)):
+                fp = strat.fundamental_provider
+                min_quality = strategy_params.get('min_quality_score', 0)
+                min_momentum = strategy_params.get('min_momentum_score', 0)
+
+                if hasattr(fp, '_quarter_report_map') and fp._quarter_report_map:
+                    for quarter_end, report_date in fp._quarter_report_map.items():
+                        # Convert report_date to timestamp for comparison
+                        report_ts = pd.Timestamp(report_date)
+
+                        # Only count quarters within the test period
+                        if report_ts >= test_period_start and report_ts <= test_period_end:
+                            total_quarters += 1
+                            try:
+                                quality = fp.get_quality_score(as_of_date=report_date)
+                                momentum = fp.get_growth_momentum_score(as_of_date=report_date)
+                                # Calculate composite score (average of quality and momentum)
+                                composite = 0
+                                if quality is not None and momentum is not None:
+                                    composite = (quality + momentum) / 2
+                                elif quality is not None:
+                                    composite = quality
+                                elif momentum is not None:
+                                    composite = momentum
+
+                                earnings_data.append((report_date, composite))
+
+                                quality_ok = min_quality == 0 or (quality is not None and quality >= min_quality)
+                                momentum_ok = min_momentum == 0 or (momentum is not None and momentum >= min_momentum)
+                                if quality_ok and momentum_ok:
+                                    tradeable_quarters += 1
+                            except:
+                                earnings_data.append((report_date, 0))
+
             return {
                 'start_date': start_date_str,
                 'end_date': end_date_str,
@@ -1274,6 +1388,11 @@ class LiveTradingMonitor:
                 # ML stats
                 'ml_stats': ml_stats,
                 'ml_diagnostics': ml_diagnostics,
+                # Exposure stats
+                'time_in_market_pct': time_in_market_pct,
+                'tradeable_quarters': tradeable_quarters,
+                'total_quarters': total_quarters,
+                'earnings_data': earnings_data,  # List of (date, score) tuples
             }
 
         except Exception as e:

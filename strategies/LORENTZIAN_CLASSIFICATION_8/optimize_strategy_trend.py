@@ -1,5 +1,5 @@
 """
-Walk-Forward Optimization for Lorentzian Classification Strategy - Mean-Reversion Features
+Walk-Forward Optimization for Lorentzian Classification Strategy - Trend-Following Features
 
 This script implements proper walk-forward analysis with:
 - Rolling optimization windows (train/test splits)
@@ -7,15 +7,28 @@ This script implements proper walk-forward analysis with:
 - Aggregation across multiple forward periods
 - COVID period handling options
 
-Uses mean-reversion feature vector:
-- RSM(10,126): Relative Strength Momentum
-- VA(20): Volume Anomaly
-- MTD(5,60): Multi-Timeframe Divergence
-- ZS(50): Mean Reversion Z-Score
-- ER(10): Efficiency Ratio (Trend Quality)
+Uses trend-following feature vector (momentum/trend quality prioritized):
+- RSM(20,252): Relative Strength Momentum (core trend signal)
+- ER(20): Efficiency Ratio (trend quality / directional movement)
+- MACC(5,5): Momentum Acceleration (trend strengthening/weakening)
+- MTD(5,60): Multi-Timeframe Divergence (timeframe alignment)
+- OBVT(20,3): OBV Trend (volume confirming trend direction)
+- STRK(15,1): Streak Pattern (consecutive directional moves)
+- CHOP(14): Choppiness Index (trending vs ranging regime)
+- VPD(22,1): Volume-Price Divergence (trend exhaustion/continuation)
+- VA(20): Volume Anomaly (volume conviction)
+- CS(5,2): Candle Structure (trend bar quality)
+
+Key differences from mean-reversion version:
+- trend_following_labels = True (labels aligned with continuation, not fade)
+- Longer label_lookahead (8 bars — trends unfold over more time)
+- Feature order prioritizes momentum/trend features, ZS dropped
+- RSI exit disabled (overbought exits cut trends short)
+- Wider trailing ATR stop (give trends room to breathe)
+- Kernel exit enabled (exit on trend reversal detection)
 
 Usage:
-    python optimize_strategy.py
+    python optimize_strategy_trend.py
 """
 
 from decimal import Decimal
@@ -41,12 +54,12 @@ import sys
 CONFIG = {
     # Input/Output
     'csv_file': '../sp500_2024.csv',
-    'results_file': 'walkforward_optimization_results.csv',
+    'results_file': 'walkforward_optimization_results_trend.csv',
 
     # Walk-Forward Settings
     'train_period_months': 18,      # Optimize on 18 months
-    'test_period_months': 9,        # Validate on next 6 months
-    'step_months': 9,               # Roll forward 6 months each iteration
+    'test_period_months': 9,        # Validate on next 9 months
+    'step_months': 9,               # Roll forward 9 months each iteration
     'total_periods': 2,             # Number of train/test cycles
 
     # Date range control (optional - leave None for automatic)
@@ -85,82 +98,92 @@ CONFIG = {
         'min_expectancy': -50.0,
     },
 
-    # Parameter grid for Lorentzian Classification - Mean-Reversion Features
+    # Parameter grid for Lorentzian Classification - Trend-Following Features
     'param_grid': {
         # ==================== ML SETTINGS ====================
         'neighbors_count': [8],
         'max_bars_back': [7000],            # Keep fixed - needs lots of history
         'feature_count': [10],
-        'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
+        'trend_following_labels': [True],   # True=trend-following labels (ride continuation)
         'allow_reentry': [True],            # True=enter anytime signal favorable
-        'min_prediction_strength': [20],   # Normalized scale: 0-100
+        'min_prediction_strength': [20],    # Normalized scale: 0-100
 
         # ==================== LABEL SETTINGS ====================
-        # Defines what "correct" means for ML — most impactful for accuracy
-        'label_lookahead': [4],       # Bars to look forward: shorter=reactive, longer=trend
-        'label_dead_zone': [0.225],  # Min ATR move for label: lower=more labels, higher=cleaner
+        # Longer lookahead for trends — they unfold over more bars than reversions
+        'label_lookahead': [8],       # Bars to look forward: 8=captures trend moves
+        'label_dead_zone': [0.225],   # Min ATR move for label: same threshold
         'use_magnitude_labels': [True],
 
         # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
+        # Core trend feature — where is this stock's momentum ranked historically?
         'f1_type': ['RSM'],
-        'f1_param_a': [30],          # Short momentum period: 5=fast rotation, 20=stable
-        'f1_param_b': [160],             # Long momentum period: 63=quarter, 126=half-year
+        'f1_param_a': [20],          # Momentum period: 20=monthly momentum
+        'f1_param_b': [252],         # Lookback: 252=full year percentile ranking
 
-        # ==================== FEATURE 2 (VA - Volume Anomaly) ====================
-        'f2_type': ['VA'],
-        'f2_param_a': [20],
+        # ==================== FEATURE 2 (ER - Efficiency Ratio) ====================
+        # Trend quality — is price moving directionally or chopping around?
+        'f2_type': ['ER'],
+        'f2_param_a': [20],          # ER period: 20=trend quality over ~1 month
         'f2_param_b': [1],
 
-        # ==================== FEATURE 3 (MTD - Multi-Timeframe Divergence) ====================
-        'f3_type': ['MTD'],
-        'f3_param_a': [5],
-        'f3_param_b': [40],              # Long EMA: wider gap = stronger divergence signal
+        # ==================== FEATURE 3 (MACC - Momentum Acceleration) ====================
+        # Is the trend accelerating or decelerating?
+        'f3_type': ['MACC'],
+        'f3_param_a': [5],           # ROC period
+        'f3_param_b': [5],           # Lag for comparison
 
-        # ==================== FEATURE 4 (ZS - Mean Reversion Z-Score) ====================
-        # Core mean-reversion feature — period determines what "normal" means
-        'f4_type': ['ZS'],
-        'f4_param_a': [40],             # Z-score lookback: 30=recent norm, 50=broader context
-        'f4_param_b': [1],
+        # ==================== FEATURE 4 (MTD - Multi-Timeframe Divergence) ====================
+        # Are short and long timeframes aligned? Alignment = strong trend
+        'f4_type': ['MTD'],
+        'f4_param_a': [5],           # Short ROC period
+        'f4_param_b': [60],          # Long ROC period
 
-        # ==================== FEATURE 5 (ER - Efficiency Ratio) ====================
-        'f5_type': ['ER'],
-        'f5_param_a': [10],          # ER period: 5=choppy detection, 20=trend quality
-        'f5_param_b': [1],
+        # ==================== FEATURE 5 (OBVT - OBV Trend) ====================
+        # Is volume confirming the price trend?
+        'f5_type': ['OBVT'],
+        'f5_param_a': [20],          # SMA/StdDev period
+        'f5_param_b': [3],           # Z-score divisor
 
-        # ==================== FEATURE 6 (Volume-Price Divergence) ====================
-        'f6_type': ['VPD'],
-        'f6_param_a': [22],
-        'f6_param_b': [1],
+        # ==================== FEATURE 6 (STRK - Streak Pattern) ====================
+        # Consecutive directional moves = trend persistence
+        'f6_type': ['STRK'],
+        'f6_param_a': [15],          # Max streak length
+        'f6_param_b': [1],           # ATR multiplier for magnitude
 
-        # ==================== FEATURE 7 (Momentum Acceleration) ====================
-        'f7_type': ['MACC'],
-        'f7_param_a': [5],
-        'f7_param_b': [5],
+        # ==================== FEATURE 7 (CHOP - Choppiness Index) ====================
+        # Low choppiness = trending market, high = ranging (avoid)
+        'f7_type': ['CHOP'],
+        'f7_param_a': [14],          # ATR/range period
+        'f7_param_b': [1],
 
-        # ==================== FEATURE 8 (OBV Trend) ====================
-        'f8_type': ['OBVT'],
-        'f8_param_a': [20],
-        'f8_param_b': [3],
+        # ==================== FEATURE 8 (VPD - Volume-Price Divergence) ====================
+        # Divergence can signal trend exhaustion or continuation
+        'f8_type': ['VPD'],
+        'f8_param_a': [22],          # Correlation window
+        'f8_param_b': [1],           # Smoothing (1=none)
 
-        # ==================== FEATURE 9 (Candle Structure) ====================
-        'f9_type': ['CS'],
-        'f9_param_a': [5],
-        'f9_param_b': [2],
+        # ==================== FEATURE 9 (VA - Volume Anomaly) ====================
+        # Unusual volume during trend = conviction
+        'f9_type': ['VA'],
+        'f9_param_a': [20],
+        'f9_param_b': [1],
 
-        # ==================== FEATURE 10 (Streak Pattern) ====================
-        'f10_type': ['STRK'],
-        'f10_param_a': [15],
-        'f10_param_b': [1],
+        # ==================== FEATURE 10 (CS - Candle Structure) ====================
+        # Trend-quality candles (strong bodies, small wicks)
+        'f10_type': ['CS'],
+        'f10_param_a': [5],          # Averaging window
+        'f10_param_b': [2],          # Sensitivity (tanh scaling)
 
-        # ==================== FEATURE 11 (Choppiness Index) ====================
-        'f11_type': ['CHOP'],
+        # ==================== FEATURE 11 (ADX - Normalized ADX) ====================
+        # ADX measures trend strength directly — backup feature if feature_count increased
+        'f11_type': ['ADX'],
         'f11_param_a': [14],
         'f11_param_b': [1],
 
         # ==================== FILTERS ====================
         'use_volatility_filter': [True],
         'use_regime_filter': [True],
-        'regime_threshold': [Decimal('1')],  # 0=block bearish, 1=require bullish
+        'regime_threshold': [Decimal('1')],  # 1=require bullish (trend-aligned)
         'regime_period': ['weekly'],  # 'weekly' or 'monthly'
         'use_regime_direction': [True],  # True=allow reverting-from-bearish when threshold=1
         'regime_stability_min': [0.0],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
@@ -186,17 +209,20 @@ CONFIG = {
         'bars_to_hold': [100000],
 
         # ==================== RSI EXIT SETTINGS ====================
-        'use_rsi_exit': [True],            # Enable RSI threshold exits
-        'rsi_exit_period': [14],            # RSI period for exit signals
-        'rsi_overbought': [70],             # Exit longs when RSI crosses above
-        'rsi_oversold': [30],               # Exit shorts when RSI crosses below
+        # DISABLED for trend-following — RSI overbought exits cut winning trends short
+        'use_rsi_exit': [False],
+        'rsi_exit_period': [14],
+        'rsi_overbought': [80],             # Widened threshold (less likely to trigger)
+        'rsi_oversold': [20],               # Widened threshold
 
         # ==================== KERNEL EXIT SETTINGS ====================
-        'use_kernel_exit': [False],         # Enable kernel line exit
+        # Kernel exit detects trend reversal — useful for trend-following
+        'use_kernel_exit': [True],
 
         # ==================== ATR TRAILING STOP EXIT SETTINGS ====================
+        # Wider multiplier gives trends room to breathe through normal pullbacks
         'use_trailing_atr_exit': [True],
-        'trailing_atr_mult': [2.0],
+        'trailing_atr_mult': [2.5],         # Wider than mean-reversion's 2.0
         'trailing_atr_warmup': [3],
 
         # ==================== RISK MANAGEMENT ====================
@@ -740,7 +766,7 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
 def run_walkforward_optimization(config):
     """Main walk-forward optimization function."""
     print("\n" + "="*70)
-    print("WALK-FORWARD OPTIMIZATION - LORENTZIAN CLASSIFICATION (MEAN-REVERSION FEATURES)")
+    print("WALK-FORWARD OPTIMIZATION - LORENTZIAN CLASSIFICATION (TREND-FOLLOWING FEATURES)")
     print("="*70)
 
     periods = generate_walkforward_periods(config)
@@ -853,17 +879,20 @@ def run_walkforward_optimization(config):
         print(f"   ML Settings:")
         print(f"     Neighbors (K):         {params_dict['neighbors_count']}")
         print(f"     Feature Count:         {params_dict['feature_count']}")
-        print(f"   Mean-Reversion Features:")
-        print(f"     F1: {params_dict['f1_type']}({params_dict['f1_param_a']},{params_dict['f1_param_b']}) - Relative Strength Momentum")
-        print(f"     F2: {params_dict['f2_type']}({params_dict['f2_param_a']}) - Volume Anomaly")
-        print(f"     F3: {params_dict['f3_type']}({params_dict['f3_param_a']},{params_dict['f3_param_b']}) - Multi-Timeframe Divergence")
-        print(f"     F4: {params_dict['f4_type']}({params_dict['f4_param_a']}) - Mean Reversion Z-Score")
-        print(f"     F5: {params_dict['f5_type']}({params_dict['f5_param_a']}) - Efficiency Ratio")
-        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak', 'CHOP': 'Choppiness'}
-        for _fi in range(6, 12):
+        print(f"   Trend-Following Features:")
+        _fn = {'RSM': 'Rel Strength Mom', 'ER': 'Efficiency Ratio', 'MACC': 'Mom Accel',
+               'MTD': 'Multi-TF Divergence', 'OBVT': 'OBV Trend', 'STRK': 'Streak',
+               'CHOP': 'Choppiness', 'VPD': 'Vol-Price Div', 'VA': 'Volume Anomaly',
+               'CS': 'Candle Struct', 'ADX': 'Norm ADX'}
+        for _fi in range(1, 12):
             _ft = params_dict.get(f'f{_fi}_type')
             if _ft:
-                print(f"     F{_fi}: {_ft}({params_dict[f'f{_fi}_param_a']},{params_dict[f'f{_fi}_param_b']}) - {_fn.get(_ft, _ft)}")
+                _pa = params_dict[f'f{_fi}_param_a']
+                _pb = params_dict.get(f'f{_fi}_param_b', 1)
+                if _pb != 1:
+                    print(f"     F{_fi}: {_ft}({_pa},{_pb}) - {_fn.get(_ft, _ft)}")
+                else:
+                    print(f"     F{_fi}: {_ft}({_pa}) - {_fn.get(_ft, _ft)}")
         print(f"   Filters:")
         print(f"     Volatility:            {'ON' if params_dict['use_volatility_filter'] else 'OFF'}")
         r_thr = params_dict.get('regime_threshold', 0)
@@ -991,7 +1020,7 @@ def run_walkforward_optimization(config):
 def print_walkforward_results(df_results):
     """Print walk-forward results summary."""
     print("\n" + "="*70)
-    print("WALK-FORWARD OPTIMIZATION RESULTS")
+    print("WALK-FORWARD OPTIMIZATION RESULTS (TREND-FOLLOWING)")
     print("="*70)
 
     print("\nPer-Period Out-of-Sample Performance:")
@@ -1086,7 +1115,7 @@ def print_walkforward_results(df_results):
 
     # Parameter summary
     print("\n" + "="*70)
-    print("OPTIMAL PARAMETERS SUMMARY")
+    print("OPTIMAL PARAMETERS SUMMARY (TREND-FOLLOWING)")
     print("="*70)
 
     most_recent = df_results.iloc[-1]
@@ -1108,23 +1137,13 @@ def print_walkforward_results(df_results):
     print(f"   label_dead_zone:          {params['label_dead_zone']}")
     print(f"   use_magnitude_labels:     {params['use_magnitude_labels']}")
 
-    print("\n🔹 MEAN-REVERSION FEATURES:")
-    print(f"   f1_type:                  {params['f1_type']} (Relative Strength Momentum)")
-    print(f"   f1_param_a:               {params['f1_param_a']}")
-    print(f"   f1_param_b:               {params['f1_param_b']}")
-    print(f"   f2_type:                  {params['f2_type']} (Volume Anomaly)")
-    print(f"   f2_param_a:               {params['f2_param_a']}")
-    print(f"   f3_type:                  {params['f3_type']} (Multi-Timeframe Divergence)")
-    print(f"   f3_param_a:               {params['f3_param_a']}")
-    print(f"   f3_param_b:               {params['f3_param_b']}")
-    print(f"   f4_type:                  {params['f4_type']} (Mean Reversion Z-Score)")
-    print(f"   f4_param_a:               {params['f4_param_a']}")
-    print(f"   f5_type:                  {params['f5_type']} (Efficiency Ratio)")
-    print(f"   f5_param_a:               {params['f5_param_a']}")
-    fnames = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
-              'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern',
-              'CHOP': 'Choppiness Index'}
-    for fi in range(6, 12):
+    print("\n🔹 TREND-FOLLOWING FEATURES:")
+    fnames = {'RSM': 'Relative Strength Momentum', 'ER': 'Efficiency Ratio',
+              'MACC': 'Momentum Acceleration', 'MTD': 'Multi-Timeframe Divergence',
+              'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern', 'CHOP': 'Choppiness Index',
+              'VPD': 'Volume-Price Divergence', 'VA': 'Volume Anomaly',
+              'CS': 'Candle Structure', 'ADX': 'Normalized ADX'}
+    for fi in range(1, 12):
         ft_key = f'f{fi}_type'
         if ft_key in params:
             print(f"   {ft_key}:{'  ' if fi < 10 else ' '}               {params[ft_key]} ({fnames.get(params[ft_key], params[ft_key])})")
@@ -1183,31 +1202,16 @@ def print_walkforward_results(df_results):
     print(f"    'label_lookahead': {params['label_lookahead']},")
     print(f"    'label_dead_zone': {params['label_dead_zone']},")
     print(f"    'use_magnitude_labels': {params['use_magnitude_labels']},")
-    print("\n    # Feature 1 (RSM - Relative Strength Momentum)")
-    print(f"    'f1_type': '{params['f1_type']}',")
-    print(f"    'f1_param_a': {params['f1_param_a']},")
-    print(f"    'f1_param_b': {params['f1_param_b']},")
-    print("\n    # Feature 2 (VA - Volume Anomaly)")
-    print(f"    'f2_type': '{params['f2_type']}',")
-    print(f"    'f2_param_a': {params['f2_param_a']},")
-    print(f"    'f2_param_b': {params['f2_param_b']},")
-    print("\n    # Feature 3 (MTD - Multi-Timeframe Divergence)")
-    print(f"    'f3_type': '{params['f3_type']}',")
-    print(f"    'f3_param_a': {params['f3_param_a']},")
-    print(f"    'f3_param_b': {params['f3_param_b']},")
-    print("\n    # Feature 4 (ZS - Mean Reversion Z-Score)")
-    print(f"    'f4_type': '{params['f4_type']}',")
-    print(f"    'f4_param_a': {params['f4_param_a']},")
-    print(f"    'f4_param_b': {params['f4_param_b']},")
-    print("\n    # Feature 5 (ER - Efficiency Ratio)")
-    print(f"    'f5_type': '{params['f5_type']}',")
-    print(f"    'f5_param_a': {params['f5_param_a']},")
-    print(f"    'f5_param_b': {params['f5_param_b']},")
-    _cpnames = {6: 'Volume-Price Divergence', 7: 'Momentum Acceleration', 8: 'OBV Trend',
-                9: 'Candle Structure', 10: 'Streak Pattern', 11: 'Choppiness Index'}
-    for _fi in range(6, 12):
+    _cpnames = {
+        'RSM': 'Relative Strength Momentum', 'ER': 'Efficiency Ratio',
+        'MACC': 'Momentum Acceleration', 'MTD': 'Multi-Timeframe Divergence',
+        'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern', 'CHOP': 'Choppiness Index',
+        'VPD': 'Volume-Price Divergence', 'VA': 'Volume Anomaly',
+        'CS': 'Candle Structure', 'ADX': 'Normalized ADX',
+    }
+    for _fi in range(1, 12):
         if f'f{_fi}_type' in params:
-            print(f"\n    # Feature {_fi} ({_cpnames.get(_fi, '')})")
+            print(f"\n    # Feature {_fi} ({_cpnames.get(params[f'f{_fi}_type'], '')})")
             print(f"    'f{_fi}_type': '{params[f'f{_fi}_type']}',")
             print(f"    'f{_fi}_param_a': {params[f'f{_fi}_param_a']},")
             print(f"    'f{_fi}_param_b': {params[f'f{_fi}_param_b']},")

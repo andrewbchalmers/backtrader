@@ -157,6 +157,21 @@ CONFIG = {
         'f11_param_a': [14],
         'f11_param_b': [1],
 
+        # ==================== FEATURE 12 (Volatility Compression) ====================
+        'f12_type': ['VCOMP'],
+        'f12_param_a': [4],             # Recent volatility window
+        'f12_param_b': [16],            # Lookback volatility window
+
+        # ==================== FEATURE 13 (Momentum Persistence) ====================
+        'f13_type': ['MPER'],
+        'f13_param_a': [4],             # Short momentum period
+        'f13_param_b': [20],            # Medium momentum period
+
+        # ==================== FEATURE 14 (Volume-Momentum Coupling) ====================
+        'f14_type': ['VMC'],
+        'f14_param_a': [5],             # Recent volume/momentum window
+        'f14_param_b': [40],            # Baseline volume average period
+
         # ==================== FILTERS ====================
         'use_volatility_filter': [True],
         'use_regime_filter': [True],
@@ -170,8 +185,10 @@ CONFIG = {
         'adx_threshold': [14],
         'use_ema_filter': [False],
         'ema_period': [25],
+        'ema_slope_lookback': [5],
         'use_sma_filter': [False],
         'sma_period': [100],
+        'sma_slope_lookback': [5],
 
         # ==================== KERNEL SETTINGS ====================
         'use_kernel_filter': [False],
@@ -615,11 +632,14 @@ PARAM_NAMES = [
     'f9_type', 'f9_param_a', 'f9_param_b',
     'f10_type', 'f10_param_a', 'f10_param_b',
     'f11_type', 'f11_param_a', 'f11_param_b',
+    'f12_type', 'f12_param_a', 'f12_param_b',
+    'f13_type', 'f13_param_a', 'f13_param_b',
+    'f14_type', 'f14_param_a', 'f14_param_b',
     # Filters
     'use_volatility_filter', 'use_regime_filter', 'regime_threshold', 'regime_period',
     'use_regime_direction', 'regime_stability_min', 'regime_stability_window', 'regime_max_flips',
-    'use_adx_filter', 'adx_threshold', 'use_ema_filter', 'ema_period',
-    'use_sma_filter', 'sma_period',
+    'use_adx_filter', 'adx_threshold', 'use_ema_filter', 'ema_period', 'ema_slope_lookback',
+    'use_sma_filter', 'sma_period', 'sma_slope_lookback',
     # Kernel Settings
     'use_kernel_filter', 'use_kernel_smoothing', 'kernel_lookback',
     'kernel_rel_weight', 'kernel_start_bar', 'kernel_lag',
@@ -859,8 +879,9 @@ def run_walkforward_optimization(config):
         print(f"     F3: {params_dict['f3_type']}({params_dict['f3_param_a']},{params_dict['f3_param_b']}) - Multi-Timeframe Divergence")
         print(f"     F4: {params_dict['f4_type']}({params_dict['f4_param_a']}) - Mean Reversion Z-Score")
         print(f"     F5: {params_dict['f5_type']}({params_dict['f5_param_a']}) - Efficiency Ratio")
-        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak', 'CHOP': 'Choppiness'}
-        for _fi in range(6, 12):
+        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak', 'CHOP': 'Choppiness',
+               'VCOMP': 'Vol Compression', 'MPER': 'Mom Persistence', 'VMC': 'Vol-Mom Coupling'}
+        for _fi in range(6, 15):
             _ft = params_dict.get(f'f{_fi}_type')
             if _ft:
                 print(f"     F{_fi}: {_ft}({params_dict[f'f{_fi}_param_a']},{params_dict[f'f{_fi}_param_b']}) - {_fn.get(_ft, _ft)}")
@@ -1123,8 +1144,9 @@ def print_walkforward_results(df_results):
     print(f"   f5_param_a:               {params['f5_param_a']}")
     fnames = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
               'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern',
-              'CHOP': 'Choppiness Index'}
-    for fi in range(6, 12):
+              'CHOP': 'Choppiness Index', 'VCOMP': 'Volatility Compression',
+              'MPER': 'Momentum Persistence', 'VMC': 'Volume-Momentum Coupling'}
+    for fi in range(6, 15):
         ft_key = f'f{fi}_type'
         if ft_key in params:
             print(f"   {ft_key}:{'  ' if fi < 10 else ' '}               {params[ft_key]} ({fnames.get(params[ft_key], params[ft_key])})")
@@ -1204,8 +1226,9 @@ def print_walkforward_results(df_results):
     print(f"    'f5_param_a': {params['f5_param_a']},")
     print(f"    'f5_param_b': {params['f5_param_b']},")
     _cpnames = {6: 'Volume-Price Divergence', 7: 'Momentum Acceleration', 8: 'OBV Trend',
-                9: 'Candle Structure', 10: 'Streak Pattern', 11: 'Choppiness Index'}
-    for _fi in range(6, 12):
+                9: 'Candle Structure', 10: 'Streak Pattern', 11: 'Choppiness Index',
+                12: 'Volatility Compression', 13: 'Momentum Persistence', 14: 'Volume-Momentum Coupling'}
+    for _fi in range(6, 15):
         if f'f{_fi}_type' in params:
             print(f"\n    # Feature {_fi} ({_cpnames.get(_fi, '')})")
             print(f"    'f{_fi}_type': '{params[f'f{_fi}_type']}',")
@@ -1224,8 +1247,10 @@ def print_walkforward_results(df_results):
     print(f"    'adx_threshold': {params['adx_threshold']},")
     print(f"    'use_ema_filter': {params['use_ema_filter']},")
     print(f"    'ema_period': {params['ema_period']},")
+    print(f"    'ema_slope_lookback': {params['ema_slope_lookback']},")
     print(f"    'use_sma_filter': {params['use_sma_filter']},")
     print(f"    'sma_period': {params['sma_period']},")
+    print(f"    'sma_slope_lookback': {params['sma_slope_lookback']},")
     print("\n    # Kernel Settings")
     print(f"    'use_kernel_filter': {params['use_kernel_filter']},")
     print(f"    'use_kernel_smoothing': {params['use_kernel_smoothing']},")

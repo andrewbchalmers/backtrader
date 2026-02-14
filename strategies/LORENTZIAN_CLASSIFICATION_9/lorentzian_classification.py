@@ -1,21 +1,21 @@
 """
-Machine Learning: Lorentzian Classification Strategy - Diverse Feature Set
+Machine Learning: Lorentzian Classification Strategy - Temporal Feature Set
 
 A backtrader implementation using diverse, information-rich features for
 better pattern matching across multiple market dimensions.
 
-This version uses a 5-feature vector targeting different predictive signals:
-1. RSM(20,252) - Relative Strength Momentum (percentile rank of current return)
-2. VA(20) - Volume Anomaly (log-scaled volume vs its moving average)
-3. MTD(5,60) - Multi-Timeframe Divergence (short vs long ROC conflict)
-4. ZS(50) - Mean Reversion Z-Score (distance from equilibrium)
-5. VCR(20,100) - Volatility Contraction Ratio (BB width percentile)
+This version adds 3 temporal derivative features (VCOMP, MPER, VMC) that
+encode multi-bar sequential context into single values, capturing patterns
+like "big swing followed by consolidation with high volume" that point-in-time
+snapshots miss.
 
-These features capture momentum persistence, volume anomalies, timeframe
-divergence, mean-reversion stretch, and volatility compression.
+New temporal features:
+12. VCOMP(4,16) - Volatility Compression (consolidation after a big move)
+13. MPER(4,20) - Momentum Persistence (pullback within intact trend vs reversal)
+14. VMC(5,40) - Volume-Momentum Coupling (elevated volume during consolidation)
 
 Author: Backtrader implementation based on TradingView indicator by @jdehorty
-Modified: Diverse feature vector
+Modified: Temporal derivative features added
 """
 
 import math
@@ -654,6 +654,175 @@ class ChoppinessIndex(bt.Indicator):
             self.lines.chop[0] = 0.0
 
 
+class VolatilityCompression(bt.Indicator):
+    """
+    Volatility Compression (VCOMP).
+
+    Ratio of recent to lookback true-range volatility, inverted so that
+    compression (recent vol < lookback vol) yields positive values.
+
+    Detects "consolidation after a big move" — a coiled spring before
+    continuation. Differs from VCR (Bollinger percentile) by directly
+    encoding the expansion-to-contraction transition via raw ATR windows.
+
+    param_a: recent window (bars for recent volatility, e.g., 3-5)
+    param_b: lookback window (bars for baseline volatility, e.g., 10-20)
+
+    Output: tanh((1 - recent_vol/lookback_vol) * 2)
+        +1 = extreme compression (recent vol << lookback vol)
+         0 = no change in volatility regime
+        -1 = extreme expansion (recent vol >> lookback vol)
+    """
+    lines = ('vcomp',)
+    params = (('recent', 4), ('lookback', 16))
+
+    def __init__(self):
+        self.addminperiod(self.p.lookback + 1)
+
+    def next(self):
+        recent_n = self.p.recent
+        lookback_n = self.p.lookback
+
+        highs = np.array(self.data.high.get(size=lookback_n))
+        lows = np.array(self.data.low.get(size=lookback_n))
+        closes = np.array(self.data.close.get(size=lookback_n + 1))
+        prev_closes = closes[:-1]
+
+        # True Range = max(H-L, |H-prevC|, |L-prevC|)
+        tr = np.maximum(
+            highs - lows,
+            np.maximum(np.abs(highs - prev_closes), np.abs(lows - prev_closes))
+        )
+
+        recent_vol = float(np.mean(tr[-recent_n:]))
+        lookback_vol = float(np.mean(tr))
+
+        if lookback_vol > 1e-10:
+            ratio = recent_vol / lookback_vol
+            raw = 1.0 - ratio
+            self.lines.vcomp[0] = math.tanh(raw * 2.0)
+        else:
+            self.lines.vcomp[0] = 0.0
+
+
+class MomentumPersistence(bt.Indicator):
+    """
+    Momentum Persistence (MPER).
+
+    Measures whether the medium-term trend direction is being confirmed
+    or contradicted by short-term price action. Captures "pullback within
+    a trend" (still positive) vs "momentum has reversed" (goes to zero/negative).
+
+    Unlike MTD (divergence magnitude), MPER encodes directional alignment:
+    the medium-term trend's direction dominates, modulated by short-term
+    confirmation or contradiction.
+
+    param_a: short momentum period (e.g., 3-5 bars, captures recent candles)
+    param_b: medium momentum period (e.g., 15-25 bars, captures the swing)
+
+    Output:
+        +1 = strong uptrend confirmed by short-term (bullish continuation)
+        +0.3 to +0.5 = uptrend intact but short-term pulling back (the setup!)
+         0 = no trend or trend fully contradicted by short-term
+        -0.3 to -0.5 = downtrend intact with short-term bounce
+        -1 = strong downtrend confirmed by short-term
+    """
+    lines = ('mper',)
+    params = (('short_period', 4), ('medium_period', 20))
+
+    def __init__(self):
+        self.atr = bt.indicators.ATR(self.data, period=14)
+        self.addminperiod(self.p.medium_period + 14)
+
+    def next(self):
+        sp = self.p.short_period
+        mp = self.p.medium_period
+        c = self.data.close
+
+        if c[-sp] == 0 or c[-mp] == 0 or c[0] == 0:
+            self.lines.mper[0] = 0.0
+            return
+
+        short_roc = (c[0] / c[-sp]) - 1.0
+        medium_roc = (c[0] / c[-mp]) - 1.0
+
+        atr_pct = self.atr[0] / c[0]
+        atr_pct = max(atr_pct, 1e-8)
+
+        s = short_roc / atr_pct
+        m = medium_roc / atr_pct
+
+        trend_strength = math.tanh(m)
+
+        if abs(m) > 1e-8:
+            m_sign = 1.0 if m > 0 else -1.0
+            alignment = math.tanh(s) * m_sign
+        else:
+            alignment = 0.0
+
+        persistence = trend_strength * (0.5 + 0.5 * alignment)
+        self.lines.mper[0] = max(-1.0, min(1.0, persistence))
+
+
+class VolumeMomentumCoupling(bt.Indicator):
+    """
+    Volume-Momentum Coupling (VMC).
+
+    Detects whether elevated volume is confirming price direction or
+    occurring during consolidation (accumulation/distribution signal).
+
+    Unlike VPD (correlation of deltas), VMC encodes the interaction between
+    volume regime (elevated vs depressed) and momentum direction,
+    specifically designed to be positive when volume is high during
+    consolidation — "smart money still engaged."
+
+    param_a: period for recent volume and momentum measurement (e.g., 5-10)
+    param_b: period for baseline volume average (e.g., 30-50)
+
+    Output:
+        +0.7 to +1 = elevated volume + upward momentum (trend confirmation)
+        +0.2 to +0.5 = elevated volume + flat momentum (accumulation setup!)
+         0 = average volume or conflicting signals
+        -0.2 to -0.5 = elevated volume + downward momentum (distribution)
+        -0.5 to -1 = depressed volume (no participation)
+    """
+    lines = ('vmc',)
+    params = (('recent', 5), ('baseline', 40))
+
+    def __init__(self):
+        self.vol_sma = bt.indicators.SMA(self.data.volume, period=self.p.baseline)
+        self.atr = bt.indicators.ATR(self.data, period=14)
+        self.addminperiod(max(self.p.baseline, 14) + 1)
+
+    def next(self):
+        recent_n = self.p.recent
+        baseline_avg = self.vol_sma[0]
+        c = self.data.close
+
+        if baseline_avg <= 0 or c[0] <= 0 or c[-recent_n] == 0:
+            self.lines.vmc[0] = 0.0
+            return
+
+        vols = np.array(self.data.volume.get(size=recent_n))
+        recent_vol_avg = float(np.mean(vols))
+
+        if recent_vol_avg > 0:
+            vol_regime = math.log(recent_vol_avg / baseline_avg)
+        else:
+            vol_regime = -2.0
+
+        vol_signal = math.tanh(vol_regime * 2.0)
+
+        roc = (c[0] / c[-recent_n]) - 1.0
+        atr_pct = self.atr[0] / c[0]
+        atr_pct = max(atr_pct, 1e-8)
+        mom = roc / atr_pct
+        mom_direction = math.tanh(mom)
+
+        coupling = vol_signal * (0.5 + 0.5 * mom_direction)
+        self.lines.vmc[0] = max(-1.0, min(1.0, coupling))
+
+
 class RationalQuadraticKernel(bt.Indicator):
     """
     Nadaraya-Watson Kernel Regression using Rational Quadratic Kernel.
@@ -941,6 +1110,21 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('f11_param_a', 14),            # ATR/range period
         ('f11_param_b', 1),             # Not used
 
+        # === Feature 12 (Volatility Compression) ===
+        ('f12_type', 'VCOMP'),
+        ('f12_param_a', 4),             # Recent volatility window
+        ('f12_param_b', 16),            # Lookback volatility window
+
+        # === Feature 13 (Momentum Persistence) ===
+        ('f13_type', 'MPER'),
+        ('f13_param_a', 4),             # Short momentum period
+        ('f13_param_b', 20),            # Medium momentum period
+
+        # === Feature 14 (Volume-Momentum Coupling) ===
+        ('f14_type', 'VMC'),
+        ('f14_param_a', 5),             # Recent volume/momentum window
+        ('f14_param_b', 40),            # Baseline volume average period
+
         # === Filters ===
         ('use_volatility_filter', True),
         ('use_regime_filter', True),
@@ -954,8 +1138,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('adx_threshold', 20),
         ('use_ema_filter', False),
         ('ema_period', 200),
+        ('ema_slope_lookback', 5),  # Bars to measure EMA slope over
         ('use_sma_filter', False),
         ('sma_period', 200),
+        ('sma_slope_lookback', 5),  # Bars to measure SMA slope over
 
         # === Kernel Settings ===
         ('use_kernel_filter', False),
@@ -1062,6 +1248,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
             (self.p.f9_type, self.p.f9_param_a, self.p.f9_param_b),
             (self.p.f10_type, self.p.f10_param_a, self.p.f10_param_b),
             (self.p.f11_type, self.p.f11_param_a, self.p.f11_param_b),
+            (self.p.f12_type, self.p.f12_param_a, self.p.f12_param_b),
+            (self.p.f13_type, self.p.f13_param_a, self.p.f13_param_b),
+            (self.p.f14_type, self.p.f14_param_a, self.p.f14_param_b),
         ]
 
         actual_count = min(self.p.feature_count, len(feature_configs))
@@ -1080,6 +1269,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         'ER': 'er', 'RSM': 'rsm', 'VA': 'va', 'MTD': 'mtd', 'ZS': 'zscore',
         'VCR': 'vcr', 'VPD': 'vpd', 'CS': 'cs', 'MACC': 'macc',
         'OBVT': 'obvt', 'STRK': 'strk', 'CHOP': 'chop',
+        'VCOMP': 'vcomp', 'MPER': 'mper', 'VMC': 'vmc',
     }
 
     def _create_feature(self, ftype, param_a, param_b):
@@ -1116,6 +1306,12 @@ class LorentzianClassificationStrategy(bt.Strategy):
             feature = StreakPattern(self.data, max_streak=param_a, atr_mult=param_b)
         elif ftype == 'CHOP':
             feature = ChoppinessIndex(self.data, period=param_a, unused=param_b)
+        elif ftype == 'VCOMP':
+            feature = VolatilityCompression(self.data, recent=param_a, lookback=param_b)
+        elif ftype == 'MPER':
+            feature = MomentumPersistence(self.data, short_period=param_a, medium_period=param_b)
+        elif ftype == 'VMC':
+            feature = VolumeMomentumCoupling(self.data, recent=param_a, baseline=param_b)
         else:
             raise ValueError(f"Unknown feature type: {ftype}")
 
@@ -1670,28 +1866,40 @@ class LorentzianClassificationStrategy(bt.Strategy):
         return True
 
     def _check_ema_uptrend(self):
-        """Check if price is above EMA."""
+        """Check if EMA slope is rising."""
         if not self.p.use_ema_filter:
             return True
-        return self.data.close[0] > self.ema[0]
+        lb = self.p.ema_slope_lookback
+        if len(self.ema) <= lb:
+            return True
+        return self.ema[0] > self.ema[-lb]
 
     def _check_ema_downtrend(self):
-        """Check if price is below EMA."""
+        """Check if EMA slope is falling."""
         if not self.p.use_ema_filter:
             return True
-        return self.data.close[0] < self.ema[0]
+        lb = self.p.ema_slope_lookback
+        if len(self.ema) <= lb:
+            return True
+        return self.ema[0] < self.ema[-lb]
 
     def _check_sma_uptrend(self):
-        """Check if price is above SMA."""
+        """Check if SMA slope is rising."""
         if not self.p.use_sma_filter:
             return True
-        return self.data.close[0] > self.sma[0]
+        lb = self.p.sma_slope_lookback
+        if len(self.sma) <= lb:
+            return True
+        return self.sma[0] > self.sma[-lb]
 
     def _check_sma_downtrend(self):
-        """Check if price is below SMA."""
+        """Check if SMA slope is falling."""
         if not self.p.use_sma_filter:
             return True
-        return self.data.close[0] < self.sma[0]
+        lb = self.p.sma_slope_lookback
+        if len(self.sma) <= lb:
+            return True
+        return self.sma[0] < self.sma[-lb]
 
     def _check_kernel_bullish(self):
         """Check kernel regression for bullish signal."""

@@ -397,7 +397,7 @@ class ChartGenerator:
         return buf
 
     def generate_backtest_chart(self, symbol, df, test_start_idx, buy_signals, sell_signals,
-                                 period_label, interval='1d', results=None):
+                                 period_label, interval='1d', results=None, earnings_data=None):
         """
         Generate a backtest chart showing price action with buy/sell signals
 
@@ -410,6 +410,7 @@ class ChartGenerator:
             period_label: Period description (e.g., "1Y")
             interval: Bar interval (e.g., '1d', '1h')
             results: Optional dict with backtest results for annotation
+            earnings_data: Optional list of (date, score) tuples for earnings visualization
 
         Returns:
             BytesIO: PNG image buffer
@@ -434,7 +435,11 @@ class ChartGenerator:
         ax.plot(df_chart.index, df_chart['close'],
                 label='Close', color='#00d4ff', linewidth=1.5, zorder=5)
 
-        # Plot buy signals
+        # Calculate offset for buy/sell markers (2% of price range)
+        price_range = df_chart['close'].max() - df_chart['close'].min()
+        marker_offset = price_range * 0.025
+
+        # Plot buy signals (offset below the price)
         if buy_signals:
             buy_dates = []
             buy_prices = []
@@ -446,14 +451,14 @@ class ChartGenerator:
                     if mask.any():
                         idx = df_chart.index[mask][0]
                         buy_dates.append(idx)
-                        buy_prices.append(price)
+                        buy_prices.append(price - marker_offset)  # Offset below
 
             if buy_dates:
                 ax.scatter(buy_dates, buy_prices, color='#00ff00', marker='^',
                           s=150, label=f'BUY ({len(buy_dates)})', zorder=10,
                           edgecolors='white', linewidths=1.5)
 
-        # Plot sell signals
+        # Plot sell signals (offset above the price)
         if sell_signals:
             sell_dates = []
             sell_prices = []
@@ -463,12 +468,52 @@ class ChartGenerator:
                     if mask.any():
                         idx = df_chart.index[mask][0]
                         sell_dates.append(idx)
-                        sell_prices.append(price)
+                        sell_prices.append(price + marker_offset)  # Offset above
 
             if sell_dates:
                 ax.scatter(sell_dates, sell_prices, color='#ff0000', marker='v',
                           s=150, label=f'SELL ({len(sell_dates)})', zorder=10,
                           edgecolors='white', linewidths=1.5)
+
+        # Plot earnings release dates as vertical lines with scores
+        if earnings_data:
+            # Sort by date and collect plotted earnings with their positions
+            sorted_earnings = sorted(earnings_data, key=lambda x: pd.Timestamp(x[0]))
+            plotted_earnings = []  # List of (x_position, score)
+
+            for earn_date, score in sorted_earnings:
+                # Convert to pandas Timestamp for comparison
+                if hasattr(earn_date, 'to_pydatetime'):
+                    earn_ts = earn_date
+                else:
+                    earn_ts = pd.Timestamp(earn_date)
+
+                # Check if earnings date falls within chart range
+                if earn_ts >= df_chart.index[0] and earn_ts <= df_chart.index[-1]:
+                    # Find the closest trading day in the chart data
+                    mask = df_chart.index >= earn_ts
+                    if mask.any():
+                        closest_idx = df_chart.index[mask][0]
+                        ax.axvline(x=closest_idx, color='#ff6b6b', linestyle='--',
+                                  linewidth=1.5, alpha=0.7, zorder=3)
+                        plotted_earnings.append((closest_idx, score))
+
+            # Add score labels between earnings lines
+            if len(plotted_earnings) > 0:
+                y_top = df_chart['close'].max()
+                price_range = df_chart['close'].max() - df_chart['close'].min()
+                label_y = y_top + (price_range * 0.02)  # Just above the top
+
+                for i, (x_pos, score) in enumerate(plotted_earnings):
+                    # Place score label to the right of each earnings line
+                    ax.text(x_pos, label_y, f'{score:.0f}',
+                           color='#ff6b6b', fontsize=9, fontweight='bold',
+                           ha='left', va='bottom', alpha=0.9)
+
+            # Add earnings to legend if any were plotted
+            if len(plotted_earnings) > 0:
+                ax.axvline(x=df_chart.index[0], color='#ff6b6b', linestyle='--',
+                          linewidth=1.5, alpha=0, label=f'Earnings ({len(plotted_earnings)})')
 
         # Title with results summary
         title = f'{symbol} Backtest - {period_label}'

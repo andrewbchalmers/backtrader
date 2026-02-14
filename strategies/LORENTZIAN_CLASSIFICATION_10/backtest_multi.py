@@ -30,95 +30,104 @@ except FileNotFoundError:
 # CONFIGURATION - MODIFY THESE PARAMETERS
 # ============================================================================
 STRATEGY_PARAMS = {
-    # General Settings
-    'neighbors_count': 8,
+    # ML Settings
+    'neighbors_count': 9,
     'max_bars_back': 7000,
-    'feature_count': 10,
-
-    # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
-    'trend_following_labels': False,
-
-    # Re-entry Mode: True=enter anytime signal is favorable, False=only enter on signal flip
-    'allow_reentry': True,
-
-    # Minimum prediction strength to trade (normalized scale: 0-100)
-    'min_prediction_strength': 20,
+    'feature_count': 8,
+    'trend_following_labels': True,    # Trend-following labels (ride continuation)
+    'allow_reentry': True,             # Enter anytime signal is favorable
+    'min_prediction_strength': 20,     # Normalized scale: 0-100
 
     # Label Settings
-    'label_lookahead': 4,
+    'label_lookahead': 8,              # Longer lookahead for trends
     'label_dead_zone': 0.225,
     'use_magnitude_labels': True,
 
-    # Feature 1: Relative Strength Momentum
+    # Feature 1 (RSM - Relative Strength Momentum)
     'f1_type': 'RSM',
-    'f1_param_a': 30,
-    'f1_param_b': 160,
+    'f1_param_a': 40,
+    'f1_param_b': 252,
 
-    # Feature 2: Volume Anomaly
-    'f2_type': 'VA',
-    'f2_param_a': 20,
-    'f2_param_b': 1,
+    # Feature 2 (ER - Efficiency Ratio)
+    'f2_type': 'ER',
+    'f2_param_a': 25,
+    'f2_param_b': 13,
 
-    # Feature 3: Multi-Timeframe Divergence
+    # Feature 3 (MTD - Multi-Timeframe Divergence)
     'f3_type': 'MTD',
-    'f3_param_a': 5,
-    'f3_param_b': 40,
+    'f3_param_a': 8,
+    'f3_param_b': 252,
 
-    # Feature 4: Mean Reversion Z-Score
-    'f4_type': 'ZS',
-    'f4_param_a': 40,
-    'f4_param_b': 1,
+    # Feature 4 (STRK - Streak Pattern)
+    'f4_type': 'STRK',
+    'f4_param_a': 30,
+    'f4_param_b': 3,
 
-    # Feature 5: Efficiency Ratio (Trend Quality)
-    'f5_type': 'ER',
-    'f5_param_a': 10,
-    'f5_param_b': 1,
+    # Feature 5 (VCOMP - Volatility Compression)
+    'f5_type': 'VCOMP',
+    'f5_param_a': 4,
+    'f5_param_b': 16,
 
-    # Feature 6: Volume-Price Divergence
-    'f6_type': 'VPD',
-    'f6_param_a': 22,
-    'f6_param_b': 1,
+    # Feature 6 (MPER - Momentum Persistence)
+    'f6_type': 'MPER',
+    'f6_param_a': 4,
+    'f6_param_b': 20,
 
-    # Feature 7: Momentum Acceleration
-    'f7_type': 'MACC',
-    'f7_param_a': 5,
-    'f7_param_b': 5,
+    # Feature 7 (VMC - Volume-Momentum Coupling)
+    'f7_type': 'VMC',
+    'f7_param_a': 3,
+    'f7_param_b': 40,
 
-    # Feature 8: OBV Trend
-    'f8_type': 'OBVT',
-    'f8_param_a': 20,
-    'f8_param_b': 3,
+    # Feature 8 (CS - Candle Structure)
+    'f8_type': 'CS',
+    'f8_param_a': 5,
+    'f8_param_b': 2,
 
-    # Feature 9: Candle Structure (available for optimizer)
+    # Unused slots (available for optimization)
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
 
-    # Feature 10: Streak Pattern (available for optimizer)
-    'f10_type': 'STRK',
-    'f10_param_a': 15,
-    'f10_param_b': 1,
+    'f10_type': 'CS',
+    'f10_param_a': 5,
+    'f10_param_b': 2,
 
-    # Feature 11: Choppiness Index
-    'f11_type': 'CHOP',
-    'f11_param_a': 14,
-    'f11_param_b': 1,
+    'f11_type': 'CS',
+    'f11_param_a': 5,
+    'f11_param_b': 2,
+
+    'f12_type': 'VCOMP',
+    'f12_param_a': 4,
+    'f12_param_b': 16,
+
+    'f13_type': 'MPER',
+    'f13_param_a': 4,
+    'f13_param_b': 20,
+
+    'f14_type': 'VMC',
+    'f14_param_a': 5,
+    'f14_param_b': 40,
 
     # Filters
     'use_volatility_filter': True,
     'use_regime_filter': True,
     'regime_threshold': 1,
-    'regime_period': 'weekly',  # 'weekly' or 'monthly'
-    'use_regime_direction': True,  # True=allow reverting-from-bearish when threshold=1
-    'regime_stability_min': 0.0,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
-    'regime_stability_window': 60,  # Bars to look back for regime flip counting
-    'regime_max_flips': 8,  # Number of flips at which stability = 0 (higher = more permissive)
+    'regime_period': 'weekly',
+    'use_regime_direction': True,
+    'regime_stability_min': 0.0,
+    'regime_stability_window': 60,
+    'regime_max_flips': 8,
     'use_adx_filter': True,
     'adx_threshold': 14,
     'use_ema_filter': False,
     'ema_period': 25,
+    'ema_slope_lookback': 5,
     'use_sma_filter': False,
     'sma_period': 100,
+    'sma_slope_lookback': 5,
+    'use_spy_filter': False,
+    'spy_regime_threshold': 0,              # 0=block bearish
+    'spy_regime_period': 'weekly',
 
     # Kernel Settings
     'use_kernel_filter': False,
@@ -132,19 +141,19 @@ STRATEGY_PARAMS = {
     'use_dynamic_exits': False,
     'bars_to_hold': 100000,
 
-    # RSI Exit Settings
+    # RSI Exit Settings (widened thresholds for trend-following)
     'use_rsi_exit': True,
     'rsi_exit_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
+    'rsi_overbought': 80,             # Widened — don't cut trends short
+    'rsi_oversold': 20,               # Widened
 
     # Kernel Exit Settings
     'use_kernel_exit': False,
 
-    # ATR Trailing Stop Exit Settings
-    'use_trailing_atr_exit': True,    # Enable ATR-based trailing stop exit
-    'trailing_atr_mult': 2.0,         # Stop distance: N x ATR from peak
-    'trailing_atr_warmup': 3,         # Bars before trailing stop activates
+    # ATR Trailing Stop Exit Settings (wider for trends)
+    'use_trailing_atr_exit': True,
+    'trailing_atr_mult': 2.5,         # Wider than mean-reversion's 2.0
+    'trailing_atr_warmup': 3,
 
     # Risk Management
     'position_size_pct': Decimal('0.95'),
@@ -160,6 +169,7 @@ STRATEGY_PARAMS = {
     # Cross-Symbol Training
     'use_cross_symbol_training': True,
     'cross_symbol_etfs': _peer_universe,
+    #'cross_symbol_etfs': ['SPY,QQQ,IWM,TLT,GLD,XLE,EFA'],
     'cross_symbol_lookback_years': 5,
     'use_regime_balancing': True,
     'cross_symbol_auto_peers': True,
@@ -167,23 +177,29 @@ STRATEGY_PARAMS = {
     'cross_symbol_max_peers': 7,
 
     # Fundamental Data Filter
-    'use_fundamental_filter': True,             # Master switch for fundamental filtering
-    'fundamental_quality_weight': 0.2,           # Weight for quality score in combined
-    'fundamental_momentum_weight': 0.3,          # Weight for growth momentum in combined
-    'min_trending_probability': 20,              # Minimum combined score to trade (0-100)
-    'close_before_earnings': True,              # Close positions before earnings
-    'earnings_blackout_before': 5,               # Days before earnings to block trades
-    'earnings_blackout_after': 2,                # Days after earnings to block trades
-    'full_position_threshold': 50,             # Score >= this gets full position
-    'reduced_position_pct': Decimal('0.75'),   # Position size when score below threshold
-    'min_quality_score': 20,                   # Minimum quality score (0 = disabled)
-    'min_momentum_score': 20,
+    'use_fundamental_filter': True,
+    'fundamental_quality_weight': 0.2,
+    'fundamental_momentum_weight': 0.3,
+    'min_trending_probability': 10,
+    'close_before_earnings': True,
+    'earnings_blackout_before': 5,
+    'earnings_blackout_after': 2,
+    'full_position_threshold': 50,
+    'reduced_position_pct': Decimal('0.75'),
+    'min_quality_score': 10,
+    'min_momentum_score': 10,
+    'require_earnings_improving': True,
+    'min_earnings_improvement': 50,
 }
 
 CSV_FILE = '../sp500_2024.csv'
 PERIOD = "1y"
 INITIAL_CASH = 10_000
 PLOT_BEST = True
+
+# Portfolio Simulation Settings
+PORTFOLIO_CAPITAL = 100_000      # Total portfolio capital
+MAX_POSITIONS = 10               # Max concurrent positions
 # ============================================================================
 
 
@@ -211,6 +227,58 @@ class PortfolioValue(bt.Observer):
 
     def prenext(self):
         self.lines.value[0] = self._owner.broker.getvalue()
+
+
+class TradeRecorder(bt.Analyzer):
+    """Records entry/exit dates, daily equity values for portfolio simulation.
+
+    Records broker value at every bar in plain Python lists (no backtrader
+    line buffer), ensuring reliable date-value alignment for equity extraction.
+    """
+
+    def start(self):
+        self.trade_log = []
+        self._open_trade_entry = None
+        self.daily_dates = []
+        self.daily_values = []
+
+    def prenext(self):
+        self._record_daily()
+
+    def next(self):
+        self._record_daily()
+
+    def _record_daily(self):
+        self.daily_dates.append(self.data.datetime.date(0))
+        self.daily_values.append(self.strategy.broker.getvalue())
+
+    def notify_trade(self, trade):
+        if trade.justopened:
+            self._open_trade_entry = bt.num2date(trade.dtopen).date()
+
+        if trade.isclosed:
+            entry = self._open_trade_entry or bt.num2date(trade.dtopen).date()
+            self.trade_log.append({
+                'entry_date': entry,
+                'exit_date': bt.num2date(trade.dtclose).date(),
+            })
+            self._open_trade_entry = None
+
+    def stop(self):
+        # Handle trade still open at end of backtest
+        if self._open_trade_entry is not None:
+            self.trade_log.append({
+                'entry_date': self._open_trade_entry,
+                'exit_date': self.data.datetime.date(0),
+                'still_open': True,
+            })
+
+    def get_analysis(self):
+        return {
+            'trade_log': self.trade_log,
+            'daily_dates': self.daily_dates,
+            'daily_values': self.daily_values,
+        }
 
 
 def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=None, plot=False):
@@ -311,11 +379,14 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
         cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
         cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
         cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
+        cerebro.addanalyzer(TradeRecorder, _name="trade_recorder")
+
+        # Always add PortfolioValue observer (needed for portfolio simulation)
+        cerebro.addobserver(PortfolioValue)
 
         if plot:
             cerebro.addobserver(BuySellArrows, plot=True, subplot=False)
             cerebro.addobserver(bt.observers.Trades, plot=True, subplot=False)
-            cerebro.addobserver(PortfolioValue)
 
         # Run
         results = cerebro.run()
@@ -385,6 +456,20 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
             ml_bullish_accuracy = ml_stats.get('bullish_accuracy_pct', 0)
             ml_bearish_accuracy = ml_stats.get('bearish_accuracy_pct', 0)
 
+        # Extract daily equity curve and trade log from TradeRecorder analyzer
+        trade_analysis = strat.analyzers.trade_recorder.get_analysis()
+        trade_log = trade_analysis.get('trade_log', [])
+
+        # Filter to test period only (by date, not index)
+        test_start_date = df.index[actual_test_start_idx].date()
+        daily_dates = []
+        daily_values = []
+        for d, v in zip(trade_analysis.get('daily_dates', []),
+                        trade_analysis.get('daily_values', [])):
+            if d >= test_start_date:
+                daily_dates.append(d)
+                daily_values.append(v)
+
         result = {
             'symbol': symbol,
             'initial_value': initial_cash,
@@ -417,6 +502,10 @@ def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=No
             'ml_accuracy': ml_accuracy,
             'ml_bullish_accuracy': ml_bullish_accuracy,
             'ml_bearish_accuracy': ml_bearish_accuracy,
+            # Portfolio simulation data
+            'daily_dates': daily_dates,
+            'daily_values': daily_values,
+            'trade_log': trade_log,
         }
 
         # Plot if requested
@@ -544,8 +633,13 @@ def create_comparison_plot(strat, df, spy_df, spy_shares, initial_cash, symbol):
 
 
 def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
-                       strategy_params=None, plot_best=True):
+                       strategy_params=None, plot_best=True,
+                       portfolio_capital=None, max_positions=None):
     """Run backtest on multiple stocks from CSV file"""
+    if portfolio_capital is None:
+        portfolio_capital = PORTFOLIO_CAPITAL
+    if max_positions is None:
+        max_positions = MAX_POSITIONS
 
     # Read symbols from CSV
     symbols = []
@@ -572,6 +666,7 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
     print(f"MULTI-STOCK BACKTEST - LORENTZIAN CLASSIFICATION (DIVERSE FEATURES)")
     print(f"{'='*70}\n")
     print(f"Stocks to test: {len(symbols)}")
+    print(f"Portfolio: ${portfolio_capital:,.0f} capital, max {max_positions} concurrent positions")
     if strategy_params:
         print(f"\nStrategy Configuration:")
         print(f"  ML Model:")
@@ -751,9 +846,53 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
 
     print(f"\n{'='*70}\n")
 
-    # Save detailed results
-    df_results.to_csv('backtest_results.csv', index=False)
+    # Save detailed results (exclude non-serializable columns)
+    save_cols = [c for c in df_results.columns if c not in ('daily_dates', 'daily_values', 'trade_log')]
+    df_results[save_cols].to_csv('backtest_results.csv', index=False)
     print("Detailed results saved to 'backtest_results.csv'")
+
+    # ====================================================================
+    # Portfolio Simulation
+    # ====================================================================
+    from portfolio_simulator import simulate_portfolio, print_portfolio_summary, plot_portfolio
+
+    # Collect stock equity curves for portfolio simulation
+    stock_data = []
+    for r in results:
+        if r.get('daily_dates') and r.get('daily_values') and len(r['daily_dates']) >= 2:
+            stock_data.append({
+                'symbol': r['symbol'],
+                'dates': r['daily_dates'],
+                'values': r['daily_values'],
+                'initial_value': r['initial_value'],
+                'trade_log': r.get('trade_log', []),
+            })
+
+    if stock_data:
+        # Download SPY once for the portfolio benchmark
+        all_dates = sorted(set(d for s in stock_data for d in s['dates']))
+        if all_dates:
+            spy_start = pd.Timestamp(all_dates[0])
+            spy_end = pd.Timestamp(all_dates[-1])
+            print(f"\nDownloading SPY for portfolio benchmark ({spy_start.date()} to {spy_end.date()})...")
+            portfolio_spy_df = yf.download('SPY', start=spy_start, end=spy_end + timedelta(days=1), progress=False)
+            if not portfolio_spy_df.empty:
+                portfolio_spy_df.index = portfolio_spy_df.index.tz_localize(None)
+            else:
+                portfolio_spy_df = None
+        else:
+            portfolio_spy_df = None
+
+        portfolio_results = simulate_portfolio(
+            stock_data,
+            initial_capital=portfolio_capital,
+            max_positions=max_positions,
+            spy_df=portfolio_spy_df,
+        )
+        print_portfolio_summary(portfolio_results)
+        plot_portfolio(portfolio_results, 'portfolio_simulation.png')
+    else:
+        print("\nNo equity curve data available for portfolio simulation.")
 
     # Plot the best performing stock
     if plot_best and len(results) > 0:
@@ -769,5 +908,7 @@ if __name__ == "__main__":
         period=PERIOD,
         initial_cash=INITIAL_CASH,
         strategy_params=STRATEGY_PARAMS,
-        plot_best=PLOT_BEST
+        plot_best=PLOT_BEST,
+        portfolio_capital=PORTFOLIO_CAPITAL,
+        max_positions=MAX_POSITIONS,
     )

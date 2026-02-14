@@ -30,95 +30,101 @@ except FileNotFoundError:
 # CONFIGURATION - MODIFY THESE PARAMETERS
 # ============================================================================
 STRATEGY_PARAMS = {
-    # General Settings
-    'neighbors_count': 8,
+    # ML Settings
+    'neighbors_count': 9,
     'max_bars_back': 7000,
-    'feature_count': 10,
-
-    # Label Mode: False=mean-reversion (expect reversals), True=trend-following (expect continuation)
-    'trend_following_labels': False,
-
-    # Re-entry Mode: True=enter anytime signal is favorable, False=only enter on signal flip
-    'allow_reentry': True,
-
-    # Minimum prediction strength to trade (normalized scale: 0-100)
-    'min_prediction_strength': 20,
+    'feature_count': 8,
+    'trend_following_labels': True,    # Trend-following labels (ride continuation)
+    'allow_reentry': True,             # Enter anytime signal is favorable
+    'min_prediction_strength': 20,     # Normalized scale: 0-100
 
     # Label Settings
-    'label_lookahead': 4,
+    'label_lookahead': 8,              # Longer lookahead for trends
     'label_dead_zone': 0.225,
     'use_magnitude_labels': True,
 
-    # Feature 1: Relative Strength Momentum
+    # Feature 1 (RSM - Relative Strength Momentum)
     'f1_type': 'RSM',
-    'f1_param_a': 30,
-    'f1_param_b': 160,
+    'f1_param_a': 40,
+    'f1_param_b': 252,
 
-    # Feature 2: Volume Anomaly
-    'f2_type': 'VA',
-    'f2_param_a': 20,
-    'f2_param_b': 1,
+    # Feature 2 (ER - Efficiency Ratio)
+    'f2_type': 'ER',
+    'f2_param_a': 25,
+    'f2_param_b': 13,
 
-    # Feature 3: Multi-Timeframe Divergence
+    # Feature 3 (MTD - Multi-Timeframe Divergence)
     'f3_type': 'MTD',
-    'f3_param_a': 5,
-    'f3_param_b': 40,
+    'f3_param_a': 8,
+    'f3_param_b': 252,
 
-    # Feature 4: Mean Reversion Z-Score
-    'f4_type': 'ZS',
-    'f4_param_a': 40,
-    'f4_param_b': 1,
+    # Feature 4 (STRK - Streak Pattern)
+    'f4_type': 'STRK',
+    'f4_param_a': 30,
+    'f4_param_b': 3,
 
-    # Feature 5: Efficiency Ratio (Trend Quality)
-    'f5_type': 'ER',
-    'f5_param_a': 10,
-    'f5_param_b': 1,
+    # Feature 5 (VCOMP - Volatility Compression)
+    'f5_type': 'VCOMP',
+    'f5_param_a': 4,
+    'f5_param_b': 16,
 
-    # Feature 6: Volume-Price Divergence
-    'f6_type': 'VPD',
-    'f6_param_a': 22,
-    'f6_param_b': 1,
+    # Feature 6 (MPER - Momentum Persistence)
+    'f6_type': 'MPER',
+    'f6_param_a': 4,
+    'f6_param_b': 20,
 
-    # Feature 7: Momentum Acceleration
-    'f7_type': 'MACC',
-    'f7_param_a': 5,
-    'f7_param_b': 5,
+    # Feature 7 (VMC - Volume-Momentum Coupling)
+    'f7_type': 'VMC',
+    'f7_param_a': 3,
+    'f7_param_b': 40,
 
-    # Feature 8: OBV Trend
-    'f8_type': 'OBVT',
-    'f8_param_a': 20,
-    'f8_param_b': 3,
+    # Feature 8 (CS - Candle Structure)
+    'f8_type': 'CS',
+    'f8_param_a': 5,
+    'f8_param_b': 2,
 
-    # Feature 9: Candle Structure (available for optimizer)
+    # Unused slots (available for optimization)
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
 
-    # Feature 10: Streak Pattern (available for optimizer)
-    'f10_type': 'STRK',
-    'f10_param_a': 15,
-    'f10_param_b': 1,
+    'f10_type': 'CS',
+    'f10_param_a': 5,
+    'f10_param_b': 2,
 
-    # Feature 11: Choppiness Index
-    'f11_type': 'CHOP',
-    'f11_param_a': 14,
-    'f11_param_b': 1,
+    'f11_type': 'CS',
+    'f11_param_a': 5,
+    'f11_param_b': 2,
+
+    'f12_type': 'VCOMP',
+    'f12_param_a': 4,
+    'f12_param_b': 16,
+
+    'f13_type': 'MPER',
+    'f13_param_a': 4,
+    'f13_param_b': 20,
+
+    'f14_type': 'VMC',
+    'f14_param_a': 5,
+    'f14_param_b': 40,
 
     # Filters
     'use_volatility_filter': True,
     'use_regime_filter': True,
     'regime_threshold': 1,
-    'regime_period': 'weekly',  # 'weekly' or 'monthly'
-    'use_regime_direction': True,  # True=allow reverting-from-bearish when threshold=1
-    'regime_stability_min': 0.0,  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
-    'regime_stability_window': 60,  # Bars to look back for regime flip counting
-    'regime_max_flips': 8,  # Number of flips at which stability = 0 (higher = more permissive)
+    'regime_period': 'weekly',
+    'use_regime_direction': True,
+    'regime_stability_min': 0.0,
+    'regime_stability_window': 60,
+    'regime_max_flips': 8,
     'use_adx_filter': True,
     'adx_threshold': 14,
     'use_ema_filter': False,
     'ema_period': 25,
+    'ema_slope_lookback': 5,
     'use_sma_filter': False,
     'sma_period': 100,
+    'sma_slope_lookback': 5,
 
     # Kernel Settings
     'use_kernel_filter': False,
@@ -132,19 +138,19 @@ STRATEGY_PARAMS = {
     'use_dynamic_exits': False,
     'bars_to_hold': 100000,
 
-    # RSI Exit Settings
+    # RSI Exit Settings (widened thresholds for trend-following)
     'use_rsi_exit': True,
     'rsi_exit_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
+    'rsi_overbought': 80,             # Widened — don't cut trends short
+    'rsi_oversold': 20,               # Widened
 
     # Kernel Exit Settings
     'use_kernel_exit': False,
 
-    # ATR Trailing Stop Exit Settings
-    'use_trailing_atr_exit': True,    # Enable ATR-based trailing stop exit
-    'trailing_atr_mult': 2.0,         # Stop distance: N x ATR from peak
-    'trailing_atr_warmup': 3,         # Bars before trailing stop activates
+    # ATR Trailing Stop Exit Settings (wider for trends)
+    'use_trailing_atr_exit': True,
+    'trailing_atr_mult': 2.5,         # Wider than mean-reversion's 2.0
+    'trailing_atr_warmup': 3,
 
     # Risk Management
     'position_size_pct': Decimal('0.95'),
@@ -167,16 +173,16 @@ STRATEGY_PARAMS = {
     'cross_symbol_max_peers': 7,
 
     # Fundamental Data Filter
-    'use_fundamental_filter': True,             # Master switch for fundamental filtering
-    'fundamental_quality_weight': 0.2,           # Weight for quality score in combined
-    'fundamental_momentum_weight': 0.3,          # Weight for growth momentum in combined
-    'min_trending_probability': 20,              # Minimum combined score to trade (0-100)
-    'close_before_earnings': True,              # Close positions before earnings
-    'earnings_blackout_before': 5,               # Days before earnings to block trades
-    'earnings_blackout_after': 2,                # Days after earnings to block trades
-    'full_position_threshold': 50,             # Score >= this gets full position
-    'reduced_position_pct': Decimal('0.75'),   # Position size when score below threshold
-    'min_quality_score': 20,                   # Minimum quality score (0 = disabled)
+    'use_fundamental_filter': True,
+    'fundamental_quality_weight': 0.2,
+    'fundamental_momentum_weight': 0.3,
+    'min_trending_probability': 20,
+    'close_before_earnings': True,
+    'earnings_blackout_before': 5,
+    'earnings_blackout_after': 2,
+    'full_position_threshold': 50,
+    'reduced_position_pct': Decimal('0.75'),
+    'min_quality_score': 20,
     'min_momentum_score': 20,
 }
 

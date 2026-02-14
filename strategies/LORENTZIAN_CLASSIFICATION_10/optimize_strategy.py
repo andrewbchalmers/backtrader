@@ -32,6 +32,18 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
 from datetime import datetime, timedelta
 import sys
+from portfolio_simulator import simulate_portfolio, print_portfolio_summary, print_trade_log_summary, plot_portfolio
+
+
+# Load peer universe from classification CSV (same as backtest.py/backtest_multi.py)
+_peer_universe = 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA'
+try:
+    with open('../classification_set.csv') as _f:
+        _symbols = [line.strip() for line in _f if line.strip()]
+        if _symbols:
+            _peer_universe = ','.join(_symbols)
+except FileNotFoundError:
+    pass
 
 
 # ============================================================================
@@ -44,14 +56,13 @@ CONFIG = {
     'results_file': 'walkforward_optimization_results.csv',
 
     # Walk-Forward Settings
-    'train_period_months': 18,      # Optimize on 18 months
-    'test_period_months': 9,        # Validate on next 6 months
-    'step_months': 9,               # Roll forward 6 months each iteration
-    'total_periods': 2,             # Number of train/test cycles
+    'train_period_months': 5,      # Optimize on 18 months
+    'test_period_months': 5,        # Validate on next 6 months
+    'step_months': 5,               # Roll forward 6 months each iteration
+    'total_periods': 3,             # Number of train/test cycles
 
     # Date range control (optional - leave None for automatic)
     'end_date': None,               # None = use most recent data
-    'lookback_years': 5,            # How many years of history to use (need more for ML)
 
     # COVID handling
     'exclude_covid': True,          # Skip COVID period in training
@@ -60,12 +71,16 @@ CONFIG = {
 
     # Backtest settings
     'initial_cash': 10000,
-    'commission': 0.0001,           # 0.05% commission per trade
+    'commission': 0.0,           # 0.05% commission per trade
 
     # Optimization settings
     'top_n_results': 10,
     'print_progress_every': 50,
     'max_workers': None,  # None = use all CPU cores
+
+    # Portfolio simulation settings
+    'portfolio_capital': 100_000,
+    'max_positions': 30,
 
     # Ranking metric: 'composite_score' for trading performance, 'ml_accuracy' for ML prediction accuracy
     # Use 'ml_accuracy' when optimizing ML parameters (features, labels, neighbors) to avoid overfitting
@@ -88,7 +103,7 @@ CONFIG = {
     # Parameter grid for Lorentzian Classification - Mean-Reversion Features
     'param_grid': {
         # ==================== ML SETTINGS ====================
-        'neighbors_count': [8],
+        'neighbors_count': [9],
         'max_bars_back': [7000],            # Keep fixed - needs lots of history
         'feature_count': [10],
         'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
@@ -98,80 +113,107 @@ CONFIG = {
         # ==================== LABEL SETTINGS ====================
         # Defines what "correct" means for ML — most impactful for accuracy
         'label_lookahead': [4],       # Bars to look forward: shorter=reactive, longer=trend
-        'label_dead_zone': [0.225],  # Min ATR move for label: lower=more labels, higher=cleaner
+        'label_dead_zone': [0.1],  # Min ATR move for label: lower=more labels, higher=cleaner
         'use_magnitude_labels': [True],
 
-        # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
-        'f1_type': ['RSM'],
-        'f1_param_a': [30],          # Short momentum period: 5=fast rotation, 20=stable
-        'f1_param_b': [160],             # Long momentum period: 63=quarter, 126=half-year
+        # ==================== FEATURE 1 (VCOMP - Volatility Compression) ====================
+        # TEMPORAL: Consolidation after a big move — the coiled spring before reversal
+        'f1_type': ['VCOMP'],
+        'f1_param_a': [4],              # Recent volatility window
+        'f1_param_b': [16],             # Lookback volatility window
 
-        # ==================== FEATURE 2 (VA - Volume Anomaly) ====================
-        'f2_type': ['VA'],
-        'f2_param_a': [20],
-        'f2_param_b': [1],
+        # ==================== FEATURE 2 (MPER - Momentum Persistence) ====================
+        # TEMPORAL: Pullback within intact trend vs reversal (subsumes MACC)
+        'f2_type': ['MPER'],
+        'f2_param_a': [4],              # Short momentum period
+        'f2_param_b': [20],             # Medium momentum period
 
-        # ==================== FEATURE 3 (MTD - Multi-Timeframe Divergence) ====================
-        'f3_type': ['MTD'],
-        'f3_param_a': [5],
-        'f3_param_b': [40],              # Long EMA: wider gap = stronger divergence signal
+        # ==================== FEATURE 3 (VMC - Volume-Momentum Coupling) ====================
+        # TEMPORAL: Volume still engaged during pullback — smart money signal (subsumes VA/VPD/OBVT)
+        'f3_type': ['VMC'],
+        'f3_param_a': [5],              # Recent volume/momentum window
+        'f3_param_b': [40],             # Baseline volume average period
 
         # ==================== FEATURE 4 (ZS - Mean Reversion Z-Score) ====================
-        # Core mean-reversion feature — period determines what "normal" means
+        # Core mean-reversion feature — how far from "normal"
         'f4_type': ['ZS'],
         'f4_param_a': [40],             # Z-score lookback: 30=recent norm, 50=broader context
         'f4_param_b': [1],
 
-        # ==================== FEATURE 5 (ER - Efficiency Ratio) ====================
-        'f5_type': ['ER'],
-        'f5_param_a': [10],          # ER period: 5=choppy detection, 20=trend quality
-        'f5_param_b': [1],
+        # ==================== FEATURE 5 (RSM - Relative Strength Momentum) ====================
+        'f5_type': ['RSM'],
+        'f5_param_a': [30],             # Short momentum period
+        'f5_param_b': [160],            # Long momentum period for percentile ranking
 
-        # ==================== FEATURE 6 (Volume-Price Divergence) ====================
-        'f6_type': ['VPD'],
-        'f6_param_a': [22],
+        # ==================== FEATURE 6 (ER - Efficiency Ratio) ====================
+        # Trend quality — trending vs ranging (subsumes CHOP)
+        'f6_type': ['ER'],
+        'f6_param_a': [10],             # ER period: 5=choppy detection, 20=trend quality
         'f6_param_b': [1],
 
-        # ==================== FEATURE 7 (Momentum Acceleration) ====================
-        'f7_type': ['MACC'],
+        # ==================== FEATURE 7 (MTD - Multi-Timeframe Divergence) ====================
+        'f7_type': ['MTD'],
         'f7_param_a': [5],
-        'f7_param_b': [5],
+        'f7_param_b': [40],             # Long EMA: wider gap = stronger divergence signal
 
-        # ==================== FEATURE 8 (OBV Trend) ====================
-        'f8_type': ['OBVT'],
-        'f8_param_a': [20],
-        'f8_param_b': [3],
+        # ==================== FEATURE 8 (STRK - Streak Pattern) ====================
+        'f8_type': ['STRK'],
+        'f8_param_a': [15],
+        'f8_param_b': [1],
 
-        # ==================== FEATURE 9 (Candle Structure) ====================
+        # ==================== FEATURE 9 (CS - Candle Structure) ====================
         'f9_type': ['CS'],
         'f9_param_a': [5],
         'f9_param_b': [2],
 
-        # ==================== FEATURE 10 (Streak Pattern) ====================
-        'f10_type': ['STRK'],
-        'f10_param_a': [15],
-        'f10_param_b': [1],
+        # ==================== FEATURE 10 (OBVT - OBV Trend) ====================
+        'f10_type': ['OBVT'],
+        'f10_param_a': [20],
+        'f10_param_b': [3],
 
-        # ==================== FEATURE 11 (Choppiness Index) ====================
-        'f11_type': ['CHOP'],
-        'f11_param_a': [14],
+        # ==================== FEATURES 11-14 (REDUNDANT - below feature_count cutoff) ===========
+        # VA: subsumed by VMC (F3)
+        'f11_type': ['VA'],
+        'f11_param_a': [20],
         'f11_param_b': [1],
 
+        # VPD: subsumed by VMC (F3)
+        'f12_type': ['VPD'],
+        'f12_param_a': [22],
+        'f12_param_b': [1],
+
+        # MACC: subsumed by MPER (F2)
+        'f13_type': ['MACC'],
+        'f13_param_a': [5],
+        'f13_param_b': [5],
+
+        # CHOP: subsumed by ER (F6)
+        'f14_type': ['CHOP'],
+        'f14_param_a': [14],
+        'f14_param_b': [1],
+
         # ==================== FILTERS ====================
-        'use_volatility_filter': [True],
+        'use_volatility_filter': [False],
         'use_regime_filter': [True],
-        'regime_threshold': [Decimal('1')],  # 0=block bearish, 1=require bullish
+        'regime_threshold': [Decimal('0')],  # 0=block bearish, 1=require bullish
         'regime_period': ['weekly'],  # 'weekly' or 'monthly'
         'use_regime_direction': [True],  # True=allow reverting-from-bearish when threshold=1
         'regime_stability_min': [0.0],  # Min stability to trade (0=off, 0.5=moderate, 0.7=strict)
         'regime_stability_window': [60],  # Bars to look back for regime flip counting
         'regime_max_flips': [8],  # Number of flips at which stability = 0 (higher = more permissive)
-        'use_adx_filter': [True],
+        'use_adx_filter': [False],
         'adx_threshold': [14],
         'use_ema_filter': [False],
         'ema_period': [25],
+        'ema_slope_lookback': [5],
         'use_sma_filter': [False],
         'sma_period': [100],
+        'sma_slope_lookback': [5],
+
+        # ==================== SPY MARKET REGIME FILTER ====================
+        'use_spy_filter': [True],
+        'spy_regime_threshold': [Decimal('0')],  # 0=block bearish
+        'spy_regime_period': ['weekly'],
 
         # ==================== KERNEL SETTINGS ====================
         'use_kernel_filter': [False],
@@ -231,6 +273,8 @@ CONFIG = {
         'min_trending_probability': [20],
         'min_quality_score': [20],
         'min_momentum_score': [20],
+        'require_earnings_improving': [True],
+        'min_earnings_improvement': [50],
     }
 }
 
@@ -242,7 +286,8 @@ CONFIG = {
 def generate_walkforward_periods(config):
     """
     Generate train/test period pairs for walk-forward analysis.
-    Works backwards from present to ensure all dates are historical.
+    Works backwards from end_date so periods are as recent as possible.
+    ML training lookback is handled separately by load_symbol_data (lookback_bars).
     """
     periods = []
 
@@ -251,42 +296,37 @@ def generate_walkforward_periods(config):
     else:
         end_date = datetime.now() - timedelta(days=7)
 
-    lookback_years = config.get('lookback_years', 5)
+    train_months = config['train_period_months']
+    test_months = config['test_period_months']
+    step_months = config['step_months']
+    total_periods = config['total_periods']
 
-    total_span_needed = (
-            config['train_period_months'] +
-            (config['total_periods'] - 1) * config['step_months'] +
-            config['test_period_months']
-    )
+    # Total span from first train_start to last test_end
+    total_span_months = train_months + (total_periods - 1) * step_months + test_months
 
-    months_to_go_back = max(total_span_needed + 6, lookback_years * 12)
-    start_date = end_date - timedelta(days=months_to_go_back * 30)
+    # Place first train_start so that the last test_end lands at end_date
+    first_train_start = end_date - timedelta(days=total_span_months * 30)
 
     print(f"\n📅 Generating Walk-Forward Periods")
-    print(f"   Lookback period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    print(f"   Total span: {months_to_go_back} months")
+    print(f"   End date: {end_date.strftime('%Y-%m-%d')}")
+    print(f"   Period span: {total_span_months} months ({first_train_start.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+    print(f"   ML lookback: handled by max_bars_back ({max(config['param_grid'].get('max_bars_back', [500]))} bars before each period)")
 
     covid_start = pd.to_datetime(config['covid_start']) if config['exclude_covid'] else None
     covid_end = pd.to_datetime(config['covid_end']) if config['exclude_covid'] else None
 
-    current_train_start = start_date
-    periods_attempted = 0
+    current_train_start = first_train_start
     periods_kept = 0
+    max_attempts = total_periods * 3  # allow extra attempts for COVID skips
 
-    while periods_attempted < config['total_periods'] * 2:
-        periods_attempted += 1
+    for attempt in range(max_attempts):
+        if periods_kept >= total_periods:
+            break
 
         train_start = current_train_start
-        train_end = train_start + timedelta(days=config['train_period_months'] * 30)
+        train_end = train_start + timedelta(days=train_months * 30)
         test_start = train_end + timedelta(days=1)
-        test_end = test_start + timedelta(days=config['test_period_months'] * 30)
-
-        if test_end > end_date:
-            print(f"   Stopped: Period {periods_attempted} would extend beyond {end_date.strftime('%Y-%m-%d')}")
-            break
-
-        if periods_kept >= config['total_periods']:
-            break
+        test_end = test_start + timedelta(days=test_months * 30)
 
         skip_period = False
         skip_reason = None
@@ -307,6 +347,10 @@ def generate_walkforward_periods(config):
 
         if skip_period:
             print(f"   Skipped period: Train {train_start.strftime('%Y-%m-%d')} to {train_end.strftime('%Y-%m-%d')} - {skip_reason}")
+            # Push start back further to get past COVID
+            current_train_start -= timedelta(days=step_months * 30)
+            # Also push all remaining periods back by recalculating
+            first_train_start = current_train_start
         else:
             periods.append((
                 train_start.strftime('%Y-%m-%d'),
@@ -316,14 +360,13 @@ def generate_walkforward_periods(config):
             ))
             periods_kept += 1
             print(f"   ✓ Period {periods_kept}: Train {train_start.strftime('%Y-%m-%d')}-{train_end.strftime('%Y-%m-%d')}, Test {test_start.strftime('%Y-%m-%d')}-{test_end.strftime('%Y-%m-%d')}")
-
-        current_train_start += timedelta(days=config['step_months'] * 30)
+            current_train_start += timedelta(days=step_months * 30)
 
     if not periods:
         print("\n⚠️  ERROR: No valid periods generated!")
         print("   Try one of these:")
         print("   1. Set 'exclude_covid': False")
-        print("   2. Increase 'lookback_years'")
+        print("   2. Reduce 'total_periods'")
         print("   3. Reduce 'total_periods'")
     else:
         print(f"\n   ✓ Generated {len(periods)} valid walk-forward periods")
@@ -442,8 +485,12 @@ def load_all_periods_data(symbols, periods, lookback_bars=600):
 # Core Backtesting
 # ============================================================================
 
-def backtest_single_config(symbol, params, df, initial_cash, commission):
-    """Run backtest for a single symbol with given parameters."""
+def backtest_single_config(symbol, params, df, initial_cash, commission, capture_equity=False):
+    """Run backtest for a single symbol with given parameters.
+
+    When capture_equity=True, also captures daily equity curve and trade log
+    for portfolio simulation (adds TradeRecorder analyzer).
+    """
     try:
         cerebro = bt.Cerebro(stdstats=False)
 
@@ -467,6 +514,9 @@ def backtest_single_config(symbol, params, df, initial_cash, commission):
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="dd")
         cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")
         cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
+
+        if capture_equity:
+            cerebro.addanalyzer(TradeRecorder, _name="trade_recorder")
 
         results = cerebro.run()
         strat = results[0]
@@ -511,7 +561,7 @@ def backtest_single_config(symbol, params, df, initial_cash, commission):
             ml_accuracy = ml_total_predictions = 0
             ml_bullish_accuracy = ml_bearish_accuracy = 0
 
-        return {
+        result = {
             'return_pct': return_pct,
             'sharpe': sharpe.get('sharperatio', 0) or 0,
             'calmar': calmar_ratio,
@@ -528,8 +578,121 @@ def backtest_single_config(symbol, params, df, initial_cash, commission):
             'ml_bearish_accuracy': ml_bearish_accuracy,
         }
 
+        if capture_equity:
+            trade_analysis = strat.analyzers.trade_recorder.get_analysis()
+            all_dates = trade_analysis['daily_dates']
+            all_values = trade_analysis['daily_values']
+
+            # Filter to test period only (by date, not index)
+            test_start_idx = params.get('test_start_idx', 0)
+            if test_start_idx > 0 and test_start_idx < len(df):
+                test_start_date = df.index[test_start_idx].date()
+            else:
+                test_start_date = df.index[0].date()
+
+            daily_dates = []
+            daily_values = []
+            for d, v in zip(all_dates, all_values):
+                if d >= test_start_date:
+                    daily_dates.append(d)
+                    daily_values.append(v)
+
+            # Sanity check: equity curve return should approximately match backtest return
+            if len(daily_values) >= 2 and daily_values[0] > 0:
+                equity_ret = (daily_values[-1] / daily_values[0] - 1) * 100
+                if abs(equity_ret - return_pct) > 10:
+                    print(f"  ⚠ {symbol}: equity curve return {equity_ret:.2f}% vs backtest {return_pct:.2f}% "
+                          f"(bars: {len(all_dates)} total, {len(daily_dates)} test, "
+                          f"start={daily_values[0]:.0f}, end={daily_values[-1]:.0f})")
+
+            result['_equity'] = {
+                'symbol': symbol,
+                'dates': daily_dates,
+                'values': daily_values,
+                'initial_value': initial_cash,
+                'trade_log': trade_analysis.get('trade_log', []),
+            }
+
+        return result
+
     except Exception as e:
         return None
+
+
+class PortfolioValue(bt.Observer):
+    """Observer to track portfolio value over time."""
+    lines = ('value',)
+    plotinfo = dict(plot=False, subplot=False)
+
+    def next(self):
+        self.lines.value[0] = self._owner.broker.getvalue()
+
+    def prenext(self):
+        self.lines.value[0] = self._owner.broker.getvalue()
+
+
+class TradeRecorder(bt.Analyzer):
+    """Records entry/exit dates, daily equity values for portfolio simulation.
+
+    Records broker value at every bar in plain Python lists (no backtrader
+    line buffer), ensuring reliable date-value alignment for equity extraction.
+    """
+
+    def start(self):
+        self.trade_log = []
+        self._open_trade_entry = None
+        self._open_trade_price = None
+        self._open_trade_size = None
+        self.daily_dates = []
+        self.daily_values = []
+
+    def prenext(self):
+        self._record_daily()
+
+    def next(self):
+        self._record_daily()
+
+    def _record_daily(self):
+        self.daily_dates.append(self.data.datetime.date(0))
+        self.daily_values.append(self.strategy.broker.getvalue())
+
+    def notify_trade(self, trade):
+        if trade.justopened:
+            self._open_trade_entry = bt.num2date(trade.dtopen).date()
+            self._open_trade_price = trade.price
+            self._open_trade_size = trade.size
+
+        if trade.isclosed:
+            entry = self._open_trade_entry or bt.num2date(trade.dtopen).date()
+            self.trade_log.append({
+                'entry_date': entry,
+                'exit_date': bt.num2date(trade.dtclose).date(),
+                'entry_price': self._open_trade_price,
+                'exit_price': trade.price,
+                'size': self._open_trade_size,
+                'pnl': trade.pnl,
+                'pnlcomm': trade.pnlcomm,
+            })
+            self._open_trade_entry = None
+            self._open_trade_price = None
+            self._open_trade_size = None
+
+    def stop(self):
+        if self._open_trade_entry is not None:
+            self.trade_log.append({
+                'entry_date': self._open_trade_entry,
+                'exit_date': self.data.datetime.date(0),
+                'entry_price': self._open_trade_price,
+                'size': self._open_trade_size,
+                'still_open': True,
+            })
+
+    def get_analysis(self):
+        return {
+            'trade_log': self.trade_log,
+            'daily_dates': self.daily_dates,
+            'daily_values': self.daily_values,
+        }
 
 
 def aggregate_results(stock_results, params):
@@ -615,11 +778,16 @@ PARAM_NAMES = [
     'f9_type', 'f9_param_a', 'f9_param_b',
     'f10_type', 'f10_param_a', 'f10_param_b',
     'f11_type', 'f11_param_a', 'f11_param_b',
+    'f12_type', 'f12_param_a', 'f12_param_b',
+    'f13_type', 'f13_param_a', 'f13_param_b',
+    'f14_type', 'f14_param_a', 'f14_param_b',
     # Filters
     'use_volatility_filter', 'use_regime_filter', 'regime_threshold', 'regime_period',
     'use_regime_direction', 'regime_stability_min', 'regime_stability_window', 'regime_max_flips',
-    'use_adx_filter', 'adx_threshold', 'use_ema_filter', 'ema_period',
-    'use_sma_filter', 'sma_period',
+    'use_adx_filter', 'adx_threshold', 'use_ema_filter', 'ema_period', 'ema_slope_lookback',
+    'use_sma_filter', 'sma_period', 'sma_slope_lookback',
+    # SPY Market Regime Filter
+    'use_spy_filter', 'spy_regime_threshold', 'spy_regime_period',
     # Kernel Settings
     'use_kernel_filter', 'use_kernel_smoothing', 'kernel_lookback',
     'kernel_rel_weight', 'kernel_start_bar', 'kernel_lag',
@@ -646,13 +814,19 @@ PARAM_NAMES = [
     'close_before_earnings', 'min_trending_probability',
     'full_position_threshold', 'reduced_position_pct',
     'min_quality_score', 'min_momentum_score',
+    'require_earnings_improving', 'min_earnings_improvement',
 ]
 
 
-def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, phase, config):
-    """Optimize or test on a single period using multiprocessing."""
+def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, phase, config, capture_equity=False):
+    """Optimize or test on a single period using multiprocessing.
+
+    When capture_equity=True, also captures per-symbol equity curves and trade logs
+    for portfolio simulation. Returns (results, equity_data) instead of just results.
+    """
     results = {}
     successful_backtests = 0
+    equity_data = [] if capture_equity else None
 
     # --- Build phase: flatten all work items ---
     work_items = []  # list of (params_tuple, params_dict, symbol, run_params, df, cash, commission)
@@ -701,7 +875,7 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
         future_to_key = {}
         for item in work_items:
             params_tuple, params_dict, symbol, run_params, df, cash, commission = item
-            future = executor.submit(backtest_single_config, symbol, run_params, df, cash, commission)
+            future = executor.submit(backtest_single_config, symbol, run_params, df, cash, commission, capture_equity)
             future_to_key[future] = params_tuple
             params_dict_map[params_tuple] = params_dict
 
@@ -716,6 +890,12 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
             if result:
                 grouped_results.setdefault(params_tuple, []).append(result)
                 successful_backtests += 1
+
+                # Collect equity data for portfolio simulation
+                if capture_equity and '_equity' in result:
+                    eq = result['_equity']
+                    if len(eq.get('dates', [])) > 1:
+                        equity_data.append(eq)
 
             backtest_count += 1
             if backtest_count % progress_interval == 0:
@@ -734,6 +914,8 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
     if len(results) == 0:
         print(f"   ⚠️  WARNING: No valid results! Check if data is available for this period.")
 
+    if capture_equity:
+        return results, equity_data
     return results
 
 
@@ -753,7 +935,16 @@ def run_walkforward_optimization(config):
 
     try:
         with open(config['csv_file'], 'r') as f:
-            symbols = [row[0].strip().upper() for row in csv.reader(f) if row and row[0].strip()]
+            raw_symbols = [row[0].strip().upper() for row in csv.reader(f) if row and row[0].strip()]
+        # Deduplicate while preserving order
+        seen = set()
+        symbols = []
+        for s in raw_symbols:
+            if s not in seen:
+                seen.add(s)
+                symbols.append(s)
+        if len(symbols) < len(raw_symbols):
+            print(f"  ⚠ Removed {len(raw_symbols) - len(symbols)} duplicate symbols from {config['csv_file']}")
     except FileNotFoundError:
         print(f"\n❌ File '{config['csv_file']}' not found")
         sys.exit(1)
@@ -764,6 +955,8 @@ def run_walkforward_optimization(config):
     print(f"   Train period: {config['train_period_months']} months")
     print(f"   Test period: {config['test_period_months']} months")
     print(f"   COVID exclusion: {'Yes' if config['exclude_covid'] else 'No'}")
+    print(f"   Portfolio capital: ${config.get('portfolio_capital', 100_000):,.0f}")
+    print(f"   Max positions: {config.get('max_positions', 10)}")
 
     # Calculate lookback from the largest max_bars_back in the param grid
     max_bars_back_values = config['param_grid'].get('max_bars_back', [500])
@@ -859,8 +1052,9 @@ def run_walkforward_optimization(config):
         print(f"     F3: {params_dict['f3_type']}({params_dict['f3_param_a']},{params_dict['f3_param_b']}) - Multi-Timeframe Divergence")
         print(f"     F4: {params_dict['f4_type']}({params_dict['f4_param_a']}) - Mean Reversion Z-Score")
         print(f"     F5: {params_dict['f5_type']}({params_dict['f5_param_a']}) - Efficiency Ratio")
-        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak', 'CHOP': 'Choppiness'}
-        for _fi in range(6, 12):
+        _fn = {'VPD': 'Vol-Price Div', 'CS': 'Candle Struct', 'MACC': 'Mom Accel', 'OBVT': 'OBV Trend', 'STRK': 'Streak', 'CHOP': 'Choppiness',
+               'VCOMP': 'Vol Compression', 'MPER': 'Mom Persistence', 'VMC': 'Vol-Mom Coupling'}
+        for _fi in range(6, 15):
             _ft = params_dict.get(f'f{_fi}_type')
             if _ft:
                 print(f"     F{_fi}: {_ft}({params_dict[f'f{_fi}_param_a']},{params_dict[f'f{_fi}_param_b']}) - {_fn.get(_ft, _ft)}")
@@ -869,6 +1063,9 @@ def run_walkforward_optimization(config):
         r_thr = params_dict.get('regime_threshold', 0)
         r_desc = "block bearish" if r_thr == 0 else "require bullish" if r_thr >= 1 else f"thr={r_thr}"
         print(f"     Regime:                {'ON' if params_dict['use_regime_filter'] else 'OFF'} (monthly H/L, {r_desc})")
+        spy_thr = params_dict.get('spy_regime_threshold', 0)
+        spy_desc = "block bearish" if spy_thr == 0 else "require bullish" if spy_thr >= 1 else f"thr={spy_thr}"
+        print(f"     SPY Regime:            {'ON' if params_dict.get('use_spy_filter', False) else 'OFF'} ({spy_desc})")
         print(f"     Kernel:                {'ON' if params_dict['use_kernel_filter'] else 'OFF'}")
         print(f"   Exit:")
         print(f"     Bars to Hold:          {params_dict['bars_to_hold']}")
@@ -895,9 +1092,11 @@ def run_walkforward_optimization(config):
 
         print(f"\n2️⃣  VALIDATION PHASE (Out-of-Sample)")
         print(f"   Testing best parameters on unseen {test_start} to {test_end} data...")
+        print(f"   (capturing equity curves for portfolio simulation)")
 
-        test_results = optimize_single_period(
-            data_cache, valid_symbols, [best_params_tuple], period_idx, 'test', config
+        test_results, equity_data = optimize_single_period(
+            data_cache, valid_symbols, [best_params_tuple], period_idx, 'test', config,
+            capture_equity=True
         )
 
         if best_params_tuple in test_results:
@@ -941,6 +1140,59 @@ def run_walkforward_optimization(config):
             elif abs(degradation_pct) < 20:
                 print(f"     ✓ Good: Low degradation indicates robust parameters.")
 
+            # Portfolio simulation using equity data captured during OOS backtests
+            print(f"\n3️⃣  PORTFOLIO SIMULATION (Out-of-Sample)")
+            portfolio_results = None
+            if equity_data:
+                # Diagnostic: verify equity data sanity
+                _n_with_trades = sum(1 for s in equity_data if len(s.get('trade_log', [])) > 0)
+                _returns = []
+                for s in equity_data:
+                    if len(s['values']) >= 2 and s['values'][0] > 0:
+                        _returns.append((s['values'][-1] / s['values'][0] - 1) * 100)
+                _avg_ret = np.mean(_returns) if _returns else 0
+                print(f"   Equity data: {len(equity_data)} stocks, {_n_with_trades} with trades")
+                print(f"   Per-stock equity returns: avg={_avg_ret:.2f}%, "
+                      f"min={min(_returns):.2f}%, max={max(_returns):.2f}%" if _returns else
+                      "   No per-stock equity returns")
+                # Debug: show per-stock equity curve stats vs trade log stats
+                print(f"\n   [DEBUG] Per-stock equity curve vs trade log reconciliation (first 20):")
+                print(f"   {'Symbol':<8} {'EqRet%':>8} {'#Trades':>8} {'TradePnL':>10} {'EqStart':>10} {'EqEnd':>10} {'#Days':>6}")
+                _debug_stocks = sorted(equity_data, key=lambda s: s['symbol'])[:20]
+                for s in _debug_stocks:
+                    eq_ret = (s['values'][-1] / s['values'][0] - 1) * 100 if s['values'][0] > 0 else 0
+                    n_trades = len(s.get('trade_log', []))
+                    trade_pnl = sum(t.get('pnl', 0) or 0 for t in s.get('trade_log', []))
+                    print(f"   {s['symbol']:<8} {eq_ret:>7.2f}% {n_trades:>8} ${trade_pnl:>9,.2f} "
+                          f"${s['values'][0]:>9,.0f} ${s['values'][-1]:>9,.0f} {len(s['dates']):>6}")
+
+                spy_df = None
+                try:
+                    all_dates = sorted(set(d for s in equity_data for d in s['dates']))
+                    if all_dates:
+                        spy_start = pd.Timestamp(all_dates[0])
+                        spy_end = pd.Timestamp(all_dates[-1]) + timedelta(days=1)
+                        spy_df = yf.download('SPY', start=spy_start, end=spy_end, progress=False)
+                        if not spy_df.empty:
+                            spy_df.index = spy_df.index.tz_localize(None)
+                except Exception:
+                    pass
+
+                trade_log_path = f'portfolio_trade_log_period_{period_idx + 1}.csv'
+                portfolio_results = simulate_portfolio(
+                    equity_data,
+                    initial_capital=config.get('portfolio_capital', 100_000),
+                    max_positions=config.get('max_positions', 10),
+                    spy_df=spy_df,
+                    trade_log_file=trade_log_path,
+                )
+                if portfolio_results:
+                    print_portfolio_summary(portfolio_results)
+                    print_trade_log_summary(portfolio_results)
+                    plot_portfolio(portfolio_results, f'portfolio_sim_period_{period_idx + 1}.png')
+            else:
+                print(f"   No equity data captured for portfolio simulation")
+
             period_result = {
                 'period': period_idx + 1,
                 'train_start': train_start,
@@ -975,6 +1227,12 @@ def run_walkforward_optimization(config):
                 'return_degradation_pct': degradation_pct,
                 'trade_difference': int(test_performance['total_trades']) - int(best_train_perf['total_trades']),
                 'params': best_train_perf['params'],
+                # Portfolio simulation metrics
+                'portfolio_return': portfolio_results['total_return_pct'] if portfolio_results else None,
+                'portfolio_sharpe': portfolio_results['sharpe'] if portfolio_results else None,
+                'portfolio_max_dd': portfolio_results['max_drawdown_pct'] if portfolio_results else None,
+                'portfolio_avg_positions': portfolio_results['avg_positions_held'] if portfolio_results else None,
+                'portfolio_skipped': portfolio_results['skipped_entries'] if portfolio_results else None,
             }
 
             all_results.append(period_result)
@@ -1023,6 +1281,14 @@ def print_walkforward_results(df_results):
         print(f"    ML Acc. Change:  {-row['ml_accuracy_degradation']:+7.1f}pp")
         print(f"    Trade Diff:      {int(row['trade_difference']):+d}")
 
+        if pd.notna(row.get('portfolio_return')):
+            print(f"  Portfolio Simulation:")
+            print(f"    Portfolio Return: {row['portfolio_return']:7.2f}%")
+            print(f"    Portfolio Sharpe: {row['portfolio_sharpe']:7.3f}")
+            print(f"    Portfolio Max DD: {row['portfolio_max_dd']:7.2f}%")
+            print(f"    Avg Positions:   {row['portfolio_avg_positions']:7.1f}")
+            print(f"    Skipped Entries: {int(row['portfolio_skipped'])}")
+
     print("\n" + "="*70)
     print("AGGREGATE OUT-OF-SAMPLE PERFORMANCE")
     print("="*70)
@@ -1051,6 +1317,16 @@ def print_walkforward_results(df_results):
     print(f"  ML Accuracy (IS):    {avg_is_ml_accuracy:7.1f}%")
     print(f"\nAverage Return Degradation: {avg_degradation:+.1f}%")
     print(f"Average ML Accuracy Change: {-avg_ml_degradation:+.1f}pp")
+
+    # Portfolio simulation aggregate
+    port_returns = df_results['portfolio_return'].dropna()
+    if len(port_returns) > 0:
+        print(f"\nPortfolio Simulation (across {len(port_returns)} periods):")
+        print(f"  Avg Portfolio Return:  {port_returns.mean():7.2f}%")
+        print(f"  Avg Portfolio Sharpe:  {df_results['portfolio_sharpe'].dropna().mean():7.3f}")
+        print(f"  Avg Portfolio Max DD:  {df_results['portfolio_max_dd'].dropna().mean():7.2f}%")
+        print(f"  Avg Positions Held:    {df_results['portfolio_avg_positions'].dropna().mean():7.1f}")
+        print(f"  Total Skipped Entries: {int(df_results['portfolio_skipped'].dropna().sum())}")
 
     if abs(avg_degradation) > 30:
         print("\n⚠️  WARNING: Average degradation > 30% indicates potential overfitting")
@@ -1123,8 +1399,9 @@ def print_walkforward_results(df_results):
     print(f"   f5_param_a:               {params['f5_param_a']}")
     fnames = {'VPD': 'Volume-Price Divergence', 'CS': 'Candle Structure',
               'MACC': 'Momentum Acceleration', 'OBVT': 'OBV Trend', 'STRK': 'Streak Pattern',
-              'CHOP': 'Choppiness Index'}
-    for fi in range(6, 12):
+              'CHOP': 'Choppiness Index', 'VCOMP': 'Volatility Compression',
+              'MPER': 'Momentum Persistence', 'VMC': 'Volume-Momentum Coupling'}
+    for fi in range(6, 15):
         ft_key = f'f{fi}_type'
         if ft_key in params:
             print(f"   {ft_key}:{'  ' if fi < 10 else ' '}               {params[ft_key]} ({fnames.get(params[ft_key], params[ft_key])})")
@@ -1140,6 +1417,9 @@ def print_walkforward_results(df_results):
     print(f"   regime_stability_min:     {params.get('regime_stability_min', 0.0)}")
     print(f"   regime_stability_window:  {params.get('regime_stability_window', 60)}")
     print(f"   regime_max_flips:         {params.get('regime_max_flips', 18)}")
+    print(f"   use_spy_filter:           {params.get('use_spy_filter', False)}")
+    print(f"   spy_regime_threshold:     {params.get('spy_regime_threshold', 0)}")
+    print(f"   spy_regime_period:        {params.get('spy_regime_period', 'weekly')}")
     print(f"   use_kernel_filter:        {params['use_kernel_filter']}")
     print(f"   kernel_lookback:          {params['kernel_lookback']}")
 
@@ -1167,6 +1447,9 @@ def print_walkforward_results(df_results):
         print(f"   min_trending_probability: {params.get('min_trending_probability', 50)}")
         print(f"   full_position_threshold:  {params.get('full_position_threshold', 70)}")
         print(f"   reduced_position_pct:     {params.get('reduced_position_pct', Decimal('0.75'))}")
+        print(f"   require_earnings_improving: {params.get('require_earnings_improving', False)}")
+        if params.get('require_earnings_improving', False):
+            print(f"   min_earnings_improvement: {params.get('min_earnings_improvement', 50)}")
 
     print("\n" + "="*70)
     print("COPY-PASTE READY PARAMETER DICT")
@@ -1204,8 +1487,9 @@ def print_walkforward_results(df_results):
     print(f"    'f5_param_a': {params['f5_param_a']},")
     print(f"    'f5_param_b': {params['f5_param_b']},")
     _cpnames = {6: 'Volume-Price Divergence', 7: 'Momentum Acceleration', 8: 'OBV Trend',
-                9: 'Candle Structure', 10: 'Streak Pattern', 11: 'Choppiness Index'}
-    for _fi in range(6, 12):
+                9: 'Candle Structure', 10: 'Streak Pattern', 11: 'Choppiness Index',
+                12: 'Volatility Compression', 13: 'Momentum Persistence', 14: 'Volume-Momentum Coupling'}
+    for _fi in range(6, 15):
         if f'f{_fi}_type' in params:
             print(f"\n    # Feature {_fi} ({_cpnames.get(_fi, '')})")
             print(f"    'f{_fi}_type': '{params[f'f{_fi}_type']}',")
@@ -1224,8 +1508,13 @@ def print_walkforward_results(df_results):
     print(f"    'adx_threshold': {params['adx_threshold']},")
     print(f"    'use_ema_filter': {params['use_ema_filter']},")
     print(f"    'ema_period': {params['ema_period']},")
+    print(f"    'ema_slope_lookback': {params['ema_slope_lookback']},")
     print(f"    'use_sma_filter': {params['use_sma_filter']},")
     print(f"    'sma_period': {params['sma_period']},")
+    print(f"    'sma_slope_lookback': {params['sma_slope_lookback']},")
+    print(f"    'use_spy_filter': {params.get('use_spy_filter', False)},")
+    print(f"    'spy_regime_threshold': {params.get('spy_regime_threshold', 0)},")
+    print(f"    'spy_regime_period': '{params.get('spy_regime_period', 'weekly')}',")
     print("\n    # Kernel Settings")
     print(f"    'use_kernel_filter': {params['use_kernel_filter']},")
     print(f"    'use_kernel_smoothing': {params['use_kernel_smoothing']},")
@@ -1268,6 +1557,8 @@ def print_walkforward_results(df_results):
         print(f"    'reduced_position_pct': Decimal('{params.get('reduced_position_pct', Decimal('0.75'))}'),")
         print(f"    'min_quality_score': {params.get('min_quality_score', 0)},")
         print(f"    'min_momentum_score': {params.get('min_momentum_score', 0)},")
+        print(f"    'require_earnings_improving': {params.get('require_earnings_improving', False)},")
+        print(f"    'min_earnings_improvement': {params.get('min_earnings_improvement', 50)},")
     print("}")
     print("\n" + "="*70 + "\n")
 
