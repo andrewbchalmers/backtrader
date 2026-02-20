@@ -59,6 +59,7 @@ class FundamentalDataProvider:
         self._earnings_history: Optional[pd.DataFrame] = None
         self._eps_revisions: Optional[Dict] = None
         self._shares_outstanding: Optional[float] = None
+        self._price_history: Optional[pd.DataFrame] = None
 
         # Quarter-to-report-date mapping for point-in-time filtering
         self._quarter_report_map: Dict[pd.Timestamp, pd.Timestamp] = {}
@@ -147,6 +148,18 @@ class FundamentalDataProvider:
                 if self.verbose:
                     print(f"Warning: Could not fetch EPS revisions for {self.symbol}: {e}")
                 self._eps_revisions = None
+
+            # Historical price data (for post-earnings reaction measurement)
+            try:
+                start = datetime.now() - timedelta(days=lookback_years * 365 + 30)
+                self._price_history = ticker.history(start=start.strftime('%Y-%m-%d'), auto_adjust=True)
+                if self._price_history is not None and not self._price_history.empty:
+                    if self._price_history.index.tz is not None:
+                        self._price_history.index = self._price_history.index.tz_localize(None)
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Could not fetch price history for {self.symbol}: {e}")
+                self._price_history = None
 
             # Build quarter-to-report-date mapping
             self._build_quarter_map()
@@ -1092,6 +1105,55 @@ class FundamentalDataProvider:
             print(f"    Total: {total:.1f}/100")
 
         return total
+
+    def get_earnings_reaction(self, as_of_date, reaction_days=5):
+        """
+        Calculate price reaction (%) in the days following the most recent
+        earnings release before as_of_date.
+
+        Returns:
+            Percentage price change from earnings date close to close
+            reaction_days trading days later, or None if insufficient data.
+        """
+        if self._earnings_dates is None or self._price_history is None:
+            return None
+
+        check_date = pd.Timestamp(as_of_date)
+        if check_date.tz is not None:
+            check_date = check_date.tz_localize(None)
+
+        # Find most recent earnings date before as_of_date
+        past_earnings = self._earnings_dates.index[self._earnings_dates.index <= check_date]
+        if len(past_earnings) == 0:
+            return None
+        last_earnings = past_earnings.max()
+
+        # Get close prices on and after earnings date
+        prices = self._price_history['Close']
+        post_dates = prices.index[prices.index >= last_earnings]
+        if len(post_dates) < 2:
+            return None
+        earnings_close = float(prices.loc[post_dates[0]])
+
+        # Find close reaction_days trading days later
+        if len(post_dates) <= reaction_days:
+            reaction_close = float(prices.loc[post_dates[-1]])
+        else:
+            reaction_close = float(prices.loc[post_dates[reaction_days]])
+
+        if earnings_close <= 0:
+            return None
+
+        reaction_pct = ((reaction_close - earnings_close) / earnings_close) * 100.0
+
+        if self.verbose:
+            print(f"  Earnings Reaction for {self.symbol} (as of {as_of_date}):")
+            print(f"    Last earnings: {last_earnings.date()}")
+            print(f"    Earnings close: ${earnings_close:.2f}")
+            print(f"    Reaction close ({reaction_days}d): ${reaction_close:.2f}")
+            print(f"    Reaction: {reaction_pct:+.1f}%")
+
+        return reaction_pct
 
     def _earnings_improvement_eps(self, income_df) -> float:
         """EPS YoY component (0-33). Compares Q0 vs Q4 (same quarter last year)."""

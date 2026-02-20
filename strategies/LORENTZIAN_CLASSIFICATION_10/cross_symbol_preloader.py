@@ -12,12 +12,92 @@ Usage:
 """
 
 import math
+import os
+import pickle
+import time
+from pathlib import Path
+
 import numpy as np
 
-# Module-level cache: prevents re-download during optimizer runs
+# Module-level cache: prevents re-download within the SAME process
 _PRECOMPUTED_CACHE = {}
 _SECTOR_CACHE = {}    # symbol -> sector string
 _DOWNLOAD_CACHE = {}  # symbol -> DataFrame (avoids re-downloading same peer across runs)
+
+# Disk cache: shared across ALL processes (solves multiprocessing rate-limit problem).
+# Each worker subprocess can read pre-downloaded ETF data written by the main process
+# or an earlier worker, so yfinance is only hit once per symbol per day.
+_DISK_CACHE_DIR = Path.home() / '.cache' / 'lorentzian_cross_symbol'
+_DISK_CACHE_TTL_SECONDS = 86400  # 24 hours
+
+_RETRY_ATTEMPTS = 3
+_RETRY_DELAY_SECONDS = 5        # initial sleep for non-rate-limit errors; doubles each attempt
+_RATE_LIMIT_COOLDOWN_SECONDS = 60  # full pause when yfinance returns 429
+_PREFETCH_INTER_REQUEST_DELAY = 1.0  # seconds between yfinance calls during prefetch
+
+# Sector lookups change rarely — cache for 7 days on disk so all worker subprocesses share them.
+_SECTOR_DISK_CACHE_PATH = _DISK_CACHE_DIR / 'sectors.json'
+_SECTOR_DISK_CACHE_TTL_SECONDS = 7 * 86400  # 7 days
+
+
+def _load_sector_disk_cache() -> dict:
+    """Load the sector disk cache. Returns {} if missing or stale."""
+    if not _SECTOR_DISK_CACHE_PATH.exists():
+        return {}
+    if time.time() - _SECTOR_DISK_CACHE_PATH.stat().st_mtime > _SECTOR_DISK_CACHE_TTL_SECONDS:
+        return {}
+    try:
+        import json
+        with open(_SECTOR_DISK_CACHE_PATH, 'r') as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def _save_sector_disk_cache(cache: dict) -> None:
+    """Persist the sector cache to disk atomically."""
+    try:
+        import json
+        _DISK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = _SECTOR_DISK_CACHE_PATH.with_suffix('.tmp')
+        with open(tmp, 'w') as fh:
+            json.dump(cache, fh)
+        tmp.replace(_SECTOR_DISK_CACHE_PATH)
+    except Exception:
+        pass  # non-critical
+
+
+def _disk_cache_path(etf: str, start_date_str: str, end_date_str: str) -> Path:
+    """Return the pickle path for this ETF + date range."""
+    _DISK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{etf}_{start_date_str}_{end_date_str}.pkl"
+    return _DISK_CACHE_DIR / filename
+
+
+def _load_from_disk(etf: str, start_date_str: str, end_date_str: str):
+    """Load cached DataFrame from disk. Returns None if missing or stale (>24 h)."""
+    path = _disk_cache_path(etf, start_date_str, end_date_str)
+    if not path.exists():
+        return None
+    if time.time() - path.stat().st_mtime > _DISK_CACHE_TTL_SECONDS:
+        return None
+    try:
+        with open(path, 'rb') as fh:
+            return pickle.load(fh)
+    except Exception:
+        return None
+
+
+def _save_to_disk(etf: str, start_date_str: str, end_date_str: str, df) -> None:
+    """Persist DataFrame to disk so other worker processes can reuse it."""
+    path = _disk_cache_path(etf, start_date_str, end_date_str)
+    try:
+        tmp = path.with_suffix('.tmp')
+        with open(tmp, 'wb') as fh:
+            pickle.dump(df, fh)
+        tmp.replace(path)   # atomic rename avoids corrupt reads by concurrent workers
+    except Exception:
+        pass  # non-critical - workers will just re-download if this fails
 
 
 # =============================================================================
@@ -392,6 +472,61 @@ def compute_feature_numpy(df, ftype, param_a, param_b):
             norm_mag = min(1.0, avg_move / (atr_pct * atr_mult))
             out[i] = streak_dir * norm_len * (0.5 + 0.5 * norm_mag)
 
+    elif ftype == 'VCOMP':
+        # Volatility Compression - tanh((1 - recent_vol/lookback_vol) * 2)
+        recent_n = param_a
+        lookback_n = param_b
+        warmup = lookback_n + 1
+        for i in range(warmup, n):
+            h = high[i - lookback_n + 1:i + 1]
+            l = low[i - lookback_n + 1:i + 1]
+            pc = close[i - lookback_n:i]
+            tr = np.maximum(h - l, np.maximum(np.abs(h - pc), np.abs(l - pc)))
+            lookback_vol = np.mean(tr)
+            if lookback_vol > 1e-10:
+                recent_vol = np.mean(tr[-recent_n:])
+                out[i] = math.tanh((1.0 - recent_vol / lookback_vol) * 2.0)
+            else:
+                out[i] = 0.0
+
+    elif ftype == 'MPER':
+        # Momentum Persistence - trend strength modulated by short-term alignment
+        sp = param_a
+        mp = param_b
+        atr = compute_atr_numpy(high, low, close, 14)
+        warmup = mp + 14
+        for i in range(warmup, n):
+            if close[i - sp] == 0 or close[i - mp] == 0 or close[i] == 0 or np.isnan(atr[i]):
+                out[i] = 0.0
+                continue
+            atr_pct = max(atr[i] / close[i], 1e-8)
+            s = ((close[i] / close[i - sp]) - 1.0) / atr_pct
+            m = ((close[i] / close[i - mp]) - 1.0) / atr_pct
+            trend_strength = math.tanh(m)
+            alignment = math.tanh(s) * (1.0 if m > 0 else -1.0) if abs(m) > 1e-8 else 0.0
+            out[i] = max(-1.0, min(1.0, trend_strength * (0.5 + 0.5 * alignment)))
+
+    elif ftype == 'VMC':
+        # Volume-Momentum Coupling - vol regime * momentum direction
+        recent_n = param_a
+        baseline_n = param_b
+        atr = compute_atr_numpy(high, low, close, 14)
+        warmup = max(baseline_n, 14) + 1
+        for i in range(warmup, n):
+            if close[i] <= 0 or close[i - recent_n] == 0 or np.isnan(atr[i]):
+                out[i] = 0.0
+                continue
+            baseline_avg = np.mean(volume[i - baseline_n + 1:i + 1])
+            if baseline_avg <= 0:
+                out[i] = 0.0
+                continue
+            recent_vol_avg = np.mean(volume[i - recent_n + 1:i + 1])
+            vol_regime = math.log(recent_vol_avg / baseline_avg) if recent_vol_avg > 0 else -2.0
+            vol_signal = math.tanh(vol_regime * 2.0)
+            atr_pct = max(atr[i] / close[i], 1e-8)
+            mom = ((close[i] / close[i - recent_n]) - 1.0) / atr_pct
+            out[i] = max(-1.0, min(1.0, vol_signal * (0.5 + 0.5 * math.tanh(mom))))
+
     elif ftype == 'CHOP':
         # Choppiness Index - measures trending vs choppy market
         # 100 * LOG10(SUM(ATR, period) / (HH - LL)) / LOG10(period)
@@ -589,39 +724,67 @@ def balance_regimes(features, labels, regimes, max_total, seed=42):
 def get_ticker_sector(symbol):
     """
     Look up the sector for a given ticker symbol using yfinance.
-    Results are cached in _SECTOR_CACHE.
+    Results are cached in _SECTOR_CACHE (in-process) and on disk (cross-process).
     Returns sector string or None on failure.
     """
     global _SECTOR_CACHE
+
+    # Seed from disk cache on first call in this process
+    if not _SECTOR_CACHE:
+        _SECTOR_CACHE.update(_load_sector_disk_cache())
+
     if symbol in _SECTOR_CACHE:
         return _SECTOR_CACHE[symbol]
 
-    try:
-        import yfinance as yf
-        info = yf.Ticker(symbol).info
-        sector = info.get('sector', None)
-        _SECTOR_CACHE[symbol] = sector
-        return sector
-    except Exception:
-        _SECTOR_CACHE[symbol] = None
-        return None
+    import yfinance as yf
+    for attempt in range(_RETRY_ATTEMPTS):
+        try:
+            info = yf.Ticker(symbol).info
+            sector = info.get('sector', None)
+            _SECTOR_CACHE[symbol] = sector
+            _save_sector_disk_cache(_SECTOR_CACHE)
+            return sector
+        except Exception as e:
+            err_str = str(e).lower()
+            is_rate_limit = 'too many requests' in err_str or 'rate limit' in err_str
+            if attempt < _RETRY_ATTEMPTS - 1:
+                delay = _RATE_LIMIT_COOLDOWN_SECONDS if is_rate_limit else _RETRY_DELAY_SECONDS * (2 ** attempt)
+                print(f"CROSS-SYMBOL: sector lookup for {symbol} failed (attempt {attempt + 1}/{_RETRY_ATTEMPTS}): {e} — retrying in {delay}s")
+                time.sleep(delay)
+            else:
+                print(f"CROSS-SYMBOL: sector lookup for {symbol} failed after {_RETRY_ATTEMPTS} attempts (skipping)")
+    _SECTOR_CACHE[symbol] = None
+    return None
 
 
 def prefetch_sectors(symbols):
     """
     Pre-fetch sector info for all symbols upfront.
-    Populates _SECTOR_CACHE so that find_sector_peers() hits cache only.
+    Populates _SECTOR_CACHE (and disk cache) so worker subprocesses hit cache only.
+
+    Throttles to _PREFETCH_INTER_REQUEST_DELAY seconds between live yfinance calls
+    to avoid triggering rate limits during bulk prefetch.
 
     Returns:
         dict mapping sector -> list of symbols in that sector
     """
+    # Seed from disk first so we only fetch what's genuinely missing
+    if not _SECTOR_CACHE:
+        _SECTOR_CACHE.update(_load_sector_disk_cache())
+
     sector_map = {}
+    fetched = 0
     for i, sym in enumerate(symbols):
+        needs_fetch = sym not in _SECTOR_CACHE
+        if needs_fetch and fetched > 0:
+            time.sleep(_PREFETCH_INTER_REQUEST_DELAY)
         sector = get_ticker_sector(sym)
+        if needs_fetch:
+            fetched += 1
         if sector:
             sector_map.setdefault(sector, []).append(sym)
         if (i + 1) % 25 == 0:
-            print(f"  Sector lookup progress: {i + 1}/{len(symbols)}")
+            print(f"  Sector lookup progress: {i + 1}/{len(symbols)} ({fetched} fetched, {i + 1 - fetched} cached)")
     return sector_map
 
 
@@ -737,19 +900,42 @@ def seed_strategy(strategy):
 
     for etf in etfs:
         try:
-            # Use download cache to avoid redundant downloads across runs
-            cache_dl_key = (etf, str(start_date.date()), str(end_date.date()))
+            start_str = str(start_date.date())
+            end_str   = str(end_date.date())
+            cache_dl_key = (etf, start_str, end_str)
+
             if cache_dl_key in _DOWNLOAD_CACHE:
+                # In-process memory cache (fastest path)
                 df = _DOWNLOAD_CACHE[cache_dl_key]
             else:
-                df = yf.download(etf, start=start_date, end=end_date,
-                                 interval='1d', progress=False)
-                if df.empty or len(df) < 100:
-                    continue
+                # Disk cache: shared across all worker subprocesses
+                df = _load_from_disk(etf, start_str, end_str)
+                if df is None:
+                    # Cache miss - actually download from yfinance (with retry)
+                    df = None
+                    for attempt in range(_RETRY_ATTEMPTS):
+                        try:
+                            df = yf.Ticker(etf).history(start=start_date, end=end_date, interval='1d')
+                            break
+                        except Exception as e:
+                            if attempt < _RETRY_ATTEMPTS - 1:
+                                delay = _RETRY_DELAY_SECONDS * (2 ** attempt)
+                                print(f"CROSS-SYMBOL: {etf} download failed (attempt {attempt + 1}/{_RETRY_ATTEMPTS}): {e} — retrying in {delay}s")
+                                time.sleep(delay)
+                            else:
+                                print(f"CROSS-SYMBOL: {etf} download failed after {_RETRY_ATTEMPTS} attempts: {e} (skipping)")
+                    if df is None or df.empty or len(df) < 100:
+                        print(f"CROSS-SYMBOL: {etf} returned {len(df) if df is not None else 0} bars (skipping)")
+                        continue
 
-                df.index = df.index.tz_localize(None)
-                df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
-                df.columns = ['open', 'high', 'low', 'close', 'volume']
+                    if df.index.tz is not None:
+                        df.index = df.index.tz_localize(None)
+                    df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+                    df.columns = ['open', 'high', 'low', 'close', 'volume']
+
+                    # Persist to disk so other worker processes skip the download
+                    _save_to_disk(etf, start_str, end_str, df)
+
                 _DOWNLOAD_CACHE[cache_dl_key] = df
 
             if len(df) < 100:
@@ -784,8 +970,7 @@ def seed_strategy(strategy):
             all_regimes.append(regimes[valid_indices])
 
         except Exception as e:
-            if hasattr(strategy.p, 'verbose') and strategy.p.verbose:
-                print(f"CROSS-SYMBOL: Failed to process {etf}: {e}")
+            print(f"CROSS-SYMBOL: Failed to process {etf}: {e}")
             continue
 
     if not all_labels:

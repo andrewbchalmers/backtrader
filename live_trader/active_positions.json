@@ -4,33 +4,33 @@
     "entry_date": "2025-12-11T00:00:00",
     "stop_loss": 84.49700012207032,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-10"
+    "exit_alerted_date": "2026-02-19"
   },
   "OKE": {
     "entry_price": 76.54,
     "entry_date": "2026-01-22T12:06:08.430624",
-    "stop_loss": 72.71300000000001
+    "stop_loss": 72.71300000000001,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-18"
   },
   "AMD": {
     "entry_price": 254.9,
     "entry_date": "2026-01-22T12:49:39.647545",
     "stop_loss": 242.155,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "exit_alerted_date": "2026-02-19"
   },
   "AAPL": {
     "entry_price": 276.9,
     "entry_date": "2026-02-04T10:44:02.846726",
     "stop_loss": 263.05499999999995,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "exit_alerted_date": "2026-02-19"
   },
   "NOC": {
     "entry_price": 693.06,
     "entry_date": "2026-02-05T14:46:05.031350",
-    "stop_loss": 658.4069999999999,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "stop_loss": 658.4069999999999
   },
   "PHM": {
     "entry_price": 134.11,
@@ -50,9 +50,7 @@
   "AOS": {
     "entry_price": 79.18,
     "entry_date": "2026-02-06T11:13:25.352811",
-    "stop_loss": 75.221,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "stop_loss": 75.221
   },
   "CTRA": {
     "entry_price": 30.67,
@@ -67,7 +65,9 @@
   "HUBB": {
     "entry_price": 497.61,
     "entry_date": "2026-02-06T13:38:56.944588",
-    "stop_loss": 472.7295
+    "stop_loss": 472.7295,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-19"
   },
   "AME": {
     "entry_price": 231.54,
@@ -82,9 +82,7 @@
   "LHX": {
     "entry_price": 350.34,
     "entry_date": "2026-02-09T15:08:32.094952",
-    "stop_loss": 332.823,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-10"
+    "stop_loss": 332.823
   },
   "MMM": {
     "entry_price": 169.59,
@@ -114,21 +112,19 @@
   "ALGN": {
     "entry_price": 195.97,
     "entry_date": "2026-02-11T10:59:11.046818",
-    "stop_loss": 186.17149999999998,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "stop_loss": 186.17149999999998
   },
   "APTV": {
     "entry_price": 85.42,
     "entry_date": "2026-02-11T11:15:36.357434",
-    "stop_loss": 81.149
+    "stop_loss": 81.149,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-19"
   },
   "CPAY": {
     "entry_price": 349.76,
     "entry_date": "2026-02-11T13:29:29.114385",
-    "stop_loss": 332.272,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
+    "stop_loss": 332.272
   },
   "CL": {
     "entry_price": 95.44,
@@ -138,9 +134,7 @@
   "ABT": {
     "entry_price": 111.99,
     "entry_date": "2026-02-12T10:57:25.812377",
-    "stop_loss": 106.39049999999999,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-06"
+    "stop_loss": 106.39049999999999
   },
   "AZO": {
     "entry_price": 3801.5,
@@ -157,20 +151,6 @@
     "entry_date": "2026-02-12T13:43:14.840189",
     "stop_loss": 71.3545
   },
-  "GRMN": {
-    "entry_price": 202.85,
-    "entry_date": "2026-02-12T15:00:43.204755",
-    "stop_loss": 192.70749999999998,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-13"
-  },
-  "HWM": {
-    "entry_price": 246.96,
-    "entry_date": "2026-02-12T15:28:28.044423",
-    "stop_loss": 234.612,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-11"
-  },
   "IZV": {
     "entry_price": 26.23,
     "entry_date": "2026-02-12T15:40:51.288785",
@@ -184,8 +164,26 @@
   "RTX": {
     "entry_price": 199.42,
     "entry_date": "2026-02-13T15:12:56.287094",
-    "stop_loss": 189.44899999999998,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-09"
+    "stop_loss": 189.44899999999998
+  },
+  "CME": {
+    "entry_price": 302.63,
+    "entry_date": "2026-02-17T12:06:59.702696",
+    "stop_loss": 287.4985
+  },
+  "CTAS": {
+    "entry_price": 195.38,
+    "entry_date": "2026-02-17T12:22:41.185166",
+    "stop_loss": 185.611
+  },
+  "LEN": {
+    "entry_price": 121.54,
+    "entry_date": "2026-02-17T16:02:11.756069",
+    "stop_loss": 115.463
+  },
+  "COR": {
+    "entry_price": 362.47,
+    "entry_date": "2026-02-19T15:29:26.916208",
+    "stop_loss": 344.3465
   }
 }

@@ -1151,6 +1151,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('trend_following_labels', False),  # False=mean-reversion labels, True=trend-following labels
         ('allow_reentry', True),         # True=enter anytime signal favorable, False=only on signal flip
         ('min_prediction_strength', 20),  # Minimum |prediction| to generate signal (normalized scale: 0-100)
+        ('min_raw_prediction', 0.0),      # Minimum expected return in ATR units (0=disabled). Requires neighbors
+                                          # to collectively predict at least N * ATR of price movement.
         ('prediction_norm_window', 200),  # Rolling window for percentile rank normalization
 
         # === Label Settings ===
@@ -1273,15 +1275,24 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # === Kernel Exit Settings ===
         ('use_kernel_exit', True),       # Enable kernel line exit (price crosses below kernel)
 
-        # === ATR Trailing Stop Exit Settings ===
-        ('use_trailing_atr_exit', False),    # Enable ATR-based trailing stop exit
-        ('trailing_atr_mult', 2.5),          # ATR multiplier for stop distance from peak
-        ('trailing_atr_warmup', 3),          # Bars in trade before trailing stop activates
+        # === Chandelier Exit (ATR Trailing Stop) ===
+        ('use_trailing_atr_exit', False),           # Enable chandelier ATR trailing stop
+        ('trailing_atr_warmup', 3),                 # Bars in trade before stop activates
+        ('chandelier_start_mult', 3.0),             # Starting (wide) ATR multiplier — stop set from peak HIGH
+        ('chandelier_end_mult', 1.5),               # Ending (tight) ATR multiplier — tightens over time/profit
+        ('chandelier_tighten_bars', 20),            # Bars over which to tighten (time mode)
+        ('chandelier_mult_mode', 'blend'),          # 'time', 'profit', or 'blend' (min of both)
+        ('chandelier_profit_atr_threshold', 1.0),   # ATR multiples of profit to fully tighten (profit mode)
+        ('chandelier_breakeven_atr', 0.0),          # Lock stop at entry price once profit >= N * ATR (0 = off)
 
         # === Loss Penalty (ML bearish feedback after losing trades) ===
         ('use_loss_penalty', True),        # Enable loss penalty on predictions
         ('loss_penalty_amount', 0),        # Penalty per loss (0 = auto: neighbors_count/2)
         ('loss_penalty_decay', 0.90),      # Decay rate per bar (0.90 = ~10 bars to halve)
+
+        # === Prediction Validation Exit ===
+        ('use_prediction_exit', False),       # Force-exit if ML wrong after label_lookahead bars
+        ('prediction_exit_threshold', -0.5),  # Exit if P&L% below this at validation bar
 
         # === Risk Management ===
         ('position_size_pct', Decimal('0.95')),
@@ -1329,9 +1340,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('min_quality_score', 0),                   # Minimum quality score (0 = disabled)
         ('min_momentum_score', 0),                  # Minimum momentum score (0 = disabled)
 
-        # Earnings Improvement Filter (mini-composite: EPS YoY + Revenue YoY + Margin)
-        ('require_earnings_improving', False),       # Block trades when earnings deteriorating QoQ
-        ('min_earnings_improvement', 50),            # Minimum improvement score (0-100, 50=neutral)
+        # Post-Earnings Reaction Filter
+        ('use_earnings_reaction', False),            # Use price reaction after earnings as sentiment filter
+        ('earnings_reaction_days', 5),               # Trading days after earnings to measure reaction
+        ('min_earnings_reaction_pct', -3.0),         # Min % change to allow trades (below = blocked)
 
         # Fundamental data symbol override (empty = auto-detect from data feed)
         ('fundamental_symbol', ''),
@@ -1523,6 +1535,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self.bars_held = 0
         self.entry_bar = 0
         self.entry_price = 0
+        self._exit_reason = None
         self.prediction = 0
         self.raw_prediction = 0.0
 
@@ -1530,6 +1543,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self._highest_since_entry = 0.0
         self._lowest_since_entry = 0.0
         self._trailing_stop_level = 0.0
+        self._trailing_entry_price = 0.0
 
         # Rolling prediction normalization (percentile rank -> [-100, +100])
         self.raw_prediction_history = deque(maxlen=self.p.prediction_norm_window)
@@ -1600,7 +1614,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self._cached_quality_score = None
         self._cached_momentum_score = None
         self._cached_confidence = None
-        self._cached_earnings_improvement = None
+        self._cached_earnings_reaction = None
 
         if not self.p.use_fundamental_filter:
             return
@@ -1623,7 +1637,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.fundamental_provider = FundamentalCache.get_provider(
                 symbol,
                 lookback_years=5,
-                verbose=self.p.verbose
+                verbose=False
             )
 
             if self.p.verbose:
@@ -1663,7 +1677,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
             price=current_price
         )
         self._cached_confidence = self.fundamental_provider.get_confidence_multiplier(current_date)
-        self._cached_earnings_improvement = self.fundamental_provider.get_earnings_improvement(current_date)
+        self._cached_earnings_reaction = self.fundamental_provider.get_earnings_reaction(
+            current_date, self.p.earnings_reaction_days)
 
         return (self._cached_trending_prob, self._cached_quality_score,
                 self._cached_momentum_score, self._cached_confidence)
@@ -1998,11 +2013,17 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.p.use_fundamental_filter and self.fundamental_provider is not None:
             current_date = self.data.datetime.date(0)
 
-            # Check earnings blackout
+            # Check earnings blackout (in window today, or approaching within blackout_before days)
             if self._check_earnings_blackout(current_date):
                 if self.p.verbose:
                     print(f"FILTER BLOCKED: Earnings blackout on {current_date}")
                 return False
+            if self.p.close_before_earnings:
+                days_until = self.fundamental_provider.days_until_earnings(current_date)
+                if days_until is not None and 0 < days_until <= self.p.earnings_blackout_before + 1:
+                    if self.p.verbose:
+                        print(f"FILTER BLOCKED: Earnings in {days_until} days on {current_date}")
+                    return False
 
             # Check combined score threshold
             trending_prob, quality, momentum, _ = self._get_fundamental_scores(current_date)
@@ -2025,12 +2046,12 @@ class LorentzianClassificationStrategy(bt.Strategy):
                         print(f"FILTER BLOCKED: Momentum score {momentum:.1f} < {self.p.min_momentum_score}")
                     return False
 
-            # Earnings improvement filter (mini-composite: EPS YoY + Revenue YoY + Margin)
-            if self.p.require_earnings_improving:
-                ei = self._cached_earnings_improvement
-                if ei is not None and ei < self.p.min_earnings_improvement:
+            # Post-earnings reaction filter
+            if self.p.use_earnings_reaction:
+                reaction = self._cached_earnings_reaction
+                if reaction is not None and reaction < self.p.min_earnings_reaction_pct:
                     if self.p.verbose:
-                        print(f"FILTER BLOCKED: Earnings improvement {ei:.1f} < {self.p.min_earnings_improvement}")
+                        print(f"FILTER BLOCKED: Earnings reaction {reaction:.1f}% < {self.p.min_earnings_reaction_pct}%")
                     return False
 
         return True
@@ -2103,19 +2124,19 @@ class LorentzianClassificationStrategy(bt.Strategy):
         """Update trading signal based on ML prediction and filters."""
         old_signal = self.signal
 
-        # Check if prediction meets minimum strength requirement
+        # Check normalized prediction strength (relative: percentile rank 0-100)
         min_strength = self.p.min_prediction_strength
         prediction_strong_enough = abs(self.prediction) >= min_strength
 
-        if self.prediction > 0 and prediction_strong_enough and self._check_filters():
+        # Check raw prediction (absolute: expected return in ATR units)
+        min_raw = self.p.min_raw_prediction
+        raw_strong_enough = abs(self.raw_prediction) >= min_raw if min_raw > 0 else True
+
+        if self.prediction > 0 and prediction_strong_enough and raw_strong_enough and self._check_filters():
             self.signal = 1  # Long
-        elif self.prediction < 0 and prediction_strong_enough and self._check_filters():
+        elif self.prediction < 0 and prediction_strong_enough and raw_strong_enough and self._check_filters():
             self.signal = -1  # Short
-        elif not prediction_strong_enough:
-            # Weak prediction - go neutral (exit existing positions on next check)
-            self.signal = 0
         else:
-            # Strong prediction but filters blocked - go neutral to prevent stale signals
             self.signal = 0
 
         # Track signal changes
@@ -2415,15 +2436,15 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self._update_and_check_trailing_stop():
             return
 
-        # Exit long on bearish signal flip
-        if self.position.size > 0 and signal_changed and self.signal == -1:
-            self._close_position("SIGNAL FLIP TO BEARISH")
-            return
-
-        # Exit short on bullish signal flip
-        if self.position.size < 0 and signal_changed and self.signal == 1:
-            self._close_position("SIGNAL FLIP TO BULLISH")
-            return
+        # Prediction validation exit — force-exit if ML was wrong after label_lookahead bars
+        if self.p.use_prediction_exit and bars_since_entry == self.p.label_lookahead:
+            if self.position.size > 0:
+                pnl_pct = ((self.data.close[0] / self.entry_price) - 1) * 100
+            else:
+                pnl_pct = ((self.entry_price / self.data.close[0]) - 1) * 100
+            if pnl_pct < self.p.prediction_exit_threshold:
+                self._close_position(f"ML PREDICTION WRONG ({pnl_pct:.2f}%)")
+                return
 
         # RSI threshold exit
         if self.p.use_rsi_exit:
@@ -2462,16 +2483,47 @@ class LorentzianClassificationStrategy(bt.Strategy):
             if current_pnl_pct <= -stop:
                 self._close_position("STOP LOSS HIT")
 
+    def _compute_dynamic_multiplier(self, bars_in_trade, atr_val):
+        """Compute dynamic Chandelier Exit multiplier based on time and/or profit."""
+        start = self.p.chandelier_start_mult
+        end = self.p.chandelier_end_mult
+        mode = self.p.chandelier_mult_mode
+
+        # Time factor: linear interpolation over tighten_bars
+        time_frac = min(1.0, bars_in_trade / max(1, self.p.chandelier_tighten_bars))
+        time_mult = start + (end - start) * time_frac
+
+        # Profit factor: tighten based on unrealized profit in ATR units
+        if self.position.size > 0:
+            unrealized_profit = self.data.close[0] - self._trailing_entry_price
+        else:
+            unrealized_profit = self._trailing_entry_price - self.data.close[0]
+
+        if unrealized_profit > 0 and atr_val > 0:
+            profit_atr = unrealized_profit / atr_val
+            profit_frac = min(1.0, profit_atr / max(0.01, self.p.chandelier_profit_atr_threshold))
+        else:
+            profit_frac = 0.0
+        profit_mult = start + (end - start) * profit_frac
+
+        # Mode selection
+        if mode == 'time':
+            return time_mult
+        elif mode == 'profit':
+            return profit_mult
+        else:  # 'blend' — use the tighter of the two
+            return min(time_mult, profit_mult)
+
     def _update_and_check_trailing_stop(self):
         """
-        Update ATR trailing stop level and check for exit.
+        Chandelier Exit: ATR trailing stop from highest HIGH (longs) or lowest LOW (shorts).
 
-        For longs: tracks highest close, stop = highest - mult * ATR.
-        For shorts: tracks lowest close, stop = lowest + mult * ATR.
-        The stop level only ratchets in the favorable direction.
+        The multiplier tightens dynamically from chandelier_start_mult to chandelier_end_mult
+        over time and/or as profit grows. If chandelier_breakeven_atr is set, the stop
+        is floored at entry price once unrealized profit reaches that many ATR multiples.
 
         Returns:
-            bool: True if trailing stop was triggered and position closed.
+            bool: True if stop was triggered and position closed.
         """
         if not self.p.use_trailing_atr_exit:
             return False
@@ -2481,44 +2533,55 @@ class LorentzianClassificationStrategy(bt.Strategy):
             return False
 
         bars_in_trade = len(self) - self.entry_bar
+        mult = self._compute_dynamic_multiplier(bars_in_trade, atr_val)
 
         if self.position.size > 0:
-            # Long: track highest close, ratchet stop upward
-            if self.data.close[0] > self._highest_since_entry:
-                self._highest_since_entry = self.data.close[0]
+            # Long: track highest HIGH (classic Chandelier), ratchet stop upward
+            if self.data.high[0] > self._highest_since_entry:
+                self._highest_since_entry = self.data.high[0]
 
-            new_stop = self._highest_since_entry - (self.p.trailing_atr_mult * atr_val)
+            new_stop = self._highest_since_entry - (mult * atr_val)
+
+            # Break-even floor: once profit >= N * ATR, stop can't go below entry
+            if self.p.chandelier_breakeven_atr > 0:
+                if (self.data.close[0] - self.entry_price) >= self.p.chandelier_breakeven_atr * atr_val:
+                    new_stop = max(new_stop, self.entry_price)
+
             if new_stop > self._trailing_stop_level:
                 self._trailing_stop_level = new_stop
 
-            # Check exit (only after warmup period)
             if bars_in_trade >= self.p.trailing_atr_warmup:
                 if self.data.close[0] < self._trailing_stop_level:
                     self.signal = -1
                     self._close_position(
-                        f"ATR TRAILING STOP ({self.data.close[0]:.2f} < "
+                        f"CHANDELIER STOP ({self.data.close[0]:.2f} < "
                         f"{self._trailing_stop_level:.2f}, "
-                        f"peak={self._highest_since_entry:.2f})"
+                        f"peak={self._highest_since_entry:.2f}, mult={mult:.2f}x)"
                     )
                     return True
 
         elif self.position.size < 0:
-            # Short: track lowest close, ratchet stop downward
-            if self.data.close[0] < self._lowest_since_entry:
-                self._lowest_since_entry = self.data.close[0]
+            # Short: track lowest LOW, ratchet stop downward
+            if self.data.low[0] < self._lowest_since_entry:
+                self._lowest_since_entry = self.data.low[0]
 
-            new_stop = self._lowest_since_entry + (self.p.trailing_atr_mult * atr_val)
+            new_stop = self._lowest_since_entry + (mult * atr_val)
+
+            # Break-even floor: once profit >= N * ATR, stop can't go above entry
+            if self.p.chandelier_breakeven_atr > 0:
+                if (self.entry_price - self.data.close[0]) >= self.p.chandelier_breakeven_atr * atr_val:
+                    new_stop = min(new_stop, self.entry_price)
+
             if new_stop < self._trailing_stop_level:
                 self._trailing_stop_level = new_stop
 
-            # Check exit (only after warmup period)
             if bars_in_trade >= self.p.trailing_atr_warmup:
                 if self.data.close[0] > self._trailing_stop_level:
                     self.signal = 1
                     self._close_position(
-                        f"ATR TRAILING STOP ({self.data.close[0]:.2f} > "
+                        f"CHANDELIER STOP ({self.data.close[0]:.2f} > "
                         f"{self._trailing_stop_level:.2f}, "
-                        f"trough={self._lowest_since_entry:.2f})"
+                        f"trough={self._lowest_since_entry:.2f}, mult={mult:.2f}x)"
                     )
                     return True
 
@@ -2596,9 +2659,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.entry_prediction = abs(self.raw_prediction)
             self.entry_norm_prediction = abs(self.prediction)
 
-            # Initialize trailing stop tracking
-            self._highest_since_entry = self.data.close[0]
-            self._trailing_stop_level = self.data.close[0] - (self.p.trailing_atr_mult * self.label_atr[0])
+            # Initialize chandelier trailing stop (track HIGH from entry bar)
+            self._highest_since_entry = self.data.high[0]
+            self._trailing_entry_price = self.data.close[0]
+            self._trailing_stop_level = self.data.close[0] - (self.p.chandelier_start_mult * self.label_atr[0])
 
             # Track regime at entry
             if self.p.use_regime_filter:
@@ -2635,9 +2699,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.entry_prediction = abs(self.raw_prediction)
             self.entry_norm_prediction = abs(self.prediction)
 
-            # Initialize trailing stop tracking
-            self._lowest_since_entry = self.data.close[0]
-            self._trailing_stop_level = self.data.close[0] + (self.p.trailing_atr_mult * self.label_atr[0])
+            # Initialize chandelier trailing stop (track LOW from entry bar)
+            self._lowest_since_entry = self.data.low[0]
+            self._trailing_entry_price = self.data.close[0]
+            self._trailing_stop_level = self.data.close[0] + (self.p.chandelier_start_mult * self.label_atr[0])
 
             # Track regime at entry
             if self.p.use_regime_filter:
@@ -2662,6 +2727,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
 
     def _close_position(self, reason):
         """Close current position (long or short)."""
+        self._exit_reason = reason
         if self.position.size > 0:
             # Close long position
             pnl = (self.data.close[0] - self.entry_price) * self.position.size
@@ -2743,8 +2809,10 @@ class LorentzianClassificationStrategy(bt.Strategy):
             if self.p.verbose:
                 print(f"FINAL BAR - Closing position at ${self.data.close[0]:.2f}")
             if self.position.size > 0:
+                self._exit_reason = "FINAL BAR"
                 self.order = self.sell(size=self.position.size)
             elif self.position.size < 0:
+                self._exit_reason = "FINAL BAR"
                 self.order = self.buy(size=abs(self.position.size))
 
     def notify_order(self, order):
@@ -2758,9 +2826,11 @@ class LorentzianClassificationStrategy(bt.Strategy):
                       f"size={order.executed.size}, "
                       f"price=${order.executed.price:.2f}")
             elif self.p.verbose and order.issell():
+                reason_str = f" [{self._exit_reason}]" if self._exit_reason else ""
                 print(f"SELL Executed: {self.data.datetime.date(0)}, "
                       f"size={order.executed.size}, "
-                      f"price=${order.executed.price:.2f}")
+                      f"price=${order.executed.price:.2f}{reason_str}")
+                self._exit_reason = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             if self.p.verbose:

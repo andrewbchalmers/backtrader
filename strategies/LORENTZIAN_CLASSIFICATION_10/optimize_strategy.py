@@ -56,9 +56,9 @@ CONFIG = {
     'results_file': 'walkforward_optimization_results.csv',
 
     # Walk-Forward Settings
-    'train_period_months': 5,      # Optimize on 18 months
-    'test_period_months': 5,        # Validate on next 6 months
-    'step_months': 5,               # Roll forward 6 months each iteration
+    'train_period_months': 6,      # Optimize on 18 months
+    'test_period_months': 12,        # Validate on next 6 months
+    'step_months': 6,               # Roll forward 6 months each iteration
     'total_periods': 3,             # Number of train/test cycles
 
     # Date range control (optional - leave None for automatic)
@@ -78,14 +78,39 @@ CONFIG = {
     'print_progress_every': 50,
     'max_workers': None,  # None = use all CPU cores
 
-    # Portfolio simulation settings
-    'portfolio_capital': 100_000,
-    'max_positions': 30,
+    # Portfolio simulation settings (list values for optimization, same pattern as param_grid)
+    'portfolio_config': {
+        'portfolio_capital': [100_000],
+        'max_positions': [10, 20],    # Lower = better utilization; 10 mirrors backtest_multi.py
+        'kelly_fraction': [0.0],      # 0.0=equal weight (more stable with short IS periods)
+        'use_position_replacement': [True],    # Replace worst positions when better candidates appear
+        'replacement_threshold': [0.7],       # Min score advantage to trigger replacement (higher=fewer swaps)
+        'replacement_cooldown_days': [10],     # Min days before position eligible for replacement
+        'replacement_max_per_day': [2],        # Max replacements per calendar day
+        'prediction_validation_bars': [8],     # Force-exit if ML wrong after N bars (0=off, matches label_lookahead)
+        'prediction_validation_threshold': [-0.5],  # Force-exit if P&L% below this after validation bars
+        # Entry mode: 'confirmation'=wait for up day (validates mean-reversion bounce),
+        # 'dip'=wait for down day (validates momentum pullback), 'market'=immediate,
+        # 'dip_or_confirmation'=fill on either condition
+        'entry_mode': ['market'],
+        'entry_limit_window': [1],             # Bars to wait for limit fill (ignored for 'market')
+        'entry_dip_threshold': [-0.5],         # Daily return % to qualify as dip fill
+        'entry_confirmation_threshold': [0.3], # Daily return % to qualify as confirmation fill
+        'portfolio_debug': [False],   # Set True to enable detailed trade logging
+    },
 
     # Ranking metric: 'composite_score' for trading performance, 'ml_accuracy' for ML prediction accuracy
     # Use 'ml_accuracy' when optimizing ML parameters (features, labels, neighbors) to avoid overfitting
     # to specific price movements. Trading filters/exits should use 'composite_score'.
     'ranking_metric': 'composite_score',
+
+    # Stock Qualification Filter (uses IS per-stock metrics to filter OOS stocks)
+    'use_stock_qualification': True,
+    'stock_qual_min_profit_factor': 0.0,   # Min profit factor per stock in training
+    'stock_qual_min_win_rate': 0.0,       # Min win rate % per stock in training
+    'stock_qual_min_trades': 0,            # Min trades per stock in training (avoid flukes)
+    'stock_qual_min_return_pct': 0.0,      # Min return % per stock in training
+    'stock_qual_min_ml_bullish_accuracy': 50.0,  # Min ML bullish prediction accuracy % (long-only relevant)
 
     # Quality filters - RELAXED for walk-forward (short periods, will average out)
     'quality_filters': {
@@ -104,15 +129,16 @@ CONFIG = {
     'param_grid': {
         # ==================== ML SETTINGS ====================
         'neighbors_count': [9],
-        'max_bars_back': [7000],            # Keep fixed - needs lots of history
+        'max_bars_back': [8000],            # Keep fixed - needs lots of history
         'feature_count': [10],
         'trend_following_labels': [False],  # False=mean-reversion, True=trend-following
         'allow_reentry': [True],            # True=enter anytime signal favorable
-        'min_prediction_strength': [20],   # Normalized scale: 0-100
+        'min_prediction_strength': [60],   # Normalized scale: 0-100
+        'min_raw_prediction': [0.0],       # Min expected return in ATR units (0=disabled)
 
         # ==================== LABEL SETTINGS ====================
         # Defines what "correct" means for ML — most impactful for accuracy
-        'label_lookahead': [4],       # Bars to look forward: shorter=reactive, longer=trend
+        'label_lookahead': [8],       # Bars to look forward: shorter=reactive, longer=trend
         'label_dead_zone': [0.1],  # Min ATR move for label: lower=more labels, higher=cleaner
         'use_magnitude_labels': [True],
 
@@ -212,7 +238,7 @@ CONFIG = {
 
         # ==================== SPY MARKET REGIME FILTER ====================
         'use_spy_filter': [True],
-        'spy_regime_threshold': [Decimal('0')],  # 0=block bearish
+        'spy_regime_threshold': [Decimal('1')],  # 0=block bearish
         'spy_regime_period': ['weekly'],
 
         # ==================== KERNEL SETTINGS ====================
@@ -228,7 +254,7 @@ CONFIG = {
         'bars_to_hold': [100000],
 
         # ==================== RSI EXIT SETTINGS ====================
-        'use_rsi_exit': [True],            # Enable RSI threshold exits
+        'use_rsi_exit': [False],            # Enable RSI threshold exits
         'rsi_exit_period': [14],            # RSI period for exit signals
         'rsi_overbought': [70],             # Exit longs when RSI crosses above
         'rsi_oversold': [30],               # Exit shorts when RSI crosses below
@@ -236,15 +262,20 @@ CONFIG = {
         # ==================== KERNEL EXIT SETTINGS ====================
         'use_kernel_exit': [False],         # Enable kernel line exit
 
-        # ==================== ATR TRAILING STOP EXIT SETTINGS ====================
+        # ==================== CHANDELIER EXIT (ATR TRAILING STOP) ====================
         'use_trailing_atr_exit': [True],
-        'trailing_atr_mult': [2.0],
         'trailing_atr_warmup': [3],
+        'chandelier_start_mult': [3.0],
+        'chandelier_end_mult': [1.5],
+        'chandelier_tighten_bars': [20],
+        'chandelier_mult_mode': ['blend'], # options: 'time', 'profit', 'blend'
+        'chandelier_profit_atr_threshold': [1.0],
+        'chandelier_breakeven_atr': [1.0],
 
         # ==================== RISK MANAGEMENT ====================
         'position_size_pct': [Decimal('0.95')],
-        'stop_loss_pct': [Decimal('0.05')],
-        'use_stop_loss': [True],
+        'stop_loss_pct': [Decimal('0.08')],
+        'use_stop_loss': [False],
         'long_only': [True],
 
         # ==================== OTHER ====================
@@ -273,8 +304,9 @@ CONFIG = {
         'min_trending_probability': [20],
         'min_quality_score': [20],
         'min_momentum_score': [20],
-        'require_earnings_improving': [True],
-        'min_earnings_improvement': [50],
+        'use_earnings_reaction': [True],
+        'earnings_reaction_days': [5],
+        'min_earnings_reaction_pct': [-5.0],
     }
 }
 
@@ -445,34 +477,98 @@ def load_symbol_data(symbol, start_date, end_date, lookback_bars=0):
         return None, 0
 
 
+def _bulk_download(symbols, start, end):
+    """Download data for many symbols in one yfinance call, return dict of {symbol: df}."""
+    try:
+        raw = yf.download(symbols, start=start, end=end, progress=False,
+                          group_by='ticker', threads=True)
+        if raw.empty:
+            return {}
+        result = {}
+        for symbol in symbols:
+            try:
+                if len(symbols) == 1:
+                    df = raw.copy()
+                else:
+                    df = raw[symbol].copy()
+                df = df.dropna(subset=['Close'])
+                if df.empty:
+                    continue
+                df.index = df.index.tz_localize(None)
+                df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+                df.columns = ['open', 'high', 'low', 'close', 'volume']
+                result[symbol] = df
+            except Exception:
+                continue
+        return result
+    except Exception:
+        return {}
+
+
 def load_all_periods_data(symbols, periods, lookback_bars=600):
-    """Load data for all symbols across all periods, with ML lookback warmup."""
+    """Load data for all symbols across all periods, with ML lookback warmup.
+
+    Uses bulk yfinance downloads (one call per period) for much faster I/O.
+    """
     data_cache = {}
 
     print(f"\n📥 Downloading data for {len(symbols)} stocks across {len(periods)} periods...")
     print(f"   ML lookback: {lookback_bars} bars before each period for training data warmup")
 
-    total_downloads = len(symbols) * len(periods)
-    download_count = 0
+    lookback_calendar_days = int(lookback_bars * 1.5) + 10
 
-    for symbol in symbols:
-        data_cache[symbol] = {}
+    for period_idx, (train_start, train_end, test_start, test_end) in enumerate(periods):
+        # Compute the widest date range needed for this period (train lookback to test end)
+        bulk_start = pd.to_datetime(train_start) - timedelta(days=lookback_calendar_days)
+        bulk_end = pd.to_datetime(test_end) + timedelta(days=5)
 
-        for period_idx, (train_start, train_end, test_start, test_end) in enumerate(periods):
-            train_df, train_tsi = load_symbol_data(symbol, train_start, train_end, lookback_bars)
-            test_df, test_tsi = load_symbol_data(symbol, test_start, test_end, lookback_bars)
+        print(f"   Period {period_idx + 1}/{len(periods)}: bulk download "
+              f"{bulk_start.strftime('%Y-%m-%d')} to {bulk_end.strftime('%Y-%m-%d')} "
+              f"({len(symbols)} symbols)...", end=' ', flush=True)
 
-            if train_df is not None and test_df is not None:
-                data_cache[symbol][period_idx] = {
-                    'train': train_df,
-                    'train_test_start_idx': train_tsi,
-                    'test': test_df,
-                    'test_test_start_idx': test_tsi,
-                }
+        bulk_data = _bulk_download(symbols, bulk_start, bulk_end)
+        print(f"got {len(bulk_data)} symbols")
 
-            download_count += 1
-            if download_count % 50 == 0:
-                print(f"   Progress: {download_count}/{total_downloads} ({download_count/total_downloads*100:.0f}%)")
+        for symbol in symbols:
+            if symbol not in data_cache:
+                data_cache[symbol] = {}
+
+            full_df = bulk_data.get(symbol)
+            if full_df is None or full_df.empty:
+                continue
+
+            # Slice train period (with lookback)
+            train_start_dt = pd.to_datetime(train_start)
+            train_end_dt = pd.to_datetime(train_end)
+            train_lookback_start = train_start_dt - timedelta(days=lookback_calendar_days)
+            train_df = full_df[(full_df.index >= train_lookback_start) & (full_df.index <= train_end_dt)].copy()
+
+            # Slice test period (with lookback)
+            test_start_dt = pd.to_datetime(test_start)
+            test_end_dt = pd.to_datetime(test_end)
+            test_lookback_start = test_start_dt - timedelta(days=lookback_calendar_days)
+            test_df = full_df[(full_df.index >= test_lookback_start) & (full_df.index <= test_end_dt)].copy()
+
+            # Find period start indices
+            train_mask = train_df.index >= train_start_dt
+            test_mask = test_df.index >= test_start_dt
+
+            if not train_mask.any() or not test_mask.any():
+                continue
+
+            train_tsi = int(train_mask.argmax())
+            test_tsi = int(test_mask.argmax())
+
+            # Need enough bars in actual period
+            if (len(train_df) - train_tsi) < 50 or (len(test_df) - test_tsi) < 50:
+                continue
+
+            data_cache[symbol][period_idx] = {
+                'train': train_df,
+                'train_test_start_idx': train_tsi,
+                'test': test_df,
+                'test_test_start_idx': test_tsi,
+            }
 
     valid_symbols = [s for s in symbols if len(data_cache.get(s, {})) >= len(periods) * 0.7]
 
@@ -508,6 +604,7 @@ def backtest_single_config(symbol, params, df, initial_cash, commission, capture
 
         cerebro.broker.setcash(initial_cash)
         cerebro.broker.setcommission(commission=commission)
+        cerebro.broker.set_coc(True)  # Fill signals at bar close (consistent with backtest_multi.py)
 
         cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe",
                             timeframe=bt.TimeFrame.Days, riskfreerate=0.0)
@@ -562,6 +659,7 @@ def backtest_single_config(symbol, params, df, initial_cash, commission, capture
             ml_bullish_accuracy = ml_bearish_accuracy = 0
 
         result = {
+            'symbol': symbol,
             'return_pct': return_pct,
             'sharpe': sharpe.get('sharperatio', 0) or 0,
             'calmar': calmar_ratio,
@@ -763,7 +861,7 @@ def aggregate_results(stock_results, params):
 PARAM_NAMES = [
     # ML Settings
     'neighbors_count', 'max_bars_back', 'feature_count',
-    'trend_following_labels', 'allow_reentry', 'min_prediction_strength',
+    'trend_following_labels', 'allow_reentry', 'min_prediction_strength', 'min_raw_prediction',
     # Label Settings
     'label_lookahead', 'label_dead_zone', 'use_magnitude_labels',
     # Features
@@ -797,8 +895,11 @@ PARAM_NAMES = [
     'use_rsi_exit', 'rsi_exit_period', 'rsi_overbought', 'rsi_oversold',
     # Kernel Exit Settings
     'use_kernel_exit',
-    # ATR Trailing Stop Exit Settings
-    'use_trailing_atr_exit', 'trailing_atr_mult', 'trailing_atr_warmup',
+    # Chandelier Exit (ATR Trailing Stop)
+    'use_trailing_atr_exit', 'trailing_atr_warmup',
+    'chandelier_start_mult', 'chandelier_end_mult',
+    'chandelier_tighten_bars', 'chandelier_mult_mode',
+    'chandelier_profit_atr_threshold', 'chandelier_breakeven_atr',
     # Risk Management
     'position_size_pct', 'stop_loss_pct', 'use_stop_loss', 'long_only',
     # Other
@@ -814,7 +915,7 @@ PARAM_NAMES = [
     'close_before_earnings', 'min_trending_probability',
     'full_position_threshold', 'reduced_position_pct',
     'min_quality_score', 'min_momentum_score',
-    'require_earnings_improving', 'min_earnings_improvement',
+    'use_earnings_reaction', 'earnings_reaction_days', 'min_earnings_reaction_pct',
 ]
 
 
@@ -915,8 +1016,8 @@ def optimize_single_period(data_cache, valid_symbols, params_list, period_idx, p
         print(f"   ⚠️  WARNING: No valid results! Check if data is available for this period.")
 
     if capture_equity:
-        return results, equity_data
-    return results
+        return results, equity_data, grouped_results
+    return results, grouped_results
 
 
 def run_walkforward_optimization(config):
@@ -955,8 +1056,10 @@ def run_walkforward_optimization(config):
     print(f"   Train period: {config['train_period_months']} months")
     print(f"   Test period: {config['test_period_months']} months")
     print(f"   COVID exclusion: {'Yes' if config['exclude_covid'] else 'No'}")
-    print(f"   Portfolio capital: ${config.get('portfolio_capital', 100_000):,.0f}")
-    print(f"   Max positions: {config.get('max_positions', 10)}")
+    _pcfg = config.get('portfolio_config', {})
+    print(f"   Portfolio capital: {_pcfg.get('portfolio_capital', [100_000])}")
+    print(f"   Max positions: {_pcfg.get('max_positions', [10])}")
+    print(f"   Kelly fraction: {_pcfg.get('kelly_fraction', [0.0])}")
 
     # Calculate lookback from the largest max_bars_back in the param grid
     max_bars_back_values = config['param_grid'].get('max_bars_back', [500])
@@ -975,13 +1078,30 @@ def run_walkforward_optimization(config):
     ParamSet = namedtuple('ParamSet', param_names)
     params_list = [ParamSet(*combo) for combo in product(*param_values)]
 
+    # Generate portfolio parameter combinations
+    portfolio_cfg = config.get('portfolio_config', {
+        'portfolio_capital': [100_000], 'max_positions': [10],
+        'kelly_fraction': [0.0], 'use_position_replacement': [False],
+        'replacement_threshold': [0.1], 'replacement_cooldown_days': [5],
+        'replacement_max_per_day': [3], 'prediction_validation_bars': [0],
+        'prediction_validation_threshold': [-0.5], 'entry_mode': ['market'],
+        'entry_limit_window': [3], 'entry_dip_threshold': [-0.5],
+        'entry_confirmation_threshold': [0.5], 'portfolio_debug': [False],
+    })
+    portfolio_param_names = list(portfolio_cfg.keys())
+    portfolio_param_values = list(portfolio_cfg.values())
+    PortfolioParamSet = namedtuple('PortfolioParamSet', portfolio_param_names)
+    portfolio_params_list = [PortfolioParamSet(*combo) for combo in product(*portfolio_param_values)]
+
     print(f"\n🔧 Parameter Grid")
-    print(f"   Combinations to test: {len(params_list):,}")
+    print(f"   Strategy combinations: {len(params_list):,}")
+    print(f"   Portfolio combinations: {len(portfolio_params_list):,}")
     print(f"   Total backtests per period: {len(params_list) * len(valid_symbols):,}")
 
     print(f"\n🚀 Starting Walk-Forward Optimization...\n")
 
     all_results = []
+    all_pf_by_period = []  # accumulates per-period pf_all_results for cross-period winner selection
 
     for period_idx, period_info in enumerate(periods):
         train_start, train_end, test_start, test_end = period_info
@@ -993,7 +1113,7 @@ def run_walkforward_optimization(config):
         print(f"Test:  {test_start} to {test_end}")
 
         print(f"\n1️⃣  OPTIMIZATION PHASE (In-Sample)")
-        train_results = optimize_single_period(
+        train_results, train_grouped = optimize_single_period(
             data_cache, valid_symbols, params_list, period_idx, 'train', config
         )
 
@@ -1090,12 +1210,63 @@ def run_walkforward_optimization(config):
         print(f"     Total Predictions:     {int(best_train_perf['total_ml_predictions'])}")
         print(f"   " + "="*66)
 
+        # Stock qualification: filter stocks based on IS per-stock performance
+        test_symbols = valid_symbols
+        if config.get('use_stock_qualification', False) and best_params_tuple in train_grouped:
+            best_stock_results = train_grouped[best_params_tuple]
+            qualified_symbols = []
+            disqualified = []
+            min_pf = config.get('stock_qual_min_profit_factor', 1.0)
+            min_wr = config.get('stock_qual_min_win_rate', 40.0)
+            min_tr = config.get('stock_qual_min_trades', 3)
+            min_ret = config.get('stock_qual_min_return_pct', 0.0)
+            min_ml_bull = config.get('stock_qual_min_ml_bullish_accuracy', 50.0)
+
+            for sr in best_stock_results:
+                sym = sr['symbol']
+                ml_bull = sr.get('ml_bullish_accuracy', 0)
+                reasons = []
+                if sr['total_trades'] < min_tr:
+                    reasons.append(f"trades={int(sr['total_trades'])}<{min_tr}")
+                if sr['profit_factor'] < min_pf:
+                    reasons.append(f"PF={sr['profit_factor']:.2f}<{min_pf}")
+                if sr['win_rate'] < min_wr:
+                    reasons.append(f"WR={sr['win_rate']:.1f}%<{min_wr}%")
+                if sr['return_pct'] < min_ret:
+                    reasons.append(f"ret={sr['return_pct']:.1f}%<{min_ret}%")
+                if ml_bull < min_ml_bull:
+                    reasons.append(f"MLBull={ml_bull:.1f}%<{min_ml_bull}%")
+
+                if not reasons:
+                    qualified_symbols.append(sym)
+                else:
+                    disqualified.append((sym, sr, reasons))
+
+            print(f"\n   📋 Stock Qualification (IS performance filter):")
+            print(f"   Thresholds: PF>={min_pf}, WR>={min_wr}%, Trades>={min_tr}, Return>={min_ret}%, MLBull>={min_ml_bull}%")
+            print(f"   {'Symbol':<8} {'Return%':>8} {'WinRate':>8} {'PF':>6} {'Trades':>7} {'MLBull%':>8}  Status")
+            print(f"   {'-'*65}")
+            for sr in sorted(best_stock_results, key=lambda x: x['return_pct'], reverse=True):
+                sym = sr['symbol']
+                ml_bull = sr.get('ml_bullish_accuracy', 0)
+                status = "✓" if sym in qualified_symbols else "✗"
+                print(f"   {sym:<8} {sr['return_pct']:>+7.1f}% {sr['win_rate']:>7.1f}% {sr['profit_factor']:>5.2f} {int(sr['total_trades']):>7} {ml_bull:>7.1f}%  {status}")
+            print(f"   {'-'*55}")
+            print(f"   Qualified: {len(qualified_symbols)}/{len(best_stock_results)} stocks "
+                  f"({len(qualified_symbols)/len(best_stock_results)*100:.1f}%)")
+
+            if qualified_symbols:
+                test_symbols = qualified_symbols
+            else:
+                print(f"   ⚠️  No stocks qualified! Using all stocks.")
+                test_symbols = valid_symbols
+
         print(f"\n2️⃣  VALIDATION PHASE (Out-of-Sample)")
         print(f"   Testing best parameters on unseen {test_start} to {test_end} data...")
-        print(f"   (capturing equity curves for portfolio simulation)")
+        print(f"   Testing {len(test_symbols)} stocks (capturing equity curves for portfolio simulation)")
 
-        test_results, equity_data = optimize_single_period(
-            data_cache, valid_symbols, [best_params_tuple], period_idx, 'test', config,
+        test_results, equity_data, _ = optimize_single_period(
+            data_cache, test_symbols, [best_params_tuple], period_idx, 'test', config,
             capture_equity=True
         )
 
@@ -1155,17 +1326,6 @@ def run_walkforward_optimization(config):
                 print(f"   Per-stock equity returns: avg={_avg_ret:.2f}%, "
                       f"min={min(_returns):.2f}%, max={max(_returns):.2f}%" if _returns else
                       "   No per-stock equity returns")
-                # Debug: show per-stock equity curve stats vs trade log stats
-                print(f"\n   [DEBUG] Per-stock equity curve vs trade log reconciliation (first 20):")
-                print(f"   {'Symbol':<8} {'EqRet%':>8} {'#Trades':>8} {'TradePnL':>10} {'EqStart':>10} {'EqEnd':>10} {'#Days':>6}")
-                _debug_stocks = sorted(equity_data, key=lambda s: s['symbol'])[:20]
-                for s in _debug_stocks:
-                    eq_ret = (s['values'][-1] / s['values'][0] - 1) * 100 if s['values'][0] > 0 else 0
-                    n_trades = len(s.get('trade_log', []))
-                    trade_pnl = sum(t.get('pnl', 0) or 0 for t in s.get('trade_log', []))
-                    print(f"   {s['symbol']:<8} {eq_ret:>7.2f}% {n_trades:>8} ${trade_pnl:>9,.2f} "
-                          f"${s['values'][0]:>9,.0f} ${s['values'][-1]:>9,.0f} {len(s['dates']):>6}")
-
                 spy_df = None
                 try:
                     all_dates = sorted(set(d for s in equity_data for d in s['dates']))
@@ -1178,18 +1338,90 @@ def run_walkforward_optimization(config):
                 except Exception:
                     pass
 
-                trade_log_path = f'portfolio_trade_log_period_{period_idx + 1}.csv'
-                portfolio_results = simulate_portfolio(
-                    equity_data,
-                    initial_capital=config.get('portfolio_capital', 100_000),
-                    max_positions=config.get('max_positions', 10),
-                    spy_df=spy_df,
-                    trade_log_file=trade_log_path,
-                )
-                if portfolio_results:
-                    print_portfolio_summary(portfolio_results)
-                    print_trade_log_summary(portfolio_results)
-                    plot_portfolio(portfolio_results, f'portfolio_sim_period_{period_idx + 1}.png')
+                # Build per-stock stats from in-sample training results
+                _kelly_stats = None
+                _ranking_stats = None
+                if best_params_tuple in train_grouped:
+                    _kelly_stats = {}
+                    _ranking_stats = {}
+                    for sr in train_grouped[best_params_tuple]:
+                        _kelly_stats[sr['symbol']] = {
+                            'win_rate': sr['win_rate'],
+                            'rr_ratio': sr['rr_ratio'],
+                        }
+                        _ranking_stats[sr['symbol']] = {
+                            'win_rate': sr['win_rate'],
+                            'rr_ratio': sr['rr_ratio'],
+                            'expectancy': sr['expectancy'],
+                            'profit_factor': sr['profit_factor'],
+                        }
+
+                pf_all_results = []  # track all portfolio results for best-selection
+                for pf_idx, pf_params in enumerate(portfolio_params_list):
+                    _portfolio_debug = pf_params.portfolio_debug
+                    _portfolio_capital = pf_params.portfolio_capital
+                    _max_positions = pf_params.max_positions
+                    _kelly_fraction = pf_params.kelly_fraction
+                    _use_replacement = pf_params.use_position_replacement
+                    _repl_threshold = pf_params.replacement_threshold
+                    _repl_cooldown = pf_params.replacement_cooldown_days
+                    _repl_max_day = pf_params.replacement_max_per_day
+                    _pred_val_bars = pf_params.prediction_validation_bars
+                    _pred_val_threshold = pf_params.prediction_validation_threshold
+                    _entry_mode = pf_params.entry_mode
+                    _entry_limit_window = pf_params.entry_limit_window
+                    _entry_dip_threshold = pf_params.entry_dip_threshold
+                    _entry_confirm_threshold = pf_params.entry_confirmation_threshold
+
+                    # Debug: show per-stock equity curve stats vs trade log stats
+                    if _portfolio_debug:
+                        print(f"\n   [DEBUG] Per-stock equity curve vs trade log reconciliation (first 20):")
+                        print(f"   {'Symbol':<8} {'EqRet%':>8} {'#Trades':>8} {'TradePnL':>10} {'EqStart':>10} {'EqEnd':>10} {'#Days':>6}")
+                        _debug_stocks = sorted(equity_data, key=lambda s: s['symbol'])[:20]
+                        for s in _debug_stocks:
+                            eq_ret = (s['values'][-1] / s['values'][0] - 1) * 100 if s['values'][0] > 0 else 0
+                            n_trades = len(s.get('trade_log', []))
+                            trade_pnl = sum(t.get('pnl', 0) or 0 for t in s.get('trade_log', []))
+                            print(f"   {s['symbol']:<8} {eq_ret:>7.2f}% {n_trades:>8} ${trade_pnl:>9,.2f} "
+                                  f"${s['values'][0]:>9,.0f} ${s['values'][-1]:>9,.0f} {len(s['dates']):>6}")
+
+                    _pf_suffix = f'_pf{pf_idx + 1}' if len(portfolio_params_list) > 1 else ''
+                    trade_log_path = f'portfolio_trade_log_period_{period_idx + 1}{_pf_suffix}.csv' if _portfolio_debug else None
+                    portfolio_results = simulate_portfolio(
+                        equity_data,
+                        initial_capital=_portfolio_capital,
+                        max_positions=_max_positions,
+                        spy_df=spy_df,
+                        debug=_portfolio_debug,
+                        trade_log_file=trade_log_path,
+                        kelly_fraction=_kelly_fraction,
+                        kelly_stats=_kelly_stats,
+                        ranking_stats=_ranking_stats,
+                        use_position_replacement=_use_replacement,
+                        replacement_threshold=_repl_threshold,
+                        replacement_cooldown_days=_repl_cooldown,
+                        replacement_max_per_day=_repl_max_day,
+                        prediction_validation_bars=_pred_val_bars,
+                        prediction_validation_threshold=_pred_val_threshold,
+                        entry_mode=_entry_mode,
+                        entry_limit_window=_entry_limit_window,
+                        entry_dip_threshold=_entry_dip_threshold,
+                        entry_confirmation_threshold=_entry_confirm_threshold,
+                    )
+                    if portfolio_results:
+                        pf_all_results.append({'pf_idx': pf_idx, 'params': pf_params, 'results': portfolio_results})
+                        if len(portfolio_params_list) > 1:
+                            pass  # per-config output suppressed; winner shown below
+                        else:
+                            print_portfolio_summary(portfolio_results)
+                            if _portfolio_debug:
+                                print_trade_log_summary(portfolio_results)
+                            plot_portfolio(portfolio_results, f'portfolio_sim_period_{period_idx + 1}.png')
+
+                # Store for cross-period winner selection (done after all periods complete)
+                all_pf_by_period.append(pf_all_results)
+                best_pf_results = None  # filled in post-loop pass
+                best_pf_params = None
             else:
                 print(f"   No equity data captured for portfolio simulation")
 
@@ -1227,17 +1459,69 @@ def run_walkforward_optimization(config):
                 'return_degradation_pct': degradation_pct,
                 'trade_difference': int(test_performance['total_trades']) - int(best_train_perf['total_trades']),
                 'params': best_train_perf['params'],
-                # Portfolio simulation metrics
-                'portfolio_return': portfolio_results['total_return_pct'] if portfolio_results else None,
-                'portfolio_sharpe': portfolio_results['sharpe'] if portfolio_results else None,
-                'portfolio_max_dd': portfolio_results['max_drawdown_pct'] if portfolio_results else None,
-                'portfolio_avg_positions': portfolio_results['avg_positions_held'] if portfolio_results else None,
-                'portfolio_skipped': portfolio_results['skipped_entries'] if portfolio_results else None,
+                # Portfolio simulation metrics (from best config by Sharpe)
+                'portfolio_return': best_pf_results['total_return_pct'] if best_pf_results else None,
+                'portfolio_sharpe': best_pf_results['sharpe'] if best_pf_results else None,
+                'portfolio_max_dd': best_pf_results['max_drawdown_pct'] if best_pf_results else None,
+                'portfolio_avg_positions': best_pf_results['avg_positions_held'] if best_pf_results else None,
+                'portfolio_skipped': best_pf_results['skipped_entries'] if best_pf_results else None,
             }
 
             all_results.append(period_result)
         else:
             print(f"\n   ❌ No results for test period!")
+
+    # ── Cross-period portfolio winner selection ───────────────────────────────
+    # Pick the single portfolio config with the best *average* Sharpe across
+    # all OOS periods instead of a different winner each period.
+    if all_pf_by_period:
+        config_sharpes = {}  # pf_idx -> [sharpe per period]
+        config_params  = {}  # pf_idx -> params object
+        for period_pf in all_pf_by_period:
+            for entry in period_pf:
+                idx = entry['pf_idx']
+                config_sharpes.setdefault(idx, []).append(entry['results'].get('sharpe', -999))
+                config_params[idx] = entry['params']
+
+        best_idx = max(config_sharpes, key=lambda i: sum(config_sharpes[i]) / len(config_sharpes[i]))
+        best_pf_params_global = config_params[best_idx]
+        avg_sharpe = sum(config_sharpes[best_idx]) / len(config_sharpes[best_idx])
+        n_seen = len(config_sharpes[best_idx])
+
+        if len(portfolio_params_list) > 1:
+            print(f"\n{'='*70}")
+            print(f"BEST PORTFOLIO CONFIG  (avg Sharpe: {avg_sharpe:.3f} across {n_seen} periods)")
+            print(f"{'='*70}")
+            p = best_pf_params_global
+            print(f"   'kelly_fraction':                {p.kelly_fraction},")
+            print(f"   'use_position_replacement':      {p.use_position_replacement},")
+            print(f"   'replacement_threshold':         {p.replacement_threshold},")
+            print(f"   'replacement_cooldown_days':     {p.replacement_cooldown_days},")
+            print(f"   'replacement_max_per_day':       {p.replacement_max_per_day},")
+            print(f"   'prediction_validation_bars':    {p.prediction_validation_bars},")
+            print(f"   'prediction_validation_threshold': {p.prediction_validation_threshold},")
+            print(f"   'entry_mode':                    '{p.entry_mode}',")
+            print(f"   'entry_limit_window':            {p.entry_limit_window},")
+            print(f"   'entry_dip_threshold':           {p.entry_dip_threshold},")
+            print(f"   'entry_confirmation_threshold':  {p.entry_confirmation_threshold},")
+            print(f"{'='*70}")
+
+        # Update per-period CSV results and (for multi-config) print + plot
+        for p_idx, period_pf in enumerate(all_pf_by_period):
+            winner = next((e for e in period_pf if e['pf_idx'] == best_idx), None)
+            if winner and p_idx < len(all_results):
+                r = winner['results']
+                all_results[p_idx]['portfolio_return']        = r['total_return_pct']
+                all_results[p_idx]['portfolio_sharpe']        = r['sharpe']
+                all_results[p_idx]['portfolio_max_dd']        = r['max_drawdown_pct']
+                all_results[p_idx]['portfolio_avg_positions'] = r['avg_positions_held']
+                all_results[p_idx]['portfolio_skipped']       = r['skipped_entries']
+                if len(portfolio_params_list) > 1:
+                    print(f"\n   Period {p_idx + 1} — winning config results:")
+                    print_portfolio_summary(r)
+                    if best_pf_params_global.portfolio_debug:
+                        print_trade_log_summary(r)
+                    plot_portfolio(r, f'portfolio_sim_period_{p_idx + 1}.png')
 
     return pd.DataFrame(all_results)
 
@@ -1378,6 +1662,7 @@ def print_walkforward_results(df_results):
     print(f"   trend_following_labels:   {params['trend_following_labels']}")
     print(f"   allow_reentry:            {params['allow_reentry']}")
     print(f"   min_prediction_strength:  {params['min_prediction_strength']}")
+    print(f"   min_raw_prediction:       {params.get('min_raw_prediction', 0.0)} ATR")
 
     print(f"\n🔹 LABEL SETTINGS:")
     print(f"   label_lookahead:          {params['label_lookahead']}")
@@ -1433,8 +1718,13 @@ def print_walkforward_results(df_results):
     print(f"   use_kernel_exit:          {params['use_kernel_exit']}")
     print(f"   use_trailing_atr_exit:    {params.get('use_trailing_atr_exit', False)}")
     if params.get('use_trailing_atr_exit', False):
-        print(f"   trailing_atr_mult:        {params['trailing_atr_mult']}")
         print(f"   trailing_atr_warmup:      {params['trailing_atr_warmup']}")
+        print(f"   chandelier_start_mult:    {params['chandelier_start_mult']}")
+        print(f"   chandelier_end_mult:      {params['chandelier_end_mult']}")
+        print(f"   chandelier_tighten_bars:  {params['chandelier_tighten_bars']}")
+        print(f"   chandelier_mult_mode:     {params['chandelier_mult_mode']}")
+        print(f"   chandelier_profit_atr_threshold: {params['chandelier_profit_atr_threshold']}")
+        print(f"   chandelier_breakeven_atr: {params.get('chandelier_breakeven_atr', 0.0)}")
 
     print("\n🔹 FUNDAMENTAL DATA FILTER:")
     print(f"   use_fundamental_filter:   {params.get('use_fundamental_filter', False)}")
@@ -1447,9 +1737,9 @@ def print_walkforward_results(df_results):
         print(f"   min_trending_probability: {params.get('min_trending_probability', 50)}")
         print(f"   full_position_threshold:  {params.get('full_position_threshold', 70)}")
         print(f"   reduced_position_pct:     {params.get('reduced_position_pct', Decimal('0.75'))}")
-        print(f"   require_earnings_improving: {params.get('require_earnings_improving', False)}")
-        if params.get('require_earnings_improving', False):
-            print(f"   min_earnings_improvement: {params.get('min_earnings_improvement', 50)}")
+        if params.get('use_earnings_reaction', False):
+            print(f"   earnings_reaction_days:   {params['earnings_reaction_days']}")
+            print(f"   min_earnings_reaction_pct: {params['min_earnings_reaction_pct']}%")
 
     print("\n" + "="*70)
     print("COPY-PASTE READY PARAMETER DICT")
@@ -1462,6 +1752,7 @@ def print_walkforward_results(df_results):
     print(f"    'trend_following_labels': {params['trend_following_labels']},")
     print(f"    'allow_reentry': {params['allow_reentry']},")
     print(f"    'min_prediction_strength': {params['min_prediction_strength']},")
+    print(f"    'min_raw_prediction': {params.get('min_raw_prediction', 0.0)},")
     print("\n    # Label Settings")
     print(f"    'label_lookahead': {params['label_lookahead']},")
     print(f"    'label_dead_zone': {params['label_dead_zone']},")
@@ -1532,10 +1823,15 @@ def print_walkforward_results(df_results):
     print(f"    'rsi_oversold': {params['rsi_oversold']},")
     print("\n    # Kernel Exit Settings")
     print(f"    'use_kernel_exit': {params['use_kernel_exit']},")
-    print("\n    # ATR Trailing Stop Exit Settings")
+    print("\n    # Chandelier Exit (ATR Trailing Stop)")
     print(f"    'use_trailing_atr_exit': {params.get('use_trailing_atr_exit', False)},")
-    print(f"    'trailing_atr_mult': {params.get('trailing_atr_mult', 2.5)},")
     print(f"    'trailing_atr_warmup': {params.get('trailing_atr_warmup', 3)},")
+    print(f"    'chandelier_start_mult': {params.get('chandelier_start_mult', 3.0)},")
+    print(f"    'chandelier_end_mult': {params.get('chandelier_end_mult', 1.5)},")
+    print(f"    'chandelier_tighten_bars': {params.get('chandelier_tighten_bars', 20)},")
+    print(f"    'chandelier_mult_mode': '{params.get('chandelier_mult_mode', 'blend')}',")
+    print(f"    'chandelier_profit_atr_threshold': {params.get('chandelier_profit_atr_threshold', 1.0)},")
+    print(f"    'chandelier_breakeven_atr': {params.get('chandelier_breakeven_atr', 0.0)},")
     print("\n    # Risk Management")
     print(f"    'position_size_pct': Decimal('{params['position_size_pct']}'),")
     print(f"    'stop_loss_pct': Decimal('{params['stop_loss_pct']}'),")
@@ -1557,8 +1853,9 @@ def print_walkforward_results(df_results):
         print(f"    'reduced_position_pct': Decimal('{params.get('reduced_position_pct', Decimal('0.75'))}'),")
         print(f"    'min_quality_score': {params.get('min_quality_score', 0)},")
         print(f"    'min_momentum_score': {params.get('min_momentum_score', 0)},")
-        print(f"    'require_earnings_improving': {params.get('require_earnings_improving', False)},")
-        print(f"    'min_earnings_improvement': {params.get('min_earnings_improvement', 50)},")
+        print(f"    'use_earnings_reaction': {params.get('use_earnings_reaction', False)},")
+        print(f"    'earnings_reaction_days': {params.get('earnings_reaction_days', 5)},")
+        print(f"    'min_earnings_reaction_pct': {params.get('min_earnings_reaction_pct', -3.0)},")
     print("}")
     print("\n" + "="*70 + "\n")
 

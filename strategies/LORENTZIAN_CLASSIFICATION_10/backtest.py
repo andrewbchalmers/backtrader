@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "nsc"
+symbol = "PAYC"
 initial_cash = 10_000
 
 # Load peer universe from classification CSV (fallback to default ETFs)
@@ -113,96 +113,99 @@ start_date = "2025-02-06"  # Start of test period
 end_date = "2026-02-06"    # End of test period
 timeframe = "1d"           # Bar timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d
 
-# Strategy parameters - Trend-Following Features configuration
+# Strategy parameters - Mean-Reversion Features configuration
 strategy_params = {
     # ML Settings
     'neighbors_count': 9,
-    'max_bars_back': 7000,
-    'feature_count': 8,
-    'trend_following_labels': True,    # Trend-following labels (ride continuation)
+    'max_bars_back': 8000,
+    'feature_count': 10,
+    'trend_following_labels': False,   # False=mean-reversion, True=trend-following
     'allow_reentry': True,             # Enter anytime signal is favorable
-    'min_prediction_strength': 20,     # Normalized scale: 0-100
+    'min_prediction_strength': 50,     # Normalized scale: 0-100
+    'min_raw_prediction': 0.0,         # Min expected return in ATR units (0=disabled)
 
     # Label Settings
-    'label_lookahead': 8,              # Longer lookahead for trends
-    'label_dead_zone': 0.225,          # Min ATR move for label
-    'use_magnitude_labels': True,      # True=continuous, False=binary +1/-1
+    'label_lookahead': 8,
+    'label_dead_zone': 0.1,
+    'use_magnitude_labels': True,
 
-    # Feature 1 (RSM - Relative Strength Momentum)
-    'f1_type': 'RSM',
-    'f1_param_a': 40,
-    'f1_param_b': 252,
+    # Feature 1 (VCOMP - Volatility Compression)
+    'f1_type': 'VCOMP',
+    'f1_param_a': 4,
+    'f1_param_b': 16,
 
-    # Feature 2 (ER - Efficiency Ratio)
-    'f2_type': 'ER',
-    'f2_param_a': 25,
-    'f2_param_b': 13,
+    # Feature 2 (MPER - Momentum Persistence)
+    'f2_type': 'MPER',
+    'f2_param_a': 4,
+    'f2_param_b': 20,
 
-    # Feature 3 (MTD - Multi-Timeframe Divergence)
-    'f3_type': 'MTD',
-    'f3_param_a': 8,
-    'f3_param_b': 252,
+    # Feature 3 (VMC - Volume-Momentum Coupling)
+    'f3_type': 'VMC',
+    'f3_param_a': 5,
+    'f3_param_b': 40,
 
-    # Feature 4 (STRK - Streak Pattern)
-    'f4_type': 'STRK',
-    'f4_param_a': 30,
-    'f4_param_b': 3,
+    # Feature 4 (ZS - Mean Reversion Z-Score)
+    'f4_type': 'ZS',
+    'f4_param_a': 40,
+    'f4_param_b': 1,
 
-    # Feature 5 (VCOMP - Volatility Compression)
-    'f5_type': 'VCOMP',
-    'f5_param_a': 4,
-    'f5_param_b': 16,
+    # Feature 5 (RSM - Relative Strength Momentum)
+    'f5_type': 'RSM',
+    'f5_param_a': 30,
+    'f5_param_b': 160,
 
-    # Feature 6 (MPER - Momentum Persistence)
-    'f6_type': 'MPER',
-    'f6_param_a': 4,
-    'f6_param_b': 20,
+    # Feature 6 (ER - Efficiency Ratio)
+    'f6_type': 'ER',
+    'f6_param_a': 10,
+    'f6_param_b': 1,
 
-    # Feature 7 (VMC - Volume-Momentum Coupling)
-    'f7_type': 'VMC',
-    'f7_param_a': 3,
+    # Feature 7 (MTD - Multi-Timeframe Divergence)
+    'f7_type': 'MTD',
+    'f7_param_a': 5,
     'f7_param_b': 40,
 
-    # Feature 8 (CS - Candle Structure)
-    'f8_type': 'CS',
-    'f8_param_a': 5,
-    'f8_param_b': 2,
+    # Feature 8 (STRK - Streak Pattern)
+    'f8_type': 'STRK',
+    'f8_param_a': 15,
+    'f8_param_b': 1,
 
-    # Unused slots (available for optimization)
+    # Feature 9 (CS - Candle Structure)
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
 
-    'f10_type': 'CS',
-    'f10_param_a': 5,
-    'f10_param_b': 2,
+    # Feature 10 (OBVT - OBV Trend)
+    'f10_type': 'OBVT',
+    'f10_param_a': 20,
+    'f10_param_b': 3,
 
-    'f11_type': 'CS',
-    'f11_param_a': 5,
-    'f11_param_b': 2,
+    # Features 11-14 (below feature_count cutoff)
+    'f11_type': 'VA',
+    'f11_param_a': 20,
+    'f11_param_b': 1,
 
-    'f12_type': 'VCOMP',
-    'f12_param_a': 4,
-    'f12_param_b': 16,
+    'f12_type': 'VPD',
+    'f12_param_a': 22,
+    'f12_param_b': 1,
 
-    'f13_type': 'MPER',
-    'f13_param_a': 4,
-    'f13_param_b': 20,
+    'f13_type': 'MACC',
+    'f13_param_a': 5,
+    'f13_param_b': 5,
 
-    'f14_type': 'VMC',
-    'f14_param_a': 5,
-    'f14_param_b': 40,
+    'f14_type': 'CHOP',
+    'f14_param_a': 14,
+    'f14_param_b': 1,
 
     # Filters
-    'use_volatility_filter': True,
+    'use_volatility_filter': False,
     'use_regime_filter': True,
-    'regime_threshold': 1,
+    'regime_threshold': 0,
     'regime_period': 'weekly',
     'use_regime_direction': True,
     'regime_stability_min': 0.0,
     'regime_stability_window': 60,
     'regime_max_flips': 8,
-    'use_adx_filter': True,
+    'use_adx_filter': False,
     'adx_threshold': 14,
     'use_ema_filter': False,
     'ema_period': 25,
@@ -212,8 +215,8 @@ strategy_params = {
     'sma_slope_lookback': 5,
 
     # SPY Market Regime Filter
-    'use_spy_filter': False,
-    'spy_regime_threshold': 0,
+    'use_spy_filter': True,
+    'spy_regime_threshold': 1,
     'spy_regime_period': 'weekly',
 
     # Kernel Settings
@@ -228,24 +231,33 @@ strategy_params = {
     'use_dynamic_exits': False,
     'bars_to_hold': 100000,
 
-    # RSI Exit Settings (widened thresholds for trend-following)
-    'use_rsi_exit': True,
+    # RSI Exit Settings
+    'use_rsi_exit': False,
     'rsi_exit_period': 14,
-    'rsi_overbought': 80,             # Widened — don't cut trends short
-    'rsi_oversold': 20,               # Widened
+    'rsi_overbought': 70,
+    'rsi_oversold': 30,
 
     # Kernel Exit Settings
     'use_kernel_exit': False,
 
-    # ATR Trailing Stop Exit Settings (wider for trends)
+    # Chandelier Exit (ATR Trailing Stop)
     'use_trailing_atr_exit': True,
-    'trailing_atr_mult': 2.5,         # Wider than mean-reversion's 2.0
     'trailing_atr_warmup': 3,
+    'chandelier_start_mult': 3.0,
+    'chandelier_end_mult': 1.5,
+    'chandelier_tighten_bars': 10,
+    'chandelier_mult_mode': 'blend',
+    'chandelier_profit_atr_threshold': 1.0,
+    'chandelier_breakeven_atr': 1.0,
+
+    # Prediction Validation Exit
+    'use_prediction_exit': True,
+    'prediction_exit_threshold': -0.5,
 
     # Risk Management
     'position_size_pct': Decimal('0.95'),
-    'stop_loss_pct': Decimal('0.05'),
-    'use_stop_loss': True,
+    'stop_loss_pct': Decimal('0.08'),
+    'use_stop_loss': False,
 
     # Trade Direction
     'long_only': True,
@@ -255,10 +267,10 @@ strategy_params = {
 
     # Cross-Symbol Training
     'use_cross_symbol_training': True,
-    'cross_symbol_etfs': _peer_universe,
+    'cross_symbol_etfs': 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA',
     'cross_symbol_lookback_years': 5,
     'use_regime_balancing': True,
-    'cross_symbol_auto_peers': True,
+    'cross_symbol_auto_peers': False,
     'cross_symbol_target_symbol': symbol,
     'cross_symbol_max_peers': 7,
 
@@ -270,13 +282,14 @@ strategy_params = {
     'earnings_blackout_before': 5,
     'earnings_blackout_after': 2,
     'close_before_earnings': True,
-    'min_trending_probability': 20,
     'full_position_threshold': 50,
     'reduced_position_pct': Decimal('0.75'),
+    'min_trending_probability': 20,
     'min_quality_score': 20,
     'min_momentum_score': 20,
-    'require_earnings_improving': True,
-    'min_earnings_improvement': 50,
+    'use_earnings_reaction': True,
+    'earnings_reaction_days': 5,
+    'min_earnings_reaction_pct': -5.0,
 
     # Backtest control (set by script - do not modify)
     'test_start_idx': 0,
@@ -429,6 +442,7 @@ cerebro.addstrategy(Strategy, **strategy_params)
 # Broker settings
 cerebro.broker.setcash(initial_cash)
 cerebro.broker.setcommission(commission=0.0)
+cerebro.broker.set_coc(True)  # Fill at current bar's close, not next bar's open
 
 # Analyzers
 cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe",
@@ -459,7 +473,9 @@ print(f"    - Label Mode: {label_mode}")
 reentry_mode = "ANYTIME" if strategy_params.get('allow_reentry', True) else "SIGNAL FLIP ONLY"
 print(f"    - Entry Mode: {reentry_mode}")
 min_strength = strategy_params.get('min_prediction_strength', 0)
-print(f"    - Min Signal Strength: {min_strength} (of {strategy_params['neighbors_count']} neighbors)")
+min_raw = strategy_params.get('min_raw_prediction', 0.0)
+raw_str = f", min ATR return={min_raw}x" if min_raw > 0 else ""
+print(f"    - Min Signal Strength: {min_strength}/100 normalized{raw_str}")
 print(f"  Labels:")
 print(f"    - Lookahead: {strategy_params.get('label_lookahead', 4)} bars")
 print(f"    - Dead Zone: {strategy_params.get('label_dead_zone', 0.5)} ATR")
@@ -505,9 +521,14 @@ print(f"    - Dynamic Exits: {'ON' if strategy_params['use_dynamic_exits'] else 
 print(f"    - RSI Exit: {'ON' if strategy_params['use_rsi_exit'] else 'OFF'}")
 print(f"    - Kernel Exit: {'ON' if strategy_params.get('use_kernel_exit', False) else 'OFF'}")
 trailing = strategy_params.get('use_trailing_atr_exit', False)
-print(f"    - ATR Trailing Stop: {'ON' if trailing else 'OFF'}", end="")
+print(f"    - Chandelier Stop: {'ON' if trailing else 'OFF'}", end="")
 if trailing:
-    print(f" ({strategy_params.get('trailing_atr_mult', 2.5)}x ATR, warmup={strategy_params.get('trailing_atr_warmup', 3)})")
+    s = strategy_params.get('chandelier_start_mult', 3.0)
+    e = strategy_params.get('chandelier_end_mult', 1.5)
+    tb = strategy_params.get('chandelier_tighten_bars', 20)
+    be = strategy_params.get('chandelier_breakeven_atr', 0.0)
+    be_str = f", breakeven={be}x ATR" if be > 0 else ""
+    print(f" ({s}x→{e}x ATR over {tb} bars, mode={strategy_params.get('chandelier_mult_mode','blend')}{be_str})")
 else:
     print()
 print(f"    - Holding Period: {strategy_params['bars_to_hold']} bars")
