@@ -212,6 +212,18 @@ def simulate_portfolio(stock_data, initial_capital=100_000, max_positions=10, sp
         entry_days[symbol] = entries
         exit_days[symbol] = exits
 
+    # Build entry prediction score lookup: {symbol: {entry_date: norm_prediction}}
+    # Used to rank same-day entry candidates by ML conviction (highest first).
+    entry_scores = {}
+    for stock in stock_data:
+        symbol = stock['symbol']
+        scores = {}
+        for trade in stock.get('trade_log', []):
+            ed = trade['entry_date']
+            score = trade.get('entry_norm_prediction', 50.0)
+            scores[ed] = score
+        entry_scores[symbol] = scores
+
     # Get all unique sorted dates across all stocks
     all_dates = sorted(set(d for stock in stock_data for d in stock['dates']))
 
@@ -333,6 +345,14 @@ def simulate_portfolio(stock_data, initial_capital=100_000, max_positions=10, sp
                         'entry_day_ret': info['entry_day_ret'],
                     })
 
+        # Rank entries by ML prediction strength (highest conviction first).
+        # When the portfolio is at capacity, weaker signals get skipped instead
+        # of random ones — the most important fix for portfolio underperformance.
+        todays_entries.sort(
+            key=lambda sym: entry_scores.get(sym, {}).get(date, 50.0),
+            reverse=True
+        )
+
         # Step 2: Process entries (allocate capital)
         # With limit orders: new signals become pending, filled pending become entries
         if use_limit_orders:
@@ -416,9 +436,13 @@ def simulate_portfolio(stock_data, initial_capital=100_000, max_positions=10, sp
                         })
                     continue
             else:
-                sym_size = position_size
+                # Dynamic equal-weight: split remaining cash across remaining open slots.
+                # When all slots fill on the same day, 100% of cash is deployed.
+                # Gains compound naturally since sym_size scales with portfolio value.
+                remaining_slots = max(1, max_positions - len(active_positions))
+                sym_size = cash / remaining_slots
 
-            if len(active_positions) < max_positions and cash >= sym_size:
+            if len(active_positions) < max_positions and cash >= sym_size * 0.99:
                 # Slot available — enter normally
                 active_positions[symbol] = sym_size
                 cash -= sym_size
@@ -483,8 +507,13 @@ def simulate_portfolio(stock_data, initial_capital=100_000, max_positions=10, sp
                             'replaced_by': symbol,
                         })
 
+                    # Recompute dynamic size now that the sold position freed up cash.
+                    if not use_kelly and not use_limit_orders:
+                        remaining_slots = max(1, max_positions - len(active_positions))
+                        sym_size = cash / remaining_slots
+
                     # Buy candidate
-                    if cash >= sym_size:
+                    if cash >= sym_size * 0.99:
                         active_positions[symbol] = sym_size
                         cash -= sym_size
                         if use_limit_orders:

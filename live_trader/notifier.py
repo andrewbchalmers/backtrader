@@ -263,11 +263,13 @@ class PushbulletNotifier:
         self.send_notification(title, message)
         print(f"🟢 BUY ALERT: {symbol} ({exchange}) @ ${signal['price']:.2f}, SL @ ${signal['stop_loss']:.2f}")
 
-    def send_sell_alert(self, symbol, signal, entry_price):
+    def send_sell_alert(self, symbol, signal, entry_price, exchange=None):
         """Send sell alert notification"""
         pnl = ((signal['price'] / entry_price) - 1) * 100
         title = f"🔴 SELL {symbol}"
+        exchange_line = f"Exchange: {exchange}\n" if exchange else ""
         message = (
+            f"{exchange_line}"
             f"Price: ${signal['price']:.2f}\n"
             f"Entry: ${entry_price:.2f}\n"
             f"P&L: {pnl:+.2f}%\n"
@@ -275,17 +277,21 @@ class PushbulletNotifier:
             f"Reply: SOLD {symbol}"
         )
         self.send_notification(title, message)
-        print(f"🔴 SELL ALERT: {symbol} @ ${signal['price']:.2f}, P&L: {pnl:+.2f}%")
+        exchange_str = f" [{exchange}]" if exchange else ""
+        print(f"🔴 SELL ALERT: {symbol}{exchange_str} @ ${signal['price']:.2f}, P&L: {pnl:+.2f}%")
 
-    def send_position_confirmation(self, symbol, entry_price, exit_price_or_stop, action="added", pnl=None):
+    def send_position_confirmation(self, symbol, entry_price, exit_price_or_stop, action="added", pnl=None, exchange=None):
         """Send position add/remove confirmation"""
         from datetime import datetime
+
+        exchange_line = f"Exchange: {exchange}\n" if exchange else ""
 
         if action == "added":
             stop_loss = exit_price_or_stop
             risk_pct = ((entry_price - stop_loss) / entry_price) * 100
             title = f"✅ {symbol} REGISTERED AS BOUGHT"
             message = (
+                f"{exchange_line}"
                 f"Entry: ${entry_price:.2f}\n"
                 f"Stop Loss: ${stop_loss:.2f}\n"
                 f"Risk: {risk_pct:.2f}%\n"
@@ -293,7 +299,8 @@ class PushbulletNotifier:
             )
         else:  # removed
             title = f"✅ {symbol} REGISTERED AS SOLD"
-            message = f"Entry was: ${entry_price:.2f}\n"
+            message = f"{exchange_line}"
+            message += f"Entry was: ${entry_price:.2f}\n"
 
             if pnl is not None:
                 message += f"P&L: {pnl:+.2f}%\n"

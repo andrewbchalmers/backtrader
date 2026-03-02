@@ -34,71 +34,92 @@ TEST_END_DATE = "2024-12-31"
 TEST_SPEED = 0  # Days per second (0 = instant, 1 = 1 day/sec, 10 = 10 days/sec)
 
 # Strategy configuration
-STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION_8/lorentzian_classification"
+STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION_10/lorentzian_classification"
 STRATEGY_CLASS = "LorentzianClassificationStrategy"
 STRATEGY_PARAMS = {
     # === General Settings ===
-    'neighbors_count': 5,
-    'max_bars_back': 5000,
-    'feature_count': 9,
-    'trend_following_labels': False,
+    'neighbors_count': 10,
+    'max_bars_back': 7000,
+    'feature_count': 8,
+    'trend_following_labels': True,
     'allow_reentry': True,
-    'min_prediction_strength': 20,
+    'min_prediction_strength': 20,       # Percentile rank threshold (0–100 normalised scale)
+    'min_raw_prediction': 0.0,           # Raw ATR-unit threshold (0 = disabled)
+    'prediction_norm_window': 200,       # Rolling window used to compute the percentile rank
+    'min_bullish_accuracy': 55,          # Minimum ML bullish accuracy % to act on a BUY signal
+    'min_bullish_accuracy_samples': 20,  # Min historical bullish predictions before filter activates
 
     # === Label Settings ===
-    'label_lookahead': 3,
-    'label_dead_zone': 0.15,
+    'label_lookahead': 8,
+    'label_dead_zone': 0.225,
+    'use_forward_labels': True,
     'use_magnitude_labels': True,
 
-    # === Feature 1: Relative Strength Momentum ===
+    # === Features (8 active, f9-f14 defined but below feature_count cutoff) ===
+    # Feature 1: Relative Strength Momentum — where is this stock's momentum ranked historically?
     'f1_type': 'RSM',
-    'f1_param_a': 10,
-    'f1_param_b': 126,
+    'f1_param_a': 40,    # Momentum period: two months
+    'f1_param_b': 252,   # Lookback: full year percentile ranking
 
-    # === Feature 2: Volume Anomaly ===
-    'f2_type': 'VA',
-    'f2_param_a': 20,
-    'f2_param_b': 1,
+    # Feature 2: Efficiency Ratio — is price moving directionally or chopping?
+    'f2_type': 'ER',
+    'f2_param_a': 25,    # Trend quality over ~1 month
+    'f2_param_b': 13,
 
-    # === Feature 3: Multi-Timeframe Divergence ===
+    # Feature 3: Multi-Timeframe Divergence — short and long timeframes aligned?
     'f3_type': 'MTD',
-    'f3_param_a': 5,
-    'f3_param_b': 60,
+    'f3_param_a': 8,     # Short ROC period
+    'f3_param_b': 252,   # Long ROC period
 
-    # === Feature 4: Mean Reversion Z-Score ===
-    'f4_type': 'ZS',
-    'f4_param_a': 50,
-    'f4_param_b': 1,
+    # Feature 4: Streak Pattern — consecutive directional moves = trend persistence
+    'f4_type': 'STRK',
+    'f4_param_a': 30,    # Max streak length
+    'f4_param_b': 3,     # ATR multiplier for magnitude
 
-    # === Feature 5: Efficiency Ratio ===
-    'f5_type': 'ER',
-    'f5_param_a': 10,
-    'f5_param_b': 1,
+    # Feature 5: Volatility Compression — coiled spring before breakout
+    'f5_type': 'VCOMP',
+    'f5_param_a': 4,     # Recent volatility window
+    'f5_param_b': 16,    # Lookback volatility window
 
-    # === Feature 6: Volume-Price Divergence ===
-    'f6_type': 'VPD',
-    'f6_param_a': 14,
-    'f6_param_b': 1,
+    # Feature 6: Momentum Persistence — pullback within trend vs reversal
+    'f6_type': 'MPER',
+    'f6_param_a': 4,     # Short momentum period
+    'f6_param_b': 20,    # Medium momentum period
 
-    # === Feature 7: Momentum Acceleration ===
-    'f7_type': 'MACC',
-    'f7_param_a': 5,
-    'f7_param_b': 5,
+    # Feature 7: Volume-Momentum Coupling — volume engaged during consolidation
+    'f7_type': 'VMC',
+    'f7_param_a': 3,     # Recent volume/momentum window
+    'f7_param_b': 40,    # Baseline volume average period
 
-    # === Feature 8: OBV Trend ===
-    'f8_type': 'OBVT',
-    'f8_param_a': 20,
-    'f8_param_b': 3,
+    # Feature 8: Candle Structure — trend-quality candles (strong bodies, small wicks)
+    'f8_type': 'CS',
+    'f8_param_a': 5,
+    'f8_param_b': 2,
 
-    # === Feature 9: Candle Structure ===
+    # Features 9-14 (inactive — below feature_count cutoff)
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
+    'f10_type': 'CS',
+    'f10_param_a': 5,
+    'f10_param_b': 2,
+    'f11_type': 'CS',
+    'f11_param_a': 5,
+    'f11_param_b': 2,
+    'f12_type': 'VCOMP',
+    'f12_param_a': 4,
+    'f12_param_b': 16,
+    'f13_type': 'MPER',
+    'f13_param_a': 4,
+    'f13_param_b': 20,
+    'f14_type': 'VMC',
+    'f14_param_a': 5,
+    'f14_param_b': 40,
 
     # === Filters ===
     'use_volatility_filter': True,
     'use_regime_filter': True,
-    'regime_threshold': 1,
+    'regime_threshold': Decimal('0'),   # 0=block bearish only
     'regime_period': 'weekly',
     'use_regime_direction': True,
     'regime_stability_min': 0.0,
@@ -107,37 +128,54 @@ STRATEGY_PARAMS = {
     'use_adx_filter': True,
     'adx_threshold': 14,
     'use_ema_filter': False,
-    'ema_period': 50,
+    'ema_period': 400,
+    'ema_slope_lookback': 20,
     'use_sma_filter': False,
-    'sma_period': 200,
+    'sma_period': 400,
+    'sma_slope_lookback': 20,
+
+    # === SPY Market Regime Filter ===
+    'use_spy_filter': True,
+    'spy_regime_threshold': Decimal('0'),  # 0=block bearish SPY
+    'spy_regime_period': 'monthly',
 
     # === Kernel Settings ===
     'use_kernel_filter': False,
     'use_kernel_smoothing': False,
-    'kernel_lookback': 20,
+    'kernel_lookback': 8,
     'kernel_rel_weight': 8.0,
     'kernel_start_bar': 25,
     'kernel_lag': 2,
 
     # === Exit Settings ===
-    'use_dynamic_exits': True,
-    'bars_to_hold': 10000,
+    'use_dynamic_exits': False,
+    'bars_to_hold': 100000,
 
     # === RSI Exit Settings ===
     'use_rsi_exit': False,
     'rsi_exit_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
+    'rsi_overbought': 80,   # Widened — avoids cutting winning trends short
+    'rsi_oversold': 20,
 
     # === Kernel Exit Settings ===
     'use_kernel_exit': False,
 
-    # === ATR Trailing Stop Exit Settings ===
+    # === Chandelier ATR Trailing Stop ===
+    # Wider settings give trends room to breathe through normal pullbacks
     'use_trailing_atr_exit': True,
-    'trailing_atr_mult': 2.5,
-    'trailing_atr_warmup': 3,
+    'trailing_atr_warmup': 5,
+    'chandelier_start_mult': 3.5,          # Wider initial stop than mean-reversion (3.0)
+    'chandelier_end_mult': 1,              # Final stop
+    'chandelier_tighten_bars': 40,         # Slower tightening — trends need more time
+    'chandelier_mult_mode': 'blend',
+    'chandelier_profit_atr_threshold': 1.5,
+    'chandelier_breakeven_atr': 0.0,       # Requires more profit before locking break-even
 
-    # === Loss Penalty (ML bearish feedback after losing trades) ===
+    # === Prediction Validation Exit ===
+    'use_prediction_exit': True,
+    'prediction_exit_threshold': -2.0,     # Wider threshold — trends need more time
+
+    # === Loss Penalty ===
     'use_loss_penalty': True,
     'loss_penalty_amount': 0,
     'loss_penalty_decay': 0.90,
@@ -145,7 +183,7 @@ STRATEGY_PARAMS = {
     # === Risk Management ===
     'position_size_pct': Decimal('0.95'),
     'stop_loss_pct': Decimal('0.05'),
-    'use_stop_loss': True,
+    'use_stop_loss': False,
     'long_only': True,
 
     # === Fundamental / Earnings Settings ===
@@ -155,21 +193,29 @@ STRATEGY_PARAMS = {
     'earnings_blackout_before': 5,
     'earnings_blackout_after': 2,
     'close_before_earnings': True,
-    'min_trending_probability': 40,
-    'full_position_threshold': 70,
+    'min_trending_probability': 20,
+    'full_position_threshold': 50,
     'reduced_position_pct': Decimal('0.75'),
-    'min_quality_score': 30,
-    'min_momentum_score': 30,
-    'fundamental_symbol': '',
+    'min_quality_score': 20,
+    'min_momentum_score': 20,
+    'use_earnings_reaction': True,
+    'earnings_reaction_days': 5,
+    'min_earnings_reaction_pct': -5.0,
+    'max_days_since_earnings': 100,
+    'staleness_decay_rate': 0.005,
+    'fundamental_symbol': '',           # Set per-symbol by strategy_loader
 
     # === Cross-Symbol Training ===
     'use_cross_symbol_training': True,
     'cross_symbol_etfs': _peer_universe,
     'cross_symbol_lookback_years': 5,
-    'use_regime_balancing': True,
-    'cross_symbol_auto_peers': True,
-    'cross_symbol_target_symbol': '',  # Set per-symbol by strategy_loader
+    'use_regime_balancing': False,
+    'cross_symbol_auto_peers': True,    # Auto-select sector peers per symbol
+    'cross_symbol_target_symbol': '',   # Set per-symbol by strategy_loader
     'cross_symbol_max_peers': 7,
+
+    # === Backtest control ===
+    'test_start_idx': 0,
 
     # === Display ===
     'verbose': False,

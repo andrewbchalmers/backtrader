@@ -84,14 +84,14 @@ CONFIG = {
     # Portfolio simulation settings (list values for optimization, same pattern as param_grid)
     'portfolio_config': {
         'portfolio_capital': [100_000],
-        'max_positions': [10],    # 10 positions; ranking ensures these are the highest-conviction signals
+        'max_positions': [10],    # Lower = better utilization; 10 mirrors backtest_multi.py
         'kelly_fraction': [0.0],      # 0.0=equal weight (more stable with short IS periods)
         'use_position_replacement': [True],    # Replace worst positions when better candidates appear
-        'replacement_threshold': [0.1],       # Lowered from 0.4 — triggers more aggressively on clear losers
-        'replacement_cooldown_days': [5],      # Lowered from 10 — faster rotation
+        'replacement_threshold': [0.4],       # Min score advantage to trigger replacement (higher=fewer swaps)
+        'replacement_cooldown_days': [10],     # Min days before position eligible for replacement
         'replacement_max_per_day': [2],        # Max replacements per calendar day
-        'prediction_validation_bars': [0],     # Disabled — was cutting good slow-starter trades too early
-        'prediction_validation_threshold': [-0.5],  # Force-exit if P&L% below this after validation bars (unused when bars=0)
+        'prediction_validation_bars': [8],     # Force-exit if ML wrong after N bars (0=off, matches label_lookahead)
+        'prediction_validation_threshold': [-0.5],  # Force-exit if P&L% below this after validation bars
         # Entry mode: 'confirmation'=wait for up day (validates mean-reversion bounce),
         # 'dip'=wait for down day (validates momentum pullback), 'market'=immediate,
         # 'dip_or_confirmation'=fill on either condition
@@ -133,7 +133,7 @@ CONFIG = {
         # ==================== ML SETTINGS ====================
         'neighbors_count': [11],
         'max_bars_back': [7000],            # Keep fixed - needs lots of history
-        'feature_count': [8],
+        'feature_count': [6],
         'trend_following_labels': [True],   # True=trend-following labels (ride continuation)
         'allow_reentry': [True],            # True=enter anytime signal favorable
         'min_prediction_strength': [20],    # Normalized scale: 0-100
@@ -144,7 +144,7 @@ CONFIG = {
         # ==================== LABEL SETTINGS ====================
         # Longer lookahead for trends — they unfold over more bars than reversions
         'label_lookahead': [4],       # Bars to look forward: 8=captures trend moves
-        'label_dead_zone': [0.18],   # Min ATR move for label: higher=cleaner trend labels
+        'label_dead_zone': [0.1],    # Min ATR move for label: higher=cleaner trend labels
         'use_magnitude_labels': [True],
 
         # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
@@ -283,7 +283,7 @@ CONFIG = {
         'chandelier_breakeven_atr': [0.0],    # Requires more profit before locking break-even
 
         # ==================== RISK MANAGEMENT ====================
-        'position_size_pct': [Decimal('0.95')],
+        'position_size_pct': [Decimal('0.5')],
         'stop_loss_pct': [Decimal('0.05')],
         'use_stop_loss': [False],
         'long_only': [True],
@@ -294,10 +294,10 @@ CONFIG = {
         # Note: max_pyramid_entries and pyramid_size_pct are only meaningful when use_pyramiding=True.
         # Keep sub-params as single values so combinatorial explosion doesn't produce duplicate
         # "pyramiding off" configurations that waste compute.
-        'use_pyramiding': [False],
+        'use_pyramiding': [True],
         'max_pyramid_entries': [2],
-        'pyramid_size_pct': [Decimal('0.5')],
-        'pyramid_min_profit_atr': [1.0],   # Must be up at least N ATR before adding
+        'pyramid_size_pct': [Decimal('0.65')],
+        'pyramid_min_profit_atr': [1.5],   # Must be up at least N ATR before adding
 
         # ==================== OTHER ====================
         'verbose': [False],

@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "PAYC"
+symbol = "SOFI"
 initial_cash = 10_000
 
 # Load peer universe from classification CSV (fallback to default ETFs)
@@ -113,113 +113,111 @@ start_date = "2025-02-06"  # Start of test period
 end_date = "2026-02-06"    # End of test period
 timeframe = "1d"           # Bar timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d
 
-# Strategy parameters - Mean-Reversion Features configuration
+# Strategy parameters - Trend-Following Features configuration
 strategy_params = {
-    # ML Settings
-    'neighbors_count': 9,
-    'max_bars_back': 8000,
-    'feature_count': 10,
-    'trend_following_labels': False,   # False=mean-reversion, True=trend-following
+    # ==================== ML SETTINGS ====================
+    'neighbors_count': 11,
+    'max_bars_back': 7000,
+    'feature_count': 6,
+    'trend_following_labels': True,    # True=trend-following labels (ride continuation)
     'allow_reentry': True,             # Enter anytime signal is favorable
-    'min_prediction_strength': 50,     # Normalized scale: 0-100
-    'min_raw_prediction': 0.0,         # Min expected return in ATR units (0=disabled)
+    'min_prediction_strength': 20,     # Normalized scale: 0-100
+    'min_raw_prediction': 0.0,          # Disabled — normalized prediction strength is the primary gate
 
-    # Label Settings
-    'label_lookahead': 8,
-    'label_dead_zone': 0.1,
+    # ==================== LABEL SETTINGS ====================
+    'label_lookahead': 4,              # Bars to look forward
+    'label_dead_zone': 0.1,           # Min ATR move for label: higher=cleaner trend labels
     'use_magnitude_labels': True,
 
-    # Feature 1 (VCOMP - Volatility Compression)
-    'f1_type': 'VCOMP',
-    'f1_param_a': 4,
-    'f1_param_b': 16,
+    # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
+    'f1_type': 'RSM',
+    'f1_param_a': 40,                  # Momentum period
+    'f1_param_b': 252,                 # Lookback: full year percentile ranking
 
-    # Feature 2 (MPER - Momentum Persistence)
-    'f2_type': 'MPER',
-    'f2_param_a': 4,
-    'f2_param_b': 20,
+    # ==================== FEATURE 2 (ER - Efficiency Ratio) ====================
+    'f2_type': 'ER',
+    'f2_param_a': 25,                  # ER period: trend quality over ~1 month
+    'f2_param_b': 13,
 
-    # Feature 3 (VMC - Volume-Momentum Coupling)
-    'f3_type': 'VMC',
-    'f3_param_a': 5,
-    'f3_param_b': 40,
+    # ==================== FEATURE 3 (MTD - Multi-Timeframe Divergence) ====================
+    'f3_type': 'MACC',
+    'f3_param_a': 5,                   # Short momentum window
+    'f3_param_b': 20,                  # Medium momentum window (acceleration = short > medium)
 
-    # Feature 4 (ZS - Mean Reversion Z-Score)
-    'f4_type': 'ZS',
-    'f4_param_a': 40,
-    'f4_param_b': 1,
+    # ==================== FEATURE 4 (STRK - Streak Pattern) ====================
+    'f4_type': 'STRK',
+    'f4_param_a': 30,                  # Max streak length
+    'f4_param_b': 3,                   # ATR multiplier for magnitude
 
-    # Feature 5 (RSM - Relative Strength Momentum)
-    'f5_type': 'RSM',
-    'f5_param_a': 30,
-    'f5_param_b': 160,
+    # ==================== FEATURE 5 (VCOMP - Volatility Compression) ====================
+    'f5_type': 'VCOMP',
+    'f5_param_a': 4,                   # Recent volatility window
+    'f5_param_b': 16,                  # Lookback volatility window
 
-    # Feature 6 (ER - Efficiency Ratio)
-    'f6_type': 'ER',
-    'f6_param_a': 10,
-    'f6_param_b': 1,
+    # ==================== FEATURE 6 (MPER - Momentum Persistence) ====================
+    'f6_type': 'MPER',
+    'f6_param_a': 4,                   # Short momentum period
+    'f6_param_b': 20,                  # Medium momentum period
 
-    # Feature 7 (MTD - Multi-Timeframe Divergence)
-    'f7_type': 'MTD',
-    'f7_param_a': 5,
-    'f7_param_b': 40,
+    # ==================== FEATURE 7 (VMC - Volume-Momentum Coupling) ====================
+    'f7_type': 'VMC',
+    'f7_param_a': 3,                   # Recent volume/momentum window
+    'f7_param_b': 40,                  # Baseline volume average period
 
-    # Feature 8 (STRK - Streak Pattern)
-    'f8_type': 'STRK',
-    'f8_param_a': 15,
-    'f8_param_b': 1,
+    # ==================== FEATURE 8 (CS - Candle Structure) ====================
+    'f8_type': 'CS',
+    'f8_param_a': 5,                   # Averaging window
+    'f8_param_b': 2,                   # Sensitivity (tanh scaling)
 
-    # Feature 9 (CS - Candle Structure)
+    # ==================== FEATURES 9-14 (below feature_count cutoff) ====================
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
 
-    # Feature 10 (OBVT - OBV Trend)
-    'f10_type': 'OBVT',
-    'f10_param_a': 20,
-    'f10_param_b': 3,
+    'f10_type': 'CS',
+    'f10_param_a': 5,
+    'f10_param_b': 2,
 
-    # Features 11-14 (below feature_count cutoff)
-    'f11_type': 'VA',
-    'f11_param_a': 20,
-    'f11_param_b': 1,
+    'f11_type': 'CS',
+    'f11_param_a': 5,
+    'f11_param_b': 2,
 
-    'f12_type': 'VPD',
-    'f12_param_a': 22,
-    'f12_param_b': 1,
+    'f12_type': 'VCOMP',
+    'f12_param_a': 4,
+    'f12_param_b': 16,
 
-    'f13_type': 'MACC',
-    'f13_param_a': 5,
-    'f13_param_b': 5,
+    'f13_type': 'MPER',
+    'f13_param_a': 4,
+    'f13_param_b': 20,
 
-    'f14_type': 'CHOP',
-    'f14_param_a': 14,
-    'f14_param_b': 1,
+    'f14_type': 'VMC',
+    'f14_param_a': 5,
+    'f14_param_b': 40,
 
-    # Filters
+    # ==================== FILTERS ====================
     'use_volatility_filter': False,
     'use_regime_filter': True,
-    'regime_threshold': 0,
+    'regime_threshold': Decimal('0'),  # 0=block bearish
     'regime_period': 'weekly',
     'use_regime_direction': True,
     'regime_stability_min': 0.0,
-    'regime_stability_window': 60,
-    'regime_max_flips': 8,
+    'regime_stability_window': 10,
+    'regime_max_flips': 2,
     'use_adx_filter': False,
     'adx_threshold': 14,
     'use_ema_filter': False,
-    'ema_period': 25,
-    'ema_slope_lookback': 5,
+    'ema_period': 400,
+    'ema_slope_lookback': 20,
     'use_sma_filter': False,
-    'sma_period': 100,
-    'sma_slope_lookback': 5,
+    'sma_period': 400,
+    'sma_slope_lookback': 20,
 
-    # SPY Market Regime Filter
+    # ==================== SPY MARKET REGIME FILTER ====================
     'use_spy_filter': True,
-    'spy_regime_threshold': 1,
+    'spy_regime_threshold': Decimal('0'),  # 0=block bearish
     'spy_regime_period': 'weekly',
 
-    # Kernel Settings
+    # ==================== KERNEL SETTINGS ====================
     'use_kernel_filter': False,
     'use_kernel_smoothing': False,
     'kernel_lookback': 8,
@@ -227,54 +225,60 @@ strategy_params = {
     'kernel_start_bar': 25,
     'kernel_lag': 2,
 
-    # Exit Settings
+    # ==================== EXIT SETTINGS ====================
     'use_dynamic_exits': False,
     'bars_to_hold': 100000,
 
-    # RSI Exit Settings
+    # ==================== RSI EXIT SETTINGS ====================
     'use_rsi_exit': False,
     'rsi_exit_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
+    'rsi_overbought': 80,              # Widened threshold (less likely to trigger)
+    'rsi_oversold': 20,
 
-    # Kernel Exit Settings
+    # ==================== KERNEL EXIT SETTINGS ====================
     'use_kernel_exit': False,
 
-    # Chandelier Exit (ATR Trailing Stop)
-    'use_trailing_atr_exit': True,
-    'trailing_atr_warmup': 3,
-    'chandelier_start_mult': 3.0,
-    'chandelier_end_mult': 1.5,
-    'chandelier_tighten_bars': 10,
-    'chandelier_mult_mode': 'blend',
-    'chandelier_profit_atr_threshold': 1.0,
-    'chandelier_breakeven_atr': 1.0,
-
-    # Prediction Validation Exit
+    # ==================== PREDICTION VALIDATION EXIT ====================
     'use_prediction_exit': True,
-    'prediction_exit_threshold': -0.5,
+    'prediction_exit_threshold': -20.0, # Exit only on strongly bearish ML, not minor dips
 
-    # Risk Management
-    'position_size_pct': Decimal('0.95'),
-    'stop_loss_pct': Decimal('0.08'),
+    # ==================== CHANDELIER EXIT (ATR TRAILING STOP) ====================
+    'use_trailing_atr_exit': True,
+    'trailing_atr_warmup': 5,
+    'chandelier_start_mult': 3.5,      # Wider than mean-reversion
+    'chandelier_end_mult': 1,          # Wider final stop
+    'chandelier_tighten_bars': 40,     # Slower tightening
+    'chandelier_mult_mode': 'blend',
+    'chandelier_profit_atr_threshold': 1.5,
+    'chandelier_breakeven_atr': 0.0,   # Requires more profit before locking break-even
+
+    # ==================== RISK MANAGEMENT ====================
+    'position_size_pct': Decimal('0.30'),  # Small initial entry; pyramid adds the rest
+    'stop_loss_pct': Decimal('0.05'),
     'use_stop_loss': False,
-
-    # Trade Direction
     'long_only': True,
 
-    # Display
+    # ==================== PYRAMIDING ====================
+    # Enter small, then add big once the trade is confirmed by another ML signal.
+    # With 30% initial + 90% of remaining 70% cash → ~93% total when confirmed.
+    'use_pyramiding': True,
+    'max_pyramid_entries': 1,              # One confirmation add-on
+    'pyramid_size_pct': Decimal('0.90'),   # Use most of remaining cash on add-on
+    'pyramid_min_profit_atr': 1.0,         # Must be up at least 1 ATR before adding
+
+    # ==================== OTHER ====================
     'verbose': True,
 
-    # Cross-Symbol Training
+    # ==================== CROSS-SYMBOL TRAINING ====================
     'use_cross_symbol_training': True,
     'cross_symbol_etfs': 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA',
     'cross_symbol_lookback_years': 5,
-    'use_regime_balancing': True,
-    'cross_symbol_auto_peers': False,
+    'use_regime_balancing': False,
+    'cross_symbol_auto_peers': True,
     'cross_symbol_target_symbol': symbol,
     'cross_symbol_max_peers': 7,
 
-    # Fundamental / Earnings Settings
+    # ==================== FUNDAMENTAL DATA FILTER ====================
     'use_fundamental_filter': True,
     'fundamental_symbol': symbol,
     'fundamental_quality_weight': 0.2,
@@ -767,6 +771,24 @@ if diag['total_bars'] > 0:
         print(f"   Kernel Filter:      {diag['entries_blocked_by_kernel']} ({diag['kernel_block_pct']:.1f}%)")
         print(f"   EMA Filter:         {diag['entries_blocked_by_ema']} ({diag['ema_block_pct']:.1f}%)")
         print(f"   SMA Filter:         {diag['entries_blocked_by_sma']} ({diag['sma_block_pct']:.1f}%)")
+
+# Signal Block Diagnostics — why bullish predictions never became signal=1
+# (invisible to the standard diagnostics above, which only count after signal is already 1)
+if hasattr(strat, 'get_signal_block_diagnostics'):
+    sbd = strat.get_signal_block_diagnostics()
+    if sbd['total'] > 0:
+        print(f"\n🔎 Signal Block Diagnostics (bars where prediction>0 but signal stayed 0):")
+        print(f"   Bullish Prediction Bars: {sbd['total']}")
+        print(f"\n   Why didn't they become signal=1? (can overlap if multiple gates hit)")
+        print(f"   Raw prediction < min ({strategy_params['min_raw_prediction']}):  "
+              f"{sbd['blocked_by_raw_min']} ({sbd['blocked_by_raw_min_pct']:.1f}%)")
+        print(f"   Norm strength < min ({strategy_params['min_prediction_strength']}):   "
+              f"{sbd['blocked_by_norm_strength']} ({sbd['blocked_by_norm_strength_pct']:.1f}%)")
+        print(f"   Regime filter:           {sbd['blocked_by_regime']} ({sbd['blocked_by_regime_pct']:.1f}%)")
+        print(f"   SPY filter:              {sbd['blocked_by_spy']} ({sbd['blocked_by_spy_pct']:.1f}%)")
+        print(f"   Volatility filter:       {sbd['blocked_by_volatility']} ({sbd['blocked_by_volatility_pct']:.1f}%)")
+        print(f"   ADX filter:              {sbd['blocked_by_adx']} ({sbd['blocked_by_adx_pct']:.1f}%)")
+        print(f"   Fundamental filter:      {sbd['blocked_by_fundamental']} ({sbd['blocked_by_fundamental_pct']:.1f}%)")
 
 # Percentile Band Performance
 if hasattr(strat, 'get_percentile_band_stats'):

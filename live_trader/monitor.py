@@ -86,15 +86,67 @@ class LiveTradingMonitor:
             self.position_manager._save()
             print(f"ℹ️  Cleared {cleared} pending exit flag(s) from previous session")
 
-    def get_live_data(self, symbol, period=None, interval=None, use_current_timeframe=True):
+    def _resolve_symbol(self, user_symbol):
+        """
+        Resolve a user-provided symbol to its canonical watchlist form.
+
+        Handles exchange suffixes so that, e.g., a user typing 'CCO' is matched
+        back to 'CCO.TO' when that is the watchlist/position entry.
+
+        Priority order:
+          1. Exact match in recent buy alerts (most likely the intended stock)
+          2. Exact match in held positions
+          3. Exact match in watchlist
+          4. Base-ticker match (strip '.' suffix) in buy alerts, then positions, then watchlist
+
+        Args:
+            user_symbol: Symbol as typed by user (e.g. 'CCO' or 'CCO.TO')
+
+        Returns:
+            str: Canonical symbol, or user_symbol uppercased if no match found
+        """
+        u = user_symbol.upper()
+
+        # 1. Exact matches
+        if u in self.buy_alerts_sent:
+            return u
+        if u in self.position_manager.positions:
+            return u
+        if u in self.watchlist:
+            return u
+
+        # 2. Base-ticker fuzzy match (handles exchange suffix mismatch)
+        base = u.split('.')[0]
+
+        for sym in self.buy_alerts_sent:
+            if sym.split('.')[0] == base:
+                print(f"ℹ️  Resolved '{u}' → '{sym}' (from recent alerts)")
+                return sym
+
+        for sym in self.position_manager.positions:
+            if sym.split('.')[0] == base:
+                print(f"ℹ️  Resolved '{u}' → '{sym}' (from held positions)")
+                return sym
+
+        for sym in self.watchlist:
+            if sym.split('.')[0] == base:
+                print(f"ℹ️  Resolved '{u}' → '{sym}' (from watchlist)")
+                return sym
+
+        return u
+
+    def get_live_data(self, symbol, period=None, interval=None, use_current_timeframe=True, ticker=None):
         """Fetch live data for a symbol
 
         Args:
-            symbol: Stock ticker
+            symbol: Stock ticker (display name, used as fallback)
             period: Data period (e.g., "1y", "6mo", "60d"). If None, uses current timeframe setting.
             interval: Bar interval (e.g., "1d", "1h", "15m"). If None, uses current timeframe setting.
             use_current_timeframe: If True and period/interval not specified, use current timeframe
+            ticker: Override yfinance ticker (e.g. 'CCO.TO'). Falls back to symbol if not provided.
         """
+        # Use the exchange-specific ticker if provided, otherwise fall back to symbol
+        yf_symbol = ticker or symbol
         try:
             # Use current timeframe settings if not explicitly specified
             if use_current_timeframe and (period is None or interval is None):
@@ -105,7 +157,7 @@ class LiveTradingMonitor:
                     interval = tf_config['interval']
 
             # Use yf.download instead of Ticker.history - handles connections better
-            df = yf.download(symbol, period=period, interval=interval, progress=False,
+            df = yf.download(yf_symbol, period=period, interval=interval, progress=False,
                            auto_adjust=True, prepost=False, threads=False)
 
             if df.empty:
@@ -123,7 +175,7 @@ class LiveTradingMonitor:
             return df
 
         except Exception as e:
-            print(f"\n❌ Error fetching {symbol}: {e}")
+            print(f"\n❌ Error fetching {yf_symbol}: {e}")
             return None
 
     def get_historical_data(self, symbol, start_date, end_date):
@@ -278,7 +330,8 @@ class LiveTradingMonitor:
             print(f"⚠️  Invalid BOUGHT format: {reply}")
             return
 
-        symbol = parts[1].upper()
+        # Resolve to canonical watchlist symbol (handles exchange suffix mismatches)
+        symbol = self._resolve_symbol(parts[1])
 
         if self.position_manager.has_position(symbol):
             print(f"⚠️  Already holding {symbol}")
@@ -292,7 +345,15 @@ class LiveTradingMonitor:
             except ValueError:
                 print(f"⚠️  Invalid price in: {reply}")
 
-        # Get current price if not provided
+        # Look up exchange info so we always fetch from the right market
+        exchange = ''
+        try:
+            ticker_info = yf.Ticker(symbol).info
+            exchange = ticker_info.get('fullExchangeName', '') or ticker_info.get('exchange', '')
+        except Exception:
+            pass
+
+        # Get current price if not provided, using the canonical ticker
         if price is None:
             df = self.get_live_data(symbol)
             if df is not None:
@@ -307,12 +368,15 @@ class LiveTradingMonitor:
             stop_loss_pct = float(stop_loss_pct)
         stop_loss = price * (1 - stop_loss_pct)
 
-        # Add position
-        position = self.position_manager.add(symbol, price, stop_loss)
+        # Add position, storing the canonical ticker and exchange for future data fetches
+        position = self.position_manager.add(
+            symbol, price, stop_loss,
+            yf_ticker=symbol, exchange=exchange
+        )
 
         if position:
-            self.notifier.send_position_confirmation(symbol, price, stop_loss, "added")
-            print(f"✅ Auto-added position from reply: {symbol} @ ${price:.2f}")
+            self.notifier.send_position_confirmation(symbol, price, stop_loss, "added", exchange=exchange)
+            print(f"✅ Auto-added position from reply: {symbol} [{exchange}] @ ${price:.2f}")
 
             # Clear the buy alert tracking since position was confirmed
             if symbol in self.buy_alerts_sent:
@@ -326,7 +390,8 @@ class LiveTradingMonitor:
             print(f"⚠️  Invalid SOLD format: {reply}")
             return
 
-        symbol = parts[1].upper()
+        # Resolve to canonical symbol (handles exchange suffix mismatches)
+        symbol = self._resolve_symbol(parts[1])
         position = self.position_manager.get(symbol)
 
         if not position:
@@ -336,8 +401,12 @@ class LiveTradingMonitor:
         # Get entry price for notification
         entry_price = position['entry_price']
 
+        # Use the stored canonical ticker for data fetching (correct exchange)
+        yf_ticker = position.get('yf_ticker', symbol)
+        exchange = position.get('exchange', '')
+
         # Get current price to calculate P&L
-        df = self.get_live_data(symbol)
+        df = self.get_live_data(symbol, ticker=yf_ticker)
         if df is not None:
             current_price = df['Close'].iloc[-1]
             pnl = ((current_price / entry_price) - 1) * 100
@@ -349,8 +418,8 @@ class LiveTradingMonitor:
         self.position_manager.remove(symbol)
 
         # Send confirmation with P&L
-        self.notifier.send_position_confirmation(symbol, entry_price, current_price, "removed", pnl)
-        print(f"✅ Auto-removed position from reply: {symbol} (P&L: {pnl:+.2f}%)")
+        self.notifier.send_position_confirmation(symbol, entry_price, current_price, "removed", pnl, exchange=exchange)
+        print(f"✅ Auto-removed position from reply: {symbol} [{exchange}] (P&L: {pnl:+.2f}%)")
 
     def handle_add_command(self, reply):
         """Handle 'ADD SYMBOL' command to add stock to watchlist"""
@@ -410,13 +479,17 @@ class LiveTradingMonitor:
         entry_price = position['entry_price']
         current_stop = position['stop_loss']
 
-        df = self.get_live_data(symbol)
+        # Use the stored exchange-specific ticker so we always fetch from the right market
+        yf_ticker = position.get('yf_ticker', symbol)
+        exchange = position.get('exchange', '')
+        df = self.get_live_data(symbol, ticker=yf_ticker)
         if df is None:
             return
 
         current_price = df['Close'].iloc[-1]
 
-        sell_signal = self.strategy.get_exit_signal(df, self.params, entry_price, current_stop, symbol=symbol)
+        entry_date = position.get('entry_date')
+        sell_signal = self.strategy.get_exit_signal(df, self.params, entry_price, current_stop, symbol=symbol, entry_date=entry_date)
 
         if sell_signal['signal']:
             # Check if stop was hit in the past
@@ -428,8 +501,9 @@ class LiveTradingMonitor:
 
             # Send SELL alert but DON'T auto-remove position
             # Wait for user to confirm with "SOLD SYMBOL"
-            self.notifier.send_sell_alert(symbol, sell_signal, entry_price)
-            print(f"🔴 SELL ALERT: {symbol} - Stop hit at ${sell_signal['price']:.2f} on {bar_date}")
+            self.notifier.send_sell_alert(symbol, sell_signal, entry_price, exchange=exchange)
+            exchange_str = f" [{exchange}]" if exchange else ""
+            print(f"🔴 SELL ALERT: {symbol}{exchange_str} - Stop hit at ${sell_signal['price']:.2f} on {bar_date}")
             print(f"   ⏳ Waiting for confirmation: Reply 'SOLD {symbol}' to remove position")
 
             # Mark position as "pending exit" to avoid sending duplicate alerts
@@ -640,7 +714,7 @@ class LiveTradingMonitor:
             )
             return
 
-        symbol = parts[1].upper()
+        symbol = self._resolve_symbol(parts[1])
 
         # Send immediate acknowledgment
         print(f"⏳ Fetching signal data for {symbol}... this may take a moment")
@@ -795,7 +869,7 @@ class LiveTradingMonitor:
             )
             return
 
-        symbol = parts[1].upper()
+        symbol = self._resolve_symbol(parts[1])
         period = parts[2].upper() if len(parts) >= 3 else "1Y"
 
         # Send immediate acknowledgment
@@ -1127,8 +1201,8 @@ class LiveTradingMonitor:
             )
             cerebro.adddata(data)
 
-            # Prepare params
-            strategy_params = self.params.copy()
+            # Prepare params: strip live-trader-only keys the strategy doesn't know about
+            strategy_params = self.strategy.filter_strategy_params(self.params)
             strategy_params['verbose'] = False
             strategy_params['test_start_idx'] = test_start_idx
 
@@ -1557,7 +1631,7 @@ class LiveTradingMonitor:
             )
             return
 
-        symbol = parts[1].upper()
+        symbol = self._resolve_symbol(parts[1])
 
         print(f"📊 Running deep analysis for {symbol}...")
 
@@ -2040,7 +2114,7 @@ class LiveTradingMonitor:
             )
             return
 
-        symbols = [s.upper() for s in parts[1:]]
+        symbols = [self._resolve_symbol(s) for s in parts[1:]]
 
         if len(symbols) > 8:
             self.notifier.send_notification(

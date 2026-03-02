@@ -30,109 +30,109 @@ except FileNotFoundError:
 # CONFIGURATION - MODIFY THESE PARAMETERS
 # ============================================================================
 STRATEGY_PARAMS = {
-    # ML Settings
-    'neighbors_count': 9,
-    'max_bars_back': 8000,
-    'feature_count': 10,
-    'trend_following_labels': False,   # False=mean-reversion, True=trend-following
+    # ==================== ML SETTINGS ====================
+    'neighbors_count': 11,
+    'max_bars_back': 7000,
+    'feature_count': 6,
+    'trend_following_labels': True,    # True=trend-following labels (ride continuation)
     'allow_reentry': True,             # Enter anytime signal is favorable
     'min_prediction_strength': 20,     # Normalized scale: 0-100
-    'min_raw_prediction': 0.0,         # Min expected return in ATR units (0=disabled)
+    'min_raw_prediction': 0.0,          # Disabled — normalized prediction strength is the primary gate
 
-    # Label Settings
-    'label_lookahead': 8,
-    'label_dead_zone': 0.1,
+    # ==================== LABEL SETTINGS ====================
+    'label_lookahead': 4,              # Bars to look forward
+    'label_dead_zone': 0.1,           # Min ATR move for label: higher=cleaner trend labels
     'use_magnitude_labels': True,
 
-    # Feature 1 (VCOMP - Volatility Compression)
-    'f1_type': 'VCOMP',
-    'f1_param_a': 4,
-    'f1_param_b': 16,
+    # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
+    'f1_type': 'RSM',
+    'f1_param_a': 40,                  # Momentum period
+    'f1_param_b': 252,                 # Lookback: full year percentile ranking
 
-    # Feature 2 (MPER - Momentum Persistence)
-    'f2_type': 'MPER',
-    'f2_param_a': 4,
-    'f2_param_b': 20,
+    # ==================== FEATURE 2 (ER - Efficiency Ratio) ====================
+    'f2_type': 'ER',
+    'f2_param_a': 25,                  # ER period: trend quality over ~1 month
+    'f2_param_b': 13,
 
-    # Feature 3 (VMC - Volume-Momentum Coupling)
-    'f3_type': 'VMC',
-    'f3_param_a': 5,
-    'f3_param_b': 40,
+    # ==================== FEATURE 3 (MTD - Multi-Timeframe Divergence) ====================
+    'f3_type': 'MACC',
+    'f3_param_a': 5,                   # Short momentum window
+    'f3_param_b': 20,                  # Medium momentum window (acceleration = short > medium)
 
-    # Feature 4 (ZS - Mean Reversion Z-Score)
-    'f4_type': 'ZS',
-    'f4_param_a': 40,
-    'f4_param_b': 1,
+    # ==================== FEATURE 4 (STRK - Streak Pattern) ====================
+    'f4_type': 'STRK',
+    'f4_param_a': 30,                  # Max streak length
+    'f4_param_b': 3,                   # ATR multiplier for magnitude
 
-    # Feature 5 (RSM - Relative Strength Momentum)
-    'f5_type': 'RSM',
-    'f5_param_a': 30,
-    'f5_param_b': 160,
+    # ==================== FEATURE 5 (VCOMP - Volatility Compression) ====================
+    'f5_type': 'VCOMP',
+    'f5_param_a': 4,                   # Recent volatility window
+    'f5_param_b': 16,                  # Lookback volatility window
 
-    # Feature 6 (ER - Efficiency Ratio)
-    'f6_type': 'ER',
-    'f6_param_a': 10,
-    'f6_param_b': 1,
+    # ==================== FEATURE 6 (MPER - Momentum Persistence) ====================
+    'f6_type': 'MPER',
+    'f6_param_a': 4,                   # Short momentum period
+    'f6_param_b': 20,                  # Medium momentum period
 
-    # Feature 7 (MTD - Multi-Timeframe Divergence)
-    'f7_type': 'MTD',
-    'f7_param_a': 5,
-    'f7_param_b': 40,
+    # ==================== FEATURE 7 (VMC - Volume-Momentum Coupling) ====================
+    'f7_type': 'VMC',
+    'f7_param_a': 3,                   # Recent volume/momentum window
+    'f7_param_b': 40,                  # Baseline volume average period
 
-    # Feature 8 (STRK - Streak Pattern)
-    'f8_type': 'STRK',
-    'f8_param_a': 15,
-    'f8_param_b': 1,
+    # ==================== FEATURE 8 (CS - Candle Structure) ====================
+    'f8_type': 'CS',
+    'f8_param_a': 5,                   # Averaging window
+    'f8_param_b': 2,                   # Sensitivity (tanh scaling)
 
-    # Feature 9 (CS - Candle Structure)
+    # ==================== FEATURES 9-14 (below feature_count cutoff) ====================
     'f9_type': 'CS',
     'f9_param_a': 5,
     'f9_param_b': 2,
 
-    # Feature 10 (OBVT - OBV Trend)
-    'f10_type': 'OBVT',
-    'f10_param_a': 20,
-    'f10_param_b': 3,
+    'f10_type': 'CS',
+    'f10_param_a': 5,
+    'f10_param_b': 2,
 
-    # Features 11-14 (below feature_count cutoff)
-    'f11_type': 'VA',
-    'f11_param_a': 20,
-    'f11_param_b': 1,
+    'f11_type': 'CS',
+    'f11_param_a': 5,
+    'f11_param_b': 2,
 
-    'f12_type': 'VPD',
-    'f12_param_a': 22,
-    'f12_param_b': 1,
+    'f12_type': 'VCOMP',
+    'f12_param_a': 4,
+    'f12_param_b': 16,
 
-    'f13_type': 'MACC',
-    'f13_param_a': 5,
-    'f13_param_b': 5,
+    'f13_type': 'MPER',
+    'f13_param_a': 4,
+    'f13_param_b': 20,
 
-    'f14_type': 'CHOP',
-    'f14_param_a': 14,
-    'f14_param_b': 1,
+    'f14_type': 'VMC',
+    'f14_param_a': 5,
+    'f14_param_b': 40,
 
-    # Filters
+    # ==================== FILTERS ====================
     'use_volatility_filter': False,
     'use_regime_filter': True,
-    'regime_threshold': 0,
+    'regime_threshold': Decimal('0'),  # 0=block bearish
     'regime_period': 'weekly',
     'use_regime_direction': True,
     'regime_stability_min': 0.0,
-    'regime_stability_window': 60,
-    'regime_max_flips': 8,
+    'regime_stability_window': 10,
+    'regime_max_flips': 2,
     'use_adx_filter': False,
     'adx_threshold': 14,
     'use_ema_filter': False,
-    'ema_period': 25,
-    'ema_slope_lookback': 5,
+    'ema_period': 400,
+    'ema_slope_lookback': 20,
     'use_sma_filter': False,
-    'sma_period': 100,
-    'sma_slope_lookback': 5,
+    'sma_period': 400,
+    'sma_slope_lookback': 20,
+
+    # ==================== SPY MARKET REGIME FILTER ====================
     'use_spy_filter': True,
-    'spy_regime_threshold': 0,              # 0=block bearish
+    'spy_regime_threshold': Decimal('0'),  # 0=block bearish
     'spy_regime_period': 'weekly',
 
-    # Kernel Settings
+    # ==================== KERNEL SETTINGS ====================
     'use_kernel_filter': False,
     'use_kernel_smoothing': False,
     'kernel_lookback': 8,
@@ -140,54 +140,60 @@ STRATEGY_PARAMS = {
     'kernel_start_bar': 25,
     'kernel_lag': 2,
 
-    # Exit Settings
+    # ==================== EXIT SETTINGS ====================
     'use_dynamic_exits': False,
     'bars_to_hold': 100000,
 
-    # RSI Exit Settings
+    # ==================== RSI EXIT SETTINGS ====================
     'use_rsi_exit': False,
     'rsi_exit_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
+    'rsi_overbought': 80,              # Widened threshold (less likely to trigger)
+    'rsi_oversold': 20,
 
-    # Kernel Exit Settings
+    # ==================== KERNEL EXIT SETTINGS ====================
     'use_kernel_exit': False,
 
-    # Chandelier Exit (ATR Trailing Stop)
-    'use_trailing_atr_exit': True,
-    'trailing_atr_warmup': 3,
-    'chandelier_start_mult': 3.0,
-    'chandelier_end_mult': 1.5,
-    'chandelier_tighten_bars': 10,
-    'chandelier_mult_mode': 'blend',
-    'chandelier_profit_atr_threshold': 1.0,
-    'chandelier_breakeven_atr': 1.0,
-
-    # Prediction Validation Exit
+    # ==================== PREDICTION VALIDATION EXIT ====================
     'use_prediction_exit': True,
-    'prediction_exit_threshold': -0.5,
+    'prediction_exit_threshold': -20.0, # Exit only on strongly bearish ML, not minor dips
 
-    # Risk Management
-    'position_size_pct': Decimal('0.95'),
-    'stop_loss_pct': Decimal('0.08'),
+    # ==================== CHANDELIER EXIT (ATR TRAILING STOP) ====================
+    'use_trailing_atr_exit': True,
+    'trailing_atr_warmup': 5,
+    'chandelier_start_mult': 3.5,      # Wider than mean-reversion
+    'chandelier_end_mult': 1,          # Wider final stop
+    'chandelier_tighten_bars': 40,     # Slower tightening
+    'chandelier_mult_mode': 'blend',
+    'chandelier_profit_atr_threshold': 1.5,
+    'chandelier_breakeven_atr': 0.0,   # Requires more profit before locking break-even
+
+    # ==================== RISK MANAGEMENT ====================
+    'position_size_pct': Decimal('0.30'),  # Small initial entry; pyramid adds the rest
+    'stop_loss_pct': Decimal('0.05'),
     'use_stop_loss': False,
-
-    # Trade Direction
     'long_only': True,
 
-    # Display
+    # ==================== PYRAMIDING ====================
+    # Enter small, then add big once the trade is confirmed by another ML signal.
+    # With 30% initial + 90% of remaining 70% cash → ~93% total when confirmed.
+    'use_pyramiding': True,
+    'max_pyramid_entries': 1,              # One confirmation add-on
+    'pyramid_size_pct': Decimal('0.90'),   # Use most of remaining cash on add-on
+    'pyramid_min_profit_atr': 1.0,         # Must be up at least 1 ATR before adding
+
+    # ==================== OTHER ====================
     'verbose': False,
 
-    # Cross-Symbol Training
+    # ==================== CROSS-SYMBOL TRAINING ====================
     'use_cross_symbol_training': True,
     'cross_symbol_etfs': 'SPY,QQQ,IWM,TLT,GLD,XLE,EFA',
     'cross_symbol_lookback_years': 5,
-    'use_regime_balancing': True,
-    'cross_symbol_auto_peers': False,
+    'use_regime_balancing': False,
+    'cross_symbol_auto_peers': True,
     'cross_symbol_target_symbol': '',
     'cross_symbol_max_peers': 7,
 
-    # Fundamental Data Filter
+    # ==================== FUNDAMENTAL DATA FILTER ====================
     'use_fundamental_filter': True,
     'fundamental_symbol': '',
     'fundamental_quality_weight': 0.2,
@@ -207,6 +213,8 @@ STRATEGY_PARAMS = {
 
 CSV_FILE = '../sp500_2024.csv'
 PERIOD = "1y"
+START_DATE = "2025-02-06"  # Fixed test start date (matches backtest.py); set to None to use PERIOD rolling window
+END_DATE = "2026-02-06"    # Fixed test end date (matches backtest.py); set to None to use PERIOD rolling window
 INITIAL_CASH = 10_000
 PLOT_BEST = True
 
@@ -294,27 +302,32 @@ class TradeRecorder(bt.Analyzer):
         }
 
 
-def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=None, plot=False):
+def backtest_symbol(symbol, period="2y", initial_cash=10_000, strategy_params=None, plot=False,
+                    start_date=None, end_date=None):
     """Run backtest for a single symbol and return results"""
     try:
         # Calculate lookback bars needed for ML warmup
         max_bars_back = strategy_params.get('max_bars_back', 2000) if strategy_params else 2000
         lookback_bars = max_bars_back + 100  # buffer for indicator warmup
 
-        # Parse period to calendar days for the test window
-        period_days = {
-            '1m': 30, '3m': 90, '6m': 180,
-            '1y': 365, '2y': 730, '3y': 1095, '5y': 1825,
-        }
-        test_days = period_days.get(period, 730)
-
-        # Download extra lookback data before the test period
-        lookback_calendar_days = int(lookback_bars * 1.5) + 10  # trading days -> calendar days
-        total_calendar_days = test_days + lookback_calendar_days
-
-        data_end = datetime.now()
-        data_start = data_end - timedelta(days=total_calendar_days)
-        test_start = data_end - timedelta(days=test_days)
+        if start_date and end_date:
+            # Fixed date range mode — matches backtest.py behavior exactly
+            test_start = datetime.strptime(start_date, "%Y-%m-%d")
+            data_end = datetime.strptime(end_date, "%Y-%m-%d")
+            lookback_calendar_days = int(lookback_bars * 1.5) + 10
+            data_start = test_start - timedelta(days=lookback_calendar_days)
+        else:
+            # Rolling window mode (PERIOD-based)
+            period_days = {
+                '1m': 30, '3m': 90, '6m': 180,
+                '1y': 365, '2y': 730, '3y': 1095, '5y': 1825,
+            }
+            test_days = period_days.get(period, 730)
+            lookback_calendar_days = int(lookback_bars * 1.5) + 10
+            total_calendar_days = test_days + lookback_calendar_days
+            data_end = datetime.now()
+            data_start = data_end - timedelta(days=total_calendar_days)
+            test_start = data_end - timedelta(days=test_days)
 
         df = yf.download(symbol, start=data_start, end=data_end, interval="1d", progress=False)
 
@@ -648,7 +661,8 @@ def create_comparison_plot(strat, df, spy_df, spy_shares, initial_cash, symbol):
 
 def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
                        strategy_params=None, plot_best=True,
-                       portfolio_capital=None, max_positions=None):
+                       portfolio_capital=None, max_positions=None,
+                       start_date=None, end_date=None):
     """Run backtest on multiple stocks from CSV file"""
     if portfolio_capital is None:
         portfolio_capital = PORTFOLIO_CAPITAL
@@ -766,7 +780,8 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
             print(f"Testing {symbol} [{sector}] peers=[{peer_str}]...", end=" ")
         else:
             print(f"Testing {symbol}...", end=" ")
-        result = backtest_symbol(symbol, period, initial_cash, strategy_params, plot=False)
+        result = backtest_symbol(symbol, period, initial_cash, strategy_params, plot=False,
+                                 start_date=start_date, end_date=end_date)
         if result:
             bull_acc = result['ml_bullish_accuracy']
             acc_flag = "✓" if bull_acc >= 50 else "✗"
@@ -914,7 +929,8 @@ def run_multi_backtest(csv_file='stocks.csv', period="2y", initial_cash=10_000,
     if plot_best and len(results) > 0:
         best_symbol = df_results.loc[df_results['return_pct'].idxmax(), 'symbol']
         print(f"\nGenerating detailed plots for best performer: {best_symbol}\n")
-        backtest_symbol(best_symbol, period, initial_cash, strategy_params, plot=True)
+        backtest_symbol(best_symbol, period, initial_cash, strategy_params, plot=True,
+                        start_date=start_date, end_date=end_date)
 
 
 if __name__ == "__main__":
@@ -927,4 +943,6 @@ if __name__ == "__main__":
         plot_best=PLOT_BEST,
         portfolio_capital=PORTFOLIO_CAPITAL,
         max_positions=MAX_POSITIONS,
+        start_date=START_DATE,
+        end_date=END_DATE,
     )

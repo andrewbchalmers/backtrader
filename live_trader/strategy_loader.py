@@ -32,6 +32,21 @@ class StrategyLoader:
         self.strategy_class = self._load_strategy()
         self._is_ml_strategy = 'lorentzian' in class_name.lower() or 'classification' in class_name.lower()
 
+    def filter_strategy_params(self, params):
+        """
+        Return a copy of params containing only keys the strategy class accepts.
+
+        Any live-trader-only keys (e.g. min_bullish_accuracy) that are not
+        declared in the strategy's params tuple are silently dropped so that
+        cerebro.addstrategy() doesn't raise TypeError.
+        """
+        valid_keys = {p for p in dir(self.strategy_class.params) if not p.startswith('_')}
+        filtered = {k: v for k, v in params.items() if k in valid_keys}
+        dropped = set(params) - set(filtered)
+        if dropped:
+            print(f"   ℹ️  Dropped live-trader-only params (not in strategy): {sorted(dropped)}")
+        return filtered
+
     def _load_strategy(self):
         """Load strategy class from module"""
         try:
@@ -151,8 +166,8 @@ class StrategyLoader:
             )
             cerebro.adddata(data)
 
-            # Prepare params (remove non-strategy params, set verbose=False)
-            strategy_params = params.copy()
+            # Prepare params: strip live-trader-only keys the strategy doesn't know about
+            strategy_params = self.filter_strategy_params(params)
             strategy_params['verbose'] = False
 
             # Set per-symbol params for cross-symbol training and fundamentals
@@ -239,6 +254,30 @@ class StrategyLoader:
                     }
                     break
 
+            # Bullish ML accuracy filter — applied after a buy signal is found
+            # Requires the model's historical bullish predictions on this symbol to
+            # have been correct at least `min_bullish_accuracy`% of the time.
+            # Only applied once enough samples exist (>= min_bullish_accuracy_samples).
+            if result.get('signal') and result.get('signal_type') == 'BUY':
+                min_acc = params.get('min_bullish_accuracy', 0)
+                if min_acc > 0 and hasattr(strat, 'get_prediction_stats'):
+                    stats = strat.get_prediction_stats()
+                    bullish_total = stats.get('bullish_total', 0)
+                    bullish_acc = stats.get('bullish_accuracy_pct', 0)
+                    min_samples = params.get('min_bullish_accuracy_samples', 20)
+
+                    if bullish_total >= min_samples:
+                        if bullish_acc < min_acc:
+                            print(f"   🚫 ML bullish accuracy {bullish_acc:.1f}% < {min_acc:.0f}% minimum "
+                                  f"({bullish_total} samples) — BUY signal rejected")
+                            result = {'signal': False}
+                        else:
+                            print(f"   ✅ ML bullish accuracy {bullish_acc:.1f}% >= {min_acc:.0f}% "
+                                  f"({bullish_total} samples) — filter passed")
+                    else:
+                        print(f"   ℹ️  ML bullish accuracy filter skipped "
+                              f"(only {bullish_total}/{min_samples} samples yet)")
+
             # Check for recent sell signals (only if no buy signal found)
             if not result['signal']:
                 for sig in reversed(strat.captured_sells):
@@ -266,7 +305,7 @@ class StrategyLoader:
 
         return result
 
-    def get_exit_signal(self, df, params, entry_price, current_stop, symbol=None):
+    def get_exit_signal(self, df, params, entry_price, current_stop, symbol=None, entry_date=None):
         """
         Extract exit logic from strategy
         For ML strategies, runs the actual strategy to detect exit signals.
@@ -275,7 +314,7 @@ class StrategyLoader:
         """
         # For ML strategies, run the actual strategy exit logic
         if self._is_ml_strategy:
-            return self._get_ml_exit_signal(df, params, entry_price, current_stop, symbol=symbol)
+            return self._get_ml_exit_signal(df, params, entry_price, current_stop, symbol=symbol, entry_date=entry_date)
 
         # Legacy: simple percentage-based stop logic
         stop_pct = params.get('stop_loss_pct', 0.05)
@@ -299,7 +338,7 @@ class StrategyLoader:
 
         return {'signal': False, 'new_stop': new_stop}
 
-    def _get_ml_exit_signal(self, df, params, entry_price, current_stop, symbol=None):
+    def _get_ml_exit_signal(self, df, params, entry_price, current_stop, symbol=None, entry_date=None):
         """
         Run the ML strategy to detect exit signals for held positions.
         Simulates holding a position and checks if strategy would exit.
@@ -364,13 +403,31 @@ class StrategyLoader:
             )
             cerebro.adddata(data)
 
-            strategy_params = params.copy()
+            strategy_params = self.filter_strategy_params(params)
             strategy_params['verbose'] = False
 
             # Set per-symbol params for cross-symbol training and fundamentals
             if symbol:
                 strategy_params['cross_symbol_target_symbol'] = symbol
                 strategy_params['fundamental_symbol'] = symbol
+
+            # Compute actual position age and highest HIGH since entry from real data.
+            # This lets the chandelier multiplier and stop level reflect the true trade state
+            # rather than starting fresh from bar 0 in the 5-bar simulation window.
+            captured_bars_since_entry = 0
+            captured_highest_since_entry = float(entry_price)
+            if entry_date:
+                try:
+                    entry_dt = pd.to_datetime(entry_date)
+                    mask = df.index >= entry_dt
+                    if mask.any():
+                        bars_after = df[mask]
+                        captured_bars_since_entry = len(bars_after)
+                        captured_highest_since_entry = float(bars_after['High'].max())
+                        print(f"   📐 Chandelier state: {captured_bars_since_entry} bars in trade, "
+                              f"peak high=${captured_highest_since_entry:.2f}")
+                except Exception as e:
+                    print(f"   ⚠️  Could not compute chandelier state from entry_date: {e}")
 
             # Create a strategy wrapper that simulates holding a position
             parent_strategy_class = self.strategy_class
@@ -396,12 +453,15 @@ class StrategyLoader:
                         # Don't call super()._execute_buy() - it would overwrite entry_price
                         # and try to place an actual order
                         self.entry_price = self.sim_entry_price
-                        self._highest_since_entry = self.sim_entry_price
+                        self._highest_since_entry = max(captured_highest_since_entry, self.data.high[0])
                         atr_val = self.label_atr[0] if len(self.label_atr) > 0 else 0
                         if atr_val > 0:
-                            self._trailing_stop_level = self.sim_entry_price - (self.p.trailing_atr_mult * atr_val)
+                            mult = self._compute_dynamic_multiplier(captured_bars_since_entry, atr_val)
+                            self._trailing_stop_level = self._highest_since_entry - (mult * atr_val)
                         else:
                             self._trailing_stop_level = 0
+                        # Offset entry_bar so bars_in_trade reflects real position age
+                        self.entry_bar = len(self) - captured_bars_since_entry
 
                 def _close_position(self, reason):
                     # Capture exit signal
@@ -489,13 +549,16 @@ class StrategyLoader:
                         self.simulated_position = True
                         self.entry_price = self.sim_entry_price
                         self.entry_bar = len(self)
-                        # Initialize trailing stop tracking
-                        self._highest_since_entry = self.sim_entry_price
+                        # Initialize trailing stop tracking using real position history
+                        self._highest_since_entry = max(captured_highest_since_entry, self.data.high[0])
                         atr_val = self.label_atr[0] if len(self.label_atr) > 0 else 0
                         if atr_val > 0:
-                            self._trailing_stop_level = self.sim_entry_price - (self.p.trailing_atr_mult * atr_val)
+                            mult = self._compute_dynamic_multiplier(captured_bars_since_entry, atr_val)
+                            self._trailing_stop_level = self._highest_since_entry - (mult * atr_val)
                         else:
                             self._trailing_stop_level = 0
+                        # Offset entry_bar so bars_in_trade reflects real position age
+                        self.entry_bar = len(self) - captured_bars_since_entry
 
                     # Check exit conditions if we have a simulated position
                     if self.simulated_position:
@@ -509,19 +572,34 @@ class StrategyLoader:
                     current price vs actual entry price, not here in simulation."""
                     current_price = self.data.close[0]
 
-                    # ATR trailing stop (LZC8 feature)
+                    # Chandelier ATR trailing stop — mirrors _update_and_check_trailing_stop()
                     if hasattr(self.p, 'use_trailing_atr_exit') and self.p.use_trailing_atr_exit:
                         atr_val = self.label_atr[0] if len(self.label_atr) > 0 else 0
                         if atr_val > 0:
-                            if current_price > self._highest_since_entry:
-                                self._highest_since_entry = current_price
-                            new_stop = self._highest_since_entry - (self.p.trailing_atr_mult * atr_val)
+                            bars_in_trade = len(self) - self.entry_bar
+                            mult = self._compute_dynamic_multiplier(bars_in_trade, atr_val)
+
+                            # Track highest HIGH (not close) — classic Chandelier
+                            if self.data.high[0] > self._highest_since_entry:
+                                self._highest_since_entry = self.data.high[0]
+
+                            new_stop = self._highest_since_entry - (mult * atr_val)
+
+                            # Break-even floor
+                            if self.p.chandelier_breakeven_atr > 0:
+                                if (current_price - self.entry_price) >= self.p.chandelier_breakeven_atr * atr_val:
+                                    new_stop = max(new_stop, self.entry_price)
+
                             if new_stop > self._trailing_stop_level:
                                 self._trailing_stop_level = new_stop
-                            bars_in_trade = len(self) - self.entry_bar
+
                             if bars_in_trade >= self.p.trailing_atr_warmup:
                                 if current_price < self._trailing_stop_level:
-                                    self._close_position("ATR TRAILING STOP")
+                                    self._close_position(
+                                        f"CHANDELIER STOP ({current_price:.2f} < "
+                                        f"{self._trailing_stop_level:.2f}, "
+                                        f"peak={self._highest_since_entry:.2f}, mult={mult:.2f}x)"
+                                    )
                                     return
 
                     # Dynamic vs strict exit modes
@@ -549,11 +627,6 @@ class StrategyLoader:
                                     return
                     else:
                         # Strict exit mode
-                        # Signal flip exit
-                        if signal_changed and self.signal == -1:
-                            self._close_position("SIGNAL FLIP TO BEARISH")
-                            return
-
                         # RSI exit
                         if self.p.use_rsi_exit and hasattr(self, 'rsi_exit'):
                             rsi_val = self.rsi_exit[0]
@@ -699,7 +772,15 @@ def calculate_lookback(strategy_class, strategy_params=None):
             except (ValueError, TypeError):
                 continue
         if isinstance(param_value, int) and param_value > 0:
-            exclude_patterns = ['verbose', 'plot', 'print', 'count', 'feature']
+            # Exclude params that are NOT lookback periods:
+            # - 'verbose/plot/print': display flags
+            # - 'count/feature': ML neighbour/feature counts
+            # - 'hold': bars_to_hold is a max hold duration, not a lookback
+            # - 'warmup': trailing_atr_warmup is a trade warm-up, not data lookback
+            # - 'samples': min_bullish_accuracy_samples, not a lookback
+            # - 'idx': test_start_idx, not a lookback
+            exclude_patterns = ['verbose', 'plot', 'print', 'count', 'feature',
+                                 'hold', 'warmup', 'samples', 'idx']
             if not any(pattern in param_name.lower() for pattern in exclude_patterns):
                 lookback_candidates.append(param_value)
 

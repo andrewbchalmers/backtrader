@@ -1151,8 +1151,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('trend_following_labels', False),  # False=mean-reversion labels, True=trend-following labels
         ('allow_reentry', True),         # True=enter anytime signal favorable, False=only on signal flip
         ('min_prediction_strength', 20),  # Minimum |prediction| to generate signal (normalized scale: 0-100)
-        ('min_raw_prediction', 0.0),      # Minimum expected return in ATR units (0=disabled). Requires neighbors
-                                          # to collectively predict at least N * ATR of price movement.
+        ('min_raw_prediction', 0.0),      # Minimum raw KNN vote (0=disabled). Scale = neighbors_count * avg_label_ATR.
+                                          # e.g. with neighbors=10: threshold=2.0 requires avg expected move >= 0.2 ATR.
         ('prediction_norm_window', 200),  # Rolling window for percentile rank normalization
 
         # === Label Settings ===
@@ -1298,6 +1298,12 @@ class LorentzianClassificationStrategy(bt.Strategy):
         ('position_size_pct', Decimal('0.95')),
         ('stop_loss_pct', Decimal('0.05')),
         ('use_stop_loss', True),
+
+        # === Pyramiding ===
+        ('use_pyramiding', False),          # Add to position when ML fires another buy signal
+        ('max_pyramid_entries', 2),         # Max additional entries (beyond initial)
+        ('pyramid_size_pct', Decimal('0.5')),  # Each add-on as fraction of remaining cash
+        ('pyramid_min_profit_atr', 1.0),    # Position must be up this many ATR before adding
 
         # === Trade Direction ===
         ('long_only', True),  # Set to False to enable short selling
@@ -1536,8 +1542,11 @@ class LorentzianClassificationStrategy(bt.Strategy):
         self.entry_bar = 0
         self.entry_price = 0
         self._exit_reason = None
+        self.pyramid_entries = 0  # Number of pyramid add-ons executed (confirmed fills only)
+        self._pending_pyramid = False  # True while a pyramid buy order is in flight
         self.prediction = 0
         self.raw_prediction = 0.0
+        self._last_prediction_sign = 0  # tracks sign of prediction to detect flips
 
         # ATR trailing stop state
         self._highest_since_entry = 0.0
@@ -1590,6 +1599,20 @@ class LorentzianClassificationStrategy(bt.Strategy):
             'entries_blocked_by_kernel': 0,
             'entries_blocked_by_ema': 0,
             'entries_blocked_by_sma': 0,
+        }
+
+        # Signal block diagnostics: why bullish predictions (prediction > 0) never became signal=1
+        # These are invisible to the standard diagnostics because _check_filters() runs inside
+        # _update_signal(), so signal never reaches 1 and entry_attempts is never incremented.
+        self.signal_block_diagnostics = {
+            'bullish_prediction_bars': 0,    # bars where normalized prediction > 0
+            'blocked_by_raw_min': 0,         # raw_prediction < min_raw_prediction
+            'blocked_by_norm_strength': 0,   # abs(prediction) < min_prediction_strength
+            'blocked_by_regime': 0,          # regime filter
+            'blocked_by_spy': 0,             # SPY market regime filter
+            'blocked_by_volatility': 0,      # volatility filter
+            'blocked_by_adx': 0,             # ADX filter
+            'blocked_by_fundamental': 0,     # fundamental/earnings filter
         }
 
         # Regime diagnostics
@@ -1967,6 +1990,125 @@ class LorentzianClassificationStrategy(bt.Strategy):
             }
         return stats
 
+    def _diagnose_signal_block(self):
+        """Track exactly why a bullish normalized prediction didn't become signal=1.
+
+        Called when self.prediction > 0 but self.signal != 1 after _update_signal runs.
+        Increments signal_block_diagnostics counters so the backtest summary can show
+        which gate is responsible for suppressing entries during uptrends.
+        """
+        d = self.signal_block_diagnostics
+        d['bullish_prediction_bars'] += 1
+
+        prediction_strong_enough = abs(self.prediction) >= self.p.min_prediction_strength
+        raw_strong_enough = (abs(self.raw_prediction) >= self.p.min_raw_prediction
+                             if self.p.min_raw_prediction > 0 else True)
+
+        if not raw_strong_enough:
+            d['blocked_by_raw_min'] += 1
+
+        if not prediction_strong_enough:
+            d['blocked_by_norm_strength'] += 1
+
+        # Only check filters when strength gates pass — mirrors _update_signal logic
+        if prediction_strong_enough and raw_strong_enough:
+            blockers = []  # collect names for single verbose line
+
+            if self.p.use_volatility_filter:
+                if self.volatility_filter.filter[0] <= 0:
+                    d['blocked_by_volatility'] += 1
+                    blockers.append('VOLATILITY')
+
+            if self.p.use_regime_filter:
+                regime = self.regime_filter.regime[0]
+                regime_passes = True
+                if regime < self.p.regime_threshold:
+                    regime_passes = (self.p.use_regime_direction
+                                     and regime == 0
+                                     and self.regime_filter.direction[0] > 0)
+                if not regime_passes:
+                    d['blocked_by_regime'] += 1
+                    regime_label = {1: 'BULL', 0: 'REVERT', -1: 'BEAR'}.get(int(regime), str(regime))
+                    blockers.append(f'REGIME({regime_label})')
+                elif (self.p.regime_stability_min > 0
+                      and self.regime_filter.stability[0] < self.p.regime_stability_min):
+                    d['blocked_by_regime'] += 1
+                    blockers.append('REGIME(UNSTABLE)')
+
+            if self.p.use_spy_filter and self._spy_filter_active:
+                current_date = self.data.datetime.date(0)
+                spy_regime = self._spy_regime_lookup.get(current_date, None)
+                if spy_regime is not None and spy_regime < self.p.spy_regime_threshold:
+                    d['blocked_by_spy'] += 1
+                    blockers.append(f'SPY({spy_regime:.0f})')
+
+            if self.p.use_adx_filter:
+                if self.adx[0] < self.p.adx_threshold:
+                    d['blocked_by_adx'] += 1
+                    blockers.append(f'ADX({self.adx[0]:.1f}<{self.p.adx_threshold})')
+
+            if self.p.use_fundamental_filter and self.fundamental_provider is not None:
+                current_date = self.data.datetime.date(0)
+                earnings_blocked = self._check_earnings_blackout(current_date)
+                if not earnings_blocked and self.p.close_before_earnings:
+                    days_until = self.fundamental_provider.days_until_earnings(current_date)
+                    earnings_blocked = (days_until is not None
+                                        and 0 < days_until <= self.p.earnings_blackout_before + 1)
+                if earnings_blocked:
+                    d['blocked_by_fundamental'] += 1
+                    blockers.append('EARNINGS')
+                else:
+                    trending_prob, quality, momentum, _ = self._get_fundamental_scores(current_date)
+                    fund_blocked = (
+                        (trending_prob is not None
+                         and trending_prob < self.p.min_trending_probability)
+                        or (self.p.min_quality_score > 0 and quality is not None
+                            and quality < self.p.min_quality_score)
+                        or (self.p.min_momentum_score > 0 and momentum is not None
+                            and momentum < self.p.min_momentum_score)
+                    )
+                    if fund_blocked:
+                        d['blocked_by_fundamental'] += 1
+                        blockers.append('FUNDAMENTAL')
+
+            if self.p.verbose and blockers:
+                print(f"SIGNAL BLOCKED: {self.data.datetime.date(0)} | "
+                      f"Pred: {self.prediction:.1f} (raw: {self.raw_prediction:.2f}) | "
+                      f"Price: ${self.data.close[0]:.2f} | "
+                      f"Blocked by: {', '.join(blockers)}")
+
+        elif self.p.verbose:
+            # Strength gate failed — print once on the flip bar only
+            if self._last_prediction_sign != (1 if self.prediction > 0 else 0):
+                reasons = []
+                if not raw_strong_enough:
+                    reasons.append(f'raw |{self.raw_prediction:.2f}| < {self.p.min_raw_prediction}')
+                if not prediction_strong_enough:
+                    reasons.append(f'norm {self.prediction:.1f} < {self.p.min_prediction_strength}')
+                if reasons:
+                    print(f"SIGNAL WEAK: {self.data.datetime.date(0)} | "
+                          f"Pred: {self.prediction:.1f} (raw: {self.raw_prediction:.2f}) | "
+                          f"Price: ${self.data.close[0]:.2f} | "
+                          f"Reason: {', '.join(reasons)}")
+
+    def get_signal_block_diagnostics(self):
+        """Return signal block diagnostics with percentages."""
+        d = self.signal_block_diagnostics
+        total = d['bullish_prediction_bars']
+        result = dict(d)
+        result['total'] = total
+        if total > 0:
+            for key in ('blocked_by_raw_min', 'blocked_by_norm_strength',
+                        'blocked_by_regime', 'blocked_by_spy', 'blocked_by_volatility',
+                        'blocked_by_adx', 'blocked_by_fundamental'):
+                result[f'{key}_pct'] = d[key] / total * 100
+        else:
+            for key in ('blocked_by_raw_min', 'blocked_by_norm_strength',
+                        'blocked_by_regime', 'blocked_by_spy', 'blocked_by_volatility',
+                        'blocked_by_adx', 'blocked_by_fundamental'):
+                result[f'{key}_pct'] = 0.0
+        return result
+
     def _check_filters(self):
         """Check all filter conditions."""
         # Volatility filter
@@ -2128,7 +2270,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
         min_strength = self.p.min_prediction_strength
         prediction_strong_enough = abs(self.prediction) >= min_strength
 
-        # Check raw prediction (absolute: expected return in ATR units)
+        # Raw magnitude check (abs): ensures the KNN vote has sufficient strength.
+        # Direction is handled by the normalized prediction (self.prediction > 0 / < 0).
         min_raw = self.p.min_raw_prediction
         raw_strong_enough = abs(self.raw_prediction) >= min_raw if min_raw > 0 else True
 
@@ -2144,6 +2287,21 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self.bars_held = 0
         else:
             self.bars_held += 1
+
+        # Log when the ML prediction flips sign — shows exactly when the model
+        # turns bullish/bearish, even if no trade fires (e.g. during silent dead zones).
+        if self.p.verbose:
+            current_sign = 1 if self.prediction > 0 else (-1 if self.prediction < 0 else 0)
+            if current_sign != self._last_prediction_sign and current_sign != 0:
+                direction = "BULLISH" if current_sign == 1 else "BEARISH"
+                print(f"ML PREDICTION FLIP → {direction}: {self.data.datetime.date(0)} | "
+                      f"Prediction: {self.prediction:.1f} (raw: {self.raw_prediction:.2f}) | "
+                      f"Price: ${self.data.close[0]:.2f}")
+            self._last_prediction_sign = current_sign
+
+        # Track why bullish predictions didn't become signal=1
+        if self.prediction > 0 and self.signal != 1:
+            self._diagnose_signal_block()
 
         return old_signal != self.signal
 
@@ -2189,6 +2347,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
         # Run ML prediction
         self.prediction = self._run_knn()
 
+        # Capture raw KNN output before any adjustments (used by min_raw_prediction filter)
+        self.raw_prediction = self.prediction
+
         # Apply loss penalty: recent losses make the model more bearish
         if self.p.use_loss_penalty and self.loss_penalty > 0:
             if self.prediction > 0:
@@ -2201,8 +2362,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
                 self.loss_penalty = 0.0
 
         # Normalize prediction to [-100, +100] via rolling percentile rank
-        self.raw_prediction = self.prediction
-        self.prediction = self._normalize_prediction(self.raw_prediction)
+        self.prediction = self._normalize_prediction(self.prediction)
 
         # === Raw Prediction Diagnostics (prediction_sum uses raw for meaningful average) ===
         self.prediction_diagnostics['total_bars'] += 1
@@ -2255,6 +2415,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
             self._check_entry(signal_changed)
         else:
             self._check_exit(signal_changed)
+            # If still in position, let ML-driven pyramiding add to it
+            if self.position and self.p.use_pyramiding:
+                self._check_pyramid_entry(signal_changed)
 
     def _validate_predictions(self):
         """
@@ -2649,10 +2812,56 @@ class LorentzianClassificationStrategy(bt.Strategy):
                 if was_bearish and is_bullish:
                     self._close_position("KERNEL BULLISH CHANGE")
 
+    def _check_pyramid_entry(self, signal_changed):
+        """Add to an existing long when the ML fires another valid buy signal.
+
+        Does NOT require regime/SPY filter re-approval — the trade is already open,
+        meaning those filters were satisfied at entry.  We only require the ML
+        prediction to still be sufficiently bullish, plus the optional
+        kernel/EMA/SMA micro-filters that the user may have enabled.
+        """
+        if (self.order is not None or
+                self.position.size <= 0 or
+                self.pyramid_entries >= self.p.max_pyramid_entries):
+            return
+
+        # Use raw ML signal strength instead of the regime/SPY-gated self.signal.
+        # We're already in the trade — just need ML to still be net bullish.
+        # Don't reuse the entry threshold (min_prediction_strength) since that
+        # exists to filter noisy fresh entries; scale-ins only need prediction > 0.
+        if self.prediction <= 0:
+            return
+
+        # Same filters as a regular long entry
+        if not (self._check_kernel_bullish() and
+                self._check_ema_uptrend() and
+                self._check_sma_uptrend()):
+            return
+
+        # Only add when the position is actually working — require minimum profit in ATR
+        if self.p.pyramid_min_profit_atr > 0 and self.entry_price > 0:
+            required_profit = self.p.pyramid_min_profit_atr * self.label_atr[0]
+            if self.data.close[0] < self.entry_price + required_profit:
+                return
+
+        cash = self.broker.getcash()
+        size = int(cash * float(self.p.pyramid_size_pct) / self.data.close[0] * 0.95)
+        if size <= 0:
+            return
+
+        self._pending_pyramid = True  # Flag so notify_order can count it on confirmed fill
+        self.order = self.buy(size=size)
+
+        if self.p.verbose:
+            print(f"PYRAMID ADD #{self.pyramid_entries + 1}: {self.data.datetime.date(0)} | "
+                  f"Size: {size} | Price: ${self.data.close[0]:.2f} | "
+                  f"Signal: {self.prediction:.1f}")
+
     def _execute_buy(self):
         """Execute buy order (go long)."""
         size = self._calculate_position_size()
         if size > 0:
+            self.pyramid_entries = 0  # Reset on every fresh entry (safety net)
             self.order = self.buy(size=size)
             self.entry_bar = len(self)
             self.entry_price = self.data.close[0]
@@ -2728,6 +2937,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
     def _close_position(self, reason):
         """Close current position (long or short)."""
         self._exit_reason = reason
+        self.pyramid_entries = 0
+        self._pending_pyramid = False
         if self.position.size > 0:
             # Close long position
             pnl = (self.data.close[0] - self.entry_price) * self.position.size
@@ -2808,6 +3019,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
         if self.position:
             if self.p.verbose:
                 print(f"FINAL BAR - Closing position at ${self.data.close[0]:.2f}")
+            self.pyramid_entries = 0
+            self._pending_pyramid = False
             if self.position.size > 0:
                 self._exit_reason = "FINAL BAR"
                 self.order = self.sell(size=self.position.size)
@@ -2821,6 +3034,8 @@ class LorentzianClassificationStrategy(bt.Strategy):
             return
 
         if order.status == order.Completed:
+            if order.isbuy() and self._pending_pyramid:
+                self.pyramid_entries += 1  # Only count confirmed pyramid fills
             if self.p.verbose and order.isbuy():
                 print(f"BUY Executed: {self.data.datetime.date(0)}, "
                       f"size={order.executed.size}, "
@@ -2836,7 +3051,9 @@ class LorentzianClassificationStrategy(bt.Strategy):
             if self.p.verbose:
                 print(f"ORDER FAILED: {self.data.datetime.date(0)}, "
                       f"status={order.getstatusname()}")
+            # Don't count a pyramid add that was never filled
 
+        self._pending_pyramid = False
         self.order = None
 
 

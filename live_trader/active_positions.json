@@ -2,139 +2,166 @@
   "NFLX": {
     "entry_price": 109.13,
     "entry_date": "2025-12-11T00:00:00",
-    "stop_loss": 84.49700012207032,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-19"
-  },
-  "OKE": {
-    "entry_price": 76.54,
-    "entry_date": "2026-01-22T12:06:08.430624",
-    "stop_loss": 72.71300000000001,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-18"
+    "stop_loss": 103.67349999999999
   },
   "AMD": {
     "entry_price": 254.9,
     "entry_date": "2026-01-22T12:49:39.647545",
-    "stop_loss": 242.155,
-    "pending_exit": true,
-    "exit_alerted_date": "2026-02-19"
+    "stop_loss": 242.155
   },
   "AAPL": {
     "entry_price": 276.9,
     "entry_date": "2026-02-04T10:44:02.846726",
     "stop_loss": 263.05499999999995,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-19"
+    "exit_alerted_date": "2026-02-23"
   },
   "NOC": {
     "entry_price": 693.06,
     "entry_date": "2026-02-05T14:46:05.031350",
-    "stop_loss": 658.4069999999999
+    "stop_loss": 658.4069999999999,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-23"
   },
   "PHM": {
     "entry_price": 134.11,
     "entry_date": "2026-02-05T15:13:21.861448",
-    "stop_loss": 127.40450000000001
+    "stop_loss": 127.40450000000001,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-18"
   },
   "SBUX": {
     "entry_price": 96.79,
     "entry_date": "2026-02-05T15:55:57.323144",
-    "stop_loss": 91.9505
+    "stop_loss": 91.9505,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "APD": {
     "entry_price": 285.86,
     "entry_date": "2026-02-06T11:11:01.470671",
-    "stop_loss": 271.567
+    "stop_loss": 271.567,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-20"
   },
   "AOS": {
     "entry_price": 79.18,
     "entry_date": "2026-02-06T11:13:25.352811",
-    "stop_loss": 75.221
+    "stop_loss": 75.221,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "CTRA": {
     "entry_price": 30.67,
     "entry_date": "2026-02-06T12:06:49.441556",
-    "stop_loss": 29.1365
+    "stop_loss": 29.1365,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-23"
   },
   "DECK": {
     "entry_price": 114.59,
     "entry_date": "2026-02-06T12:24:37.039951",
-    "stop_loss": 108.8605
+    "stop_loss": 108.8605,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "HUBB": {
     "entry_price": 497.61,
     "entry_date": "2026-02-06T13:38:56.944588",
     "stop_loss": 472.7295,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-19"
+    "exit_alerted_date": "2026-02-24"
   },
   "AME": {
     "entry_price": 231.54,
     "entry_date": "2026-02-09T11:01:34.203875",
-    "stop_loss": 219.963
+    "stop_loss": 219.963,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "KMI": {
     "entry_price": 31.01,
     "entry_date": "2026-02-09T15:03:16.250849",
-    "stop_loss": 29.4595
+    "stop_loss": 29.4595,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "LHX": {
     "entry_price": 350.34,
     "entry_date": "2026-02-09T15:08:32.094952",
-    "stop_loss": 332.823
+    "stop_loss": 332.823,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-20"
   },
   "MMM": {
     "entry_price": 169.59,
     "entry_date": "2026-02-09T15:39:34.319574",
-    "stop_loss": 161.1105
+    "stop_loss": 161.1105,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-23"
   },
   "MO": {
     "entry_price": 64.21,
     "entry_date": "2026-02-09T15:43:14.037486",
-    "stop_loss": 60.99949999999999
+    "stop_loss": 60.99949999999999,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "MTB": {
     "entry_price": 236.34,
     "entry_date": "2026-02-09T15:58:27.570063",
-    "stop_loss": 224.523
+    "stop_loss": 224.523,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-19"
   },
   "NSC": {
     "entry_price": 306.2,
     "entry_date": "2026-02-09T16:38:56.575423",
-    "stop_loss": 290.89
+    "stop_loss": 290.89,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-17"
   },
   "PLD": {
     "entry_price": 137.08,
     "entry_date": "2026-02-09T16:44:02.678122",
-    "stop_loss": 130.226
+    "stop_loss": 130.226,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-19"
   },
   "ALGN": {
     "entry_price": 195.97,
     "entry_date": "2026-02-11T10:59:11.046818",
-    "stop_loss": 186.17149999999998
+    "stop_loss": 186.17149999999998,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "APTV": {
     "entry_price": 85.42,
     "entry_date": "2026-02-11T11:15:36.357434",
     "stop_loss": 81.149,
     "pending_exit": true,
-    "exit_alerted_date": "2026-02-19"
+    "exit_alerted_date": "2026-02-18"
   },
   "CPAY": {
     "entry_price": 349.76,
     "entry_date": "2026-02-11T13:29:29.114385",
-    "stop_loss": 332.272
+    "stop_loss": 332.272,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "CL": {
     "entry_price": 95.44,
     "entry_date": "2026-02-11T13:35:52.730439",
-    "stop_loss": 90.66799999999999
+    "stop_loss": 90.66799999999999,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "ABT": {
     "entry_price": 111.99,
     "entry_date": "2026-02-12T10:57:25.812377",
-    "stop_loss": 106.39049999999999
+    "stop_loss": 106.39049999999999,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "AZO": {
     "entry_price": 3801.5,
@@ -144,12 +171,16 @@
   "BG": {
     "entry_price": 121.26,
     "entry_date": "2026-02-12T12:43:26.802651",
-    "stop_loss": 115.197
+    "stop_loss": 115.197,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "CMS": {
     "entry_price": 75.11,
     "entry_date": "2026-02-12T13:43:14.840189",
-    "stop_loss": 71.3545
+    "stop_loss": 71.3545,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-17"
   },
   "IZV": {
     "entry_price": 26.23,
@@ -159,31 +190,52 @@
   "LULU": {
     "entry_price": 176.14,
     "entry_date": "2026-02-13T13:11:25.092796",
-    "stop_loss": 167.33299999999997
+    "stop_loss": 167.33299999999997,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-18"
   },
   "RTX": {
     "entry_price": 199.42,
     "entry_date": "2026-02-13T15:12:56.287094",
-    "stop_loss": 189.44899999999998
+    "stop_loss": 189.44899999999998,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-20"
   },
   "CME": {
     "entry_price": 302.63,
     "entry_date": "2026-02-17T12:06:59.702696",
-    "stop_loss": 287.4985
+    "stop_loss": 287.4985,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-24"
   },
   "CTAS": {
     "entry_price": 195.38,
     "entry_date": "2026-02-17T12:22:41.185166",
-    "stop_loss": 185.611
+    "stop_loss": 185.611,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-23"
   },
-  "LEN": {
-    "entry_price": 121.54,
-    "entry_date": "2026-02-17T16:02:11.756069",
-    "stop_loss": 115.463
+  "AIZ": {
+    "entry_price": 223.23,
+    "entry_date": "2026-02-20T10:58:54.997842",
+    "stop_loss": 212.06849999999997,
+    "yf_ticker": "AIZ",
+    "exchange": "NYSE"
   },
-  "COR": {
-    "entry_price": 362.47,
-    "entry_date": "2026-02-19T15:29:26.916208",
-    "stop_loss": 344.3465
+  "AMP": {
+    "entry_price": 465.34,
+    "entry_date": "2026-02-20T11:16:34.026549",
+    "stop_loss": 442.073,
+    "yf_ticker": "AMP",
+    "exchange": "NYSE"
+  },
+  "CSCO": {
+    "entry_price": 78.75,
+    "entry_date": "2026-02-20T13:26:30.135519",
+    "stop_loss": 74.8125,
+    "yf_ticker": "CSCO",
+    "exchange": "NasdaqGS",
+    "pending_exit": true,
+    "exit_alerted_date": "2026-02-19"
   }
 }

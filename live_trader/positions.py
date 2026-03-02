@@ -46,15 +46,18 @@ class PositionManager:
             traceback.print_exc()
             return False
 
-    def add(self, symbol, entry_price, stop_loss, entry_date=None):
+    def add(self, symbol, entry_price, stop_loss, entry_date=None, yf_ticker=None, exchange=None):
         """
         Add a new position
 
         Args:
-            symbol: Stock ticker
+            symbol: Display ticker (e.g. 'CCO')
             entry_price: Entry price
             stop_loss: Initial stop loss price
             entry_date: Entry date (defaults to now)
+            yf_ticker: Canonical yfinance ticker including exchange suffix (e.g. 'CCO.TO').
+                       Defaults to symbol if not provided.
+            exchange: Human-readable exchange name (e.g. 'Toronto', 'NYSE')
 
         Returns:
             dict: The position data if successful, None otherwise
@@ -69,11 +72,14 @@ class PositionManager:
         self.positions[symbol] = {
             'entry_price': float(entry_price),
             'entry_date': entry_date,
-            'stop_loss': float(stop_loss)
+            'stop_loss': float(stop_loss),
+            'yf_ticker': yf_ticker or symbol,
+            'exchange': exchange or '',
         }
 
         if self._save():
-            print(f"✓ Position added: {symbol} @ ${entry_price:.2f}, SL @ ${stop_loss:.2f}")
+            exchange_str = f" [{exchange}]" if exchange else ""
+            print(f"✓ Position added: {symbol}{exchange_str} @ ${entry_price:.2f}, SL @ ${stop_loss:.2f}")
             return self.positions[symbol]
         return None
 
