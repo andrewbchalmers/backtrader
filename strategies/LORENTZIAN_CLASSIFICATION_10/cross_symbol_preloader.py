@@ -74,6 +74,40 @@ def _disk_cache_path(etf: str, start_date_str: str, end_date_str: str) -> Path:
     return _DISK_CACHE_DIR / filename
 
 
+def _precomputed_cache_path(cache_key: tuple) -> Path:
+    """Return the disk path for a precomputed features+labels cache entry."""
+    import hashlib
+    key_hash = hashlib.md5(str(cache_key).encode()).hexdigest()
+    _DISK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    return _DISK_CACHE_DIR / f"precomputed_{key_hash}.pkl"
+
+
+def _load_precomputed_from_disk(cache_key: tuple):
+    """Load precomputed features+labels from disk. Returns None if missing or stale."""
+    path = _precomputed_cache_path(cache_key)
+    if not path.exists():
+        return None
+    if time.time() - path.stat().st_mtime > _DISK_CACHE_TTL_SECONDS:
+        return None
+    try:
+        with open(path, 'rb') as fh:
+            return pickle.load(fh)
+    except Exception:
+        return None
+
+
+def _save_precomputed_to_disk(cache_key: tuple, data: dict) -> None:
+    """Persist precomputed features+labels to disk atomically."""
+    path = _precomputed_cache_path(cache_key)
+    try:
+        tmp = path.with_suffix('.tmp')
+        with open(tmp, 'wb') as fh:
+            pickle.dump(data, fh)
+        tmp.replace(path)
+    except Exception:
+        pass  # non-critical
+
+
 def _load_from_disk(etf: str, start_date_str: str, end_date_str: str):
     """Load cached DataFrame from disk. Returns None if missing or stale (>24 h)."""
     path = _disk_cache_path(etf, start_date_str, end_date_str)
@@ -885,6 +919,15 @@ def seed_strategy(strategy):
         _inject_into_deques(strategy, cached['features'], cached['labels'], feature_count)
         return len(cached['labels'])
 
+    # Try disk cache (persists across process restarts — same 24h TTL as raw downloads)
+    disk_cached = _load_precomputed_from_disk(cache_key)
+    if disk_cached is not None:
+        _PRECOMPUTED_CACHE[cache_key] = disk_cached
+        _inject_into_deques(strategy, disk_cached['features'], disk_cached['labels'], feature_count)
+        if getattr(strategy.p, 'verbose', False):
+            print(f"CROSS-SYMBOL: Loaded {len(disk_cached['labels'])} precomputed bars from disk cache")
+        return len(disk_cached['labels'])
+
     # Download and compute
     from datetime import datetime, timedelta
     import pandas as pd
@@ -999,11 +1042,12 @@ def seed_strategy(strategy):
         print(f"CROSS-SYMBOL: Pooled {len(pooled_labels)} bars from {len(etfs)} ETFs"
               f" (balancing={'ON' if use_balancing else 'OFF'})")
 
-    # Cache for future optimizer runs
+    # Cache in process memory and on disk (disk survives restarts, same 24h TTL)
     _PRECOMPUTED_CACHE[cache_key] = {
         'features': pooled_features,
         'labels': pooled_labels,
     }
+    _save_precomputed_to_disk(cache_key, _PRECOMPUTED_CACHE[cache_key])
 
     # Inject into strategy deques
     _inject_into_deques(strategy, pooled_features, pooled_labels, feature_count)

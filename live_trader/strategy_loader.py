@@ -42,9 +42,6 @@ class StrategyLoader:
         """
         valid_keys = {p for p in dir(self.strategy_class.params) if not p.startswith('_')}
         filtered = {k: v for k, v in params.items() if k in valid_keys}
-        dropped = set(params) - set(filtered)
-        if dropped:
-            print(f"   ℹ️  Dropped live-trader-only params (not in strategy): {sorted(dropped)}")
         return filtered
 
     def _load_strategy(self):
@@ -72,7 +69,6 @@ class StrategyLoader:
             spec.loader.exec_module(module)
 
             strategy_class = getattr(module, self.class_name)
-            print(f"✓ Loaded strategy: {self.class_name} from {module_path}")
             return strategy_class
 
         except Exception as e:
@@ -441,6 +437,11 @@ class StrategyLoader:
                     self.simulated_position = False
                     self.sim_entry_price = captured_entry_price
                     self.sim_entry_bar = None
+                    # Chandelier state exposed for external comparison with real-time price
+                    self.computed_chandelier_stop = 0.0
+                    self.chandelier_warmup_done = False
+                    self.chandelier_peak = 0.0
+                    self.chandelier_mult = 0.0
 
                 def _execute_buy(self):
                     # Track when strategy would have entered
@@ -572,16 +573,21 @@ class StrategyLoader:
                     current price vs actual entry price, not here in simulation."""
                     current_price = self.data.close[0]
 
-                    # Chandelier ATR trailing stop — mirrors _update_and_check_trailing_stop()
+                    # Chandelier ATR trailing stop — compute and track stop level only.
+                    # Price comparison is intentionally NOT done here; check_exit() in
+                    # monitor.py compares real-time price vs this stop, avoiding the stale
+                    # daily-close inaccuracy that caused false exit signals.
                     if hasattr(self.p, 'use_trailing_atr_exit') and self.p.use_trailing_atr_exit:
                         atr_val = self.label_atr[0] if len(self.label_atr) > 0 else 0
                         if atr_val > 0:
                             bars_in_trade = len(self) - self.entry_bar
                             mult = self._compute_dynamic_multiplier(bars_in_trade, atr_val)
+                            self.chandelier_mult = mult
 
                             # Track highest HIGH (not close) — classic Chandelier
                             if self.data.high[0] > self._highest_since_entry:
                                 self._highest_since_entry = self.data.high[0]
+                            self.chandelier_peak = self._highest_since_entry
 
                             new_stop = self._highest_since_entry - (mult * atr_val)
 
@@ -594,13 +600,9 @@ class StrategyLoader:
                                 self._trailing_stop_level = new_stop
 
                             if bars_in_trade >= self.p.trailing_atr_warmup:
-                                if current_price < self._trailing_stop_level:
-                                    self._close_position(
-                                        f"CHANDELIER STOP ({current_price:.2f} < "
-                                        f"{self._trailing_stop_level:.2f}, "
-                                        f"peak={self._highest_since_entry:.2f}, mult={mult:.2f}x)"
-                                    )
-                                    return
+                                self.computed_chandelier_stop = self._trailing_stop_level
+                                self.chandelier_warmup_done = True
+                            # No _close_position() here — caller uses real-time price
 
                     # Dynamic vs strict exit modes
                     if self.p.use_dynamic_exits:
@@ -648,7 +650,18 @@ class StrategyLoader:
             results = cerebro.run()
             strat = results[0]
 
-            # Check for recent exit signals (last 5 bars)
+            # Extract chandelier state for external real-time price comparison
+            chandelier_stop = strat.computed_chandelier_stop if strat.chandelier_warmup_done else 0.0
+            chandelier_peak = strat.chandelier_peak
+            chandelier_mult = strat.chandelier_mult
+
+            # Always include chandelier info in result (used by check_exit even when signal=False)
+            result['chandelier_stop'] = chandelier_stop
+            result['chandelier_peak'] = chandelier_peak
+            result['chandelier_mult'] = chandelier_mult
+
+            # Check for recent non-chandelier exit signals (last 5 bars)
+            # (prediction exit, earnings blackout, RSI, kernel — all still fire inside cerebro)
             total_bars = len(bt_df)
             recent_threshold = total_bars - 5
 
@@ -663,7 +676,10 @@ class StrategyLoader:
                         'stop_type': sig['reason'],
                         'new_stop': new_stop,
                         'bars_ago': bars_ago,
-                        'bar_date': bar_date
+                        'bar_date': bar_date,
+                        'chandelier_stop': chandelier_stop,
+                        'chandelier_peak': chandelier_peak,
+                        'chandelier_mult': chandelier_mult,
                     }
                     break
 

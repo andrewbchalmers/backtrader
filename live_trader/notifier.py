@@ -202,9 +202,11 @@ class PushbulletNotifier:
 
                     # Valid commands must match exactly at the start
                     # Commands with arguments (space after keyword)
-                    command_prefixes = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'TIMEFRAME SET ', 'ANALYZE ', 'COMPARE ', 'ADD ']
+                    command_prefixes = ['BOUGHT ', 'SOLD ', 'LAST ', 'BACKTEST ', 'TIMEFRAME SET ',
+                                       'ANALYZE ', 'COMPARE ', 'ADD ', 'REMOVE ', 'REPLACE ', 'CAPITAL ',
+                                       'UPDATE ']
                     # Exact match commands (no arguments)
-                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME']
+                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME', 'PORTFOLIO', 'HELP']
 
                     is_valid_command = False
 
@@ -280,7 +282,8 @@ class PushbulletNotifier:
         exchange_str = f" [{exchange}]" if exchange else ""
         print(f"🔴 SELL ALERT: {symbol}{exchange_str} @ ${signal['price']:.2f}, P&L: {pnl:+.2f}%")
 
-    def send_position_confirmation(self, symbol, entry_price, exit_price_or_stop, action="added", pnl=None, exchange=None):
+    def send_position_confirmation(self, symbol, entry_price, exit_price_or_stop, action="added", pnl=None,
+                                   exchange=None, allocated_amount=None, shares=None):
         """Send position add/remove confirmation"""
         from datetime import datetime
 
@@ -295,8 +298,13 @@ class PushbulletNotifier:
                 f"Entry: ${entry_price:.2f}\n"
                 f"Stop Loss: ${stop_loss:.2f}\n"
                 f"Risk: {risk_pct:.2f}%\n"
-                f"Time: {datetime.now().strftime('%H:%M:%S')}"
             )
+            if allocated_amount is not None and allocated_amount > 0:
+                message += f"Allocated: ${allocated_amount:,.2f}"
+                if shares:
+                    message += f" (~{shares} shares)"
+                message += "\n"
+            message += f"Time: {datetime.now().strftime('%H:%M:%S')}"
         else:  # removed
             title = f"✅ {symbol} REGISTERED AS SOLD"
             message = f"{exchange_line}"

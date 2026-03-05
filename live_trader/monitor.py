@@ -3,6 +3,9 @@
 Live trading monitor - scans for opportunities and manages positions
 """
 
+import os
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -10,11 +13,77 @@ import time
 import logging
 import gc
 import threading
-from positions import PositionManager
+from positions import PositionManager, PortfolioStateManager
 
 # Suppress yfinance and urllib verbose logging/errors
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+
+
+def _entry_signal_worker(args):
+    """
+    Worker function for parallel buy-scan.  Runs in a separate spawned process
+    so it has no shared memory with the parent — no ml_lock required.
+
+    Each worker independently fetches data and runs ML signal detection.
+    Cross-symbol peer data is shared via the on-disk cache in
+    ~/.cache/lorentzian_cross_symbol/ so workers don't redundantly download peers.
+    """
+    (symbol, yf_ticker, period, interval,
+     strategy_module, strategy_class, params, live_trader_dir) = args
+
+    import sys
+    import logging as _logging
+    import gc as _gc
+
+    _logging.getLogger('yfinance').setLevel(_logging.CRITICAL)
+    _logging.getLogger('urllib3').setLevel(_logging.CRITICAL)
+
+    # Ensure live_trader and strategy dirs are importable
+    if live_trader_dir not in sys.path:
+        sys.path.insert(0, live_trader_dir)
+
+    try:
+        import yfinance as _yf
+        import pandas as _pd
+        from strategy_loader import StrategyLoader
+
+        # --- Fetch OHLCV data ---
+        df = _yf.download(yf_ticker, period=period, interval=interval,
+                          progress=False, auto_adjust=True, prepost=False, threads=False)
+        if df.empty or len(df) < 200:
+            return symbol, {'signal': False}, 'no_data'
+
+        if isinstance(df.columns, _pd.MultiIndex):
+            df.columns = [col[0] for col in df.columns]
+        df = df.loc[:, ~df.columns.duplicated()]
+        df.index = df.index.tz_localize(None)
+
+        # Patch last close with real-time price (mirrors get_live_data logic)
+        if interval in ('1d', None):
+            try:
+                live_price = getattr(_yf.Ticker(yf_ticker).fast_info, 'last_price', None)
+                if live_price and live_price > 0:
+                    stale = float(df['Close'].iloc[-1])
+                    if abs(live_price - stale) / stale > 0.005:
+                        df.iloc[-1, df.columns.get_loc('Close')] = live_price
+                        df.iloc[-1, df.columns.get_loc('High')] = max(
+                            float(df.iloc[-1, df.columns.get_loc('High')]), live_price)
+                        df.iloc[-1, df.columns.get_loc('Low')] = min(
+                            float(df.iloc[-1, df.columns.get_loc('Low')]), live_price)
+            except Exception:
+                pass
+
+        # --- Run ML signal detection ---
+        loader = StrategyLoader(strategy_module, strategy_class)
+        signal = loader.get_entry_signal(df, params, symbol=symbol)
+
+        del df, loader
+        _gc.collect()
+        return symbol, signal, None
+
+    except Exception as e:
+        return symbol, {'signal': False}, str(e)
 
 
 class LiveTradingMonitor:
@@ -31,13 +100,15 @@ class LiveTradingMonitor:
         '1D': {'interval': '1d', 'period': 'max', 'description': '1 Day'},
     }
 
-    def __init__(self, watchlist, strategy_loader, strategy_params, notifier, warmup_days=300):
+    def __init__(self, watchlist, strategy_loader, strategy_params, notifier, warmup_days=300,
+                 portfolio_capital=100_000, max_positions=10):
         self.watchlist = watchlist
         self.strategy = strategy_loader
         self.params = strategy_params
         self.notifier = notifier
         self.position_manager = PositionManager()
         self.warmup_days = warmup_days
+        self.max_positions = max_positions
         self.buy_alerts_sent = {}  # Track when buy alerts were sent: {symbol: date}
         self.market_open_notified_date = None  # Track when market open notification was sent
         self.current_timeframe = '1D'  # Default to daily bars
@@ -45,6 +116,12 @@ class LiveTradingMonitor:
         self.scan_thread = None  # Buy scanning thread
         self.exit_thread = None  # Exit/sell scanning thread
         self.scanning = False  # Flag to control scan loops
+        self.pending_replacements = {}  # {new_sym: {'worst_held': sym, 'signal': {...}, 'worst_pnl': float}}
+        self.portfolio_state = PortfolioStateManager(
+            initial_capital=portfolio_capital,
+            position_manager=self.position_manager,
+            max_positions=max_positions,
+        )
 
         # Clear any pending_exit flags from previous sessions
         self._clear_pending_exit_flags()
@@ -172,6 +249,31 @@ class LiveTradingMonitor:
             df = df.loc[:, ~df.columns.duplicated()]
 
             df.index = df.index.tz_localize(None)
+
+            # Patch the last bar's close with a real-time quote.
+            # yf.download with auto_adjust=True can return yesterday's close (not today's
+            # intraday price) or apply an incorrect adjustment factor to the most recent bar.
+            # This causes false exit signals when the stock has moved significantly intraday.
+            # Only applied for daily interval to avoid patching intraday bars unnecessarily.
+            if interval in ('1d', None):
+                try:
+                    fast_info = yf.Ticker(yf_symbol).fast_info
+                    live_price = getattr(fast_info, 'last_price', None)
+                    if live_price and live_price > 0:
+                        stale_close = float(df['Close'].iloc[-1])
+                        pct_diff = (live_price - stale_close) / stale_close
+                        if abs(pct_diff) > 0.005:  # >0.5% discrepancy
+                            print(f"   ⚠️  {yf_symbol}: Stale/adjusted close ${stale_close:.2f} → "
+                                  f"real-time ${live_price:.2f} ({pct_diff:+.2%}). Patching last bar.")
+                            close_idx = df.columns.get_loc('Close')
+                            high_idx = df.columns.get_loc('High')
+                            low_idx = df.columns.get_loc('Low')
+                            df.iloc[-1, close_idx] = live_price
+                            df.iloc[-1, high_idx] = max(float(df.iloc[-1, high_idx]), live_price)
+                            df.iloc[-1, low_idx] = min(float(df.iloc[-1, low_idx]), live_price)
+                except Exception as e:
+                    pass  # Non-fatal: fall back to downloaded close
+
             return df
 
         except Exception as e:
@@ -233,60 +335,109 @@ class LiveTradingMonitor:
         scan_start = time.time()
         print(f"Scanning {total_to_scan} symbols for buy opportunities...")
 
-        for idx, symbol in enumerate(symbols_to_scan):
-            try:
-                # Skip if position was added during scan (via BOUGHT reply)
-                if self.position_manager.has_position(symbol):
-                    print(f"   [{idx+1}/{total_to_scan}] {symbol}: skipped (now holding)")
-                    continue
+        # Phase 1: collect all signals in parallel using worker processes.
+        # Each worker independently fetches data + runs ML — no shared state,
+        # no ml_lock needed.  Cross-symbol peer data is shared via disk cache.
+        found_signals = []  # list of (symbol, signal_dict, abs_prediction_score)
 
-                # Progress indicator - each on new line for debugging
-                print(f"   [{idx+1}/{total_to_scan}] {symbol}: fetching...", end='', flush=True)
+        # Absolute strategy module path (workers may have different cwd)
+        strategy_module_abs = os.path.abspath(self.strategy.module_name)
+        live_trader_dir = os.path.dirname(os.path.abspath(__file__))
+        tf_config_interval = tf_config['interval']
+        tf_config_period = tf_config['period']
 
-                # Small delay to avoid rate limiting
-                time.sleep(0.1)
+        # Cap workers at 4 to stay within yfinance rate limits while still
+        # getting meaningful parallelism.  Increase if your network allows it.
+        n_workers = min(multiprocessing.cpu_count() or 4, 4)
+        print(f"Running parallel scan with {n_workers} worker processes...")
 
-                df = self.get_live_data(symbol)
-                if df is None or len(df) < 200:
-                    print(" skipped (no data)")
-                    continue
+        scan_args = [
+            (symbol, symbol,
+             tf_config_period, tf_config_interval,
+             strategy_module_abs, self.strategy.class_name,
+             self.params, live_trader_dir)
+            for symbol in symbols_to_scan
+        ]
 
-                print(f" {len(df)} bars...", end='', flush=True)
+        # Use spawn context — safe with parent's running threads (exit_scan, listener)
+        mp_ctx = multiprocessing.get_context('spawn')
+        completed = 0
 
-                # Run ML signal detection (with lock to prevent concurrent operations)
-                with self.ml_lock:
-                    buy_signal = self.strategy.get_entry_signal(df, self.params, symbol=symbol)
+        with ProcessPoolExecutor(max_workers=n_workers, mp_context=mp_ctx) as executor:
+            futures = {executor.submit(_entry_signal_worker, args): args[0]
+                       for args in scan_args}
 
-                # Clean up dataframe after use
-                del df
+            for future in as_completed(futures):
+                symbol = futures[future]
+                completed += 1
+                print(f"\r   [{completed}/{total_to_scan}] scanning...", end='', flush=True)
+                try:
+                    sym, signal, error = future.result()
+                    if error and error != 'no_data':
+                        print(f"\n   ❌ {sym}: {error}")
+                    elif (signal.get('signal') and
+                          signal.get('signal_type', 'BUY') == 'BUY' and
+                          not self.position_manager.has_position(sym)):
+                        bars_ago = signal.get('bars_ago', 0)
+                        if bars_ago <= 3:
+                            score = abs(signal.get('prediction', 0))
+                            found_signals.append((sym, signal, score))
 
-                if buy_signal.get('signal') and buy_signal.get('signal_type', 'BUY') == 'BUY':
-                    bars_ago = buy_signal.get('bars_ago', 0)
-                    print(f"SIGNAL! (bars_ago={bars_ago})")
-                    # Only alert if signal is recent (within last 3 bars)
-                    if bars_ago <= 3:
-                        self.notifier.send_buy_alert(symbol, buy_signal)
-                        self.buy_alerts_sent[symbol] = today  # Mark as alerted today
-                        buy_opportunities += 1
-                        print(f"🟢 BUY SIGNAL: {symbol} (ML prediction: {buy_signal.get('prediction', 'N/A')})")
-                    else:
-                        print(f"   ⏭️  Skipped {symbol} - signal too old ({bars_ago} bars ago)")
-                else:
-                    print("no signal")
+                            if self.buy_alerts_sent.get(sym) == today:
+                                print(f"\n   🟢 SIGNAL: {sym} (score={score:.0f}, "
+                                      f"bars_ago={bars_ago}) | already alerted today")
+                            else:
+                                cur_slots = max(0, self.max_positions -
+                                               len(self.position_manager.list_active()))
+                                if cur_slots > 0:
+                                    # Send immediately — don't wait for all 470 to finish
+                                    self.notifier.send_buy_alert(sym, signal)
+                                    self.buy_alerts_sent[sym] = today
+                                    buy_opportunities += 1
+                                    print(f"\n   🟢 BUY ALERT SENT: {sym} (score={score:.0f}, "
+                                          f"bars_ago={bars_ago})")
+                                else:
+                                    print(f"\n   🟢 SIGNAL: {sym} (score={score:.0f}, "
+                                          f"bars_ago={bars_ago}) | no slots (overflow)")
+                        else:
+                            print(f"\n   ⏭️  {sym}: signal too old ({bars_ago} bars ago)")
+                except Exception as e:
+                    print(f"\n   ❌ {symbol}: {e}")
 
-            except Exception as e:
-                print(f" ERROR: {e}")
-
-            # Periodic garbage collection every 25 symbols
-            if idx > 0 and idx % 25 == 0:
-                gc.collect()
-
-        # Final cleanup
         gc.collect()
 
         scan_duration = time.time() - scan_start
-        print(f"\r   Scanning: {total_to_scan}/{total_to_scan} - Done!          ")
-        print(f"✅ Scan complete in {scan_duration:.1f}s - Found {buy_opportunities} buy opportunities")
+        print(f"\n   Parallel scan complete: {total_to_scan} symbols in {scan_duration:.1f}s "
+              f"({n_workers} workers)")
+
+        # Phase 2: handle overflow signals (portfolio full — replacement logic)
+        # Alerts for signals with available slots were already sent immediately in Phase 1.
+        found_signals.sort(key=lambda x: x[2], reverse=True)
+
+        held_positions_dict = self.position_manager.list_all()
+        active_positions_dict = self.position_manager.list_active()
+        available_slots = max(0, self.max_positions - len(active_positions_dict))
+
+        # Collect overflow signals (not yet alerted, no slots available)
+        overflow_signals = []
+        for symbol, signal, score in found_signals:
+            if self.buy_alerts_sent.get(symbol) == today:
+                continue  # already sent in Phase 1
+            if symbol in held_positions_dict:
+                continue
+            overflow_signals.append((symbol, signal, score))
+
+        # Replacement suggestion: best overflow vs worst held position
+        if overflow_signals and available_slots == 0:
+            best_sym, best_signal, best_score = overflow_signals[0]
+            worst_sym, worst_pnl = self._find_worst_held_position(held_positions_dict)
+            if worst_sym:
+                self._send_replacement_alert(best_sym, best_signal, best_score, worst_sym, worst_pnl)
+
+        print(f"✅ Scan complete in {scan_duration:.1f}s - Found {buy_opportunities} buy opportunity(s) "
+              f"(active: {len(active_positions_dict)}/{self.max_positions}, "
+              f"pending exit: {len(held_positions_dict) - len(active_positions_dict)}, "
+              f"overflow: {len(overflow_signals)})")
 
     def _handle_reply(self, reply):
         """
@@ -310,6 +461,10 @@ class LiveTradingMonitor:
             self.handle_timeframe_query()
         elif reply.startswith("ADD "):
             self.handle_add_command(reply)
+        elif reply.startswith("REMOVE "):
+            self.handle_remove_command(reply)
+        elif reply.startswith("UPDATE "):
+            self.handle_update_command(reply)
         # Commands that use ML - processed immediately on listener thread (ml_lock handles sync)
         elif reply.startswith("LAST "):
             self.handle_last_signal_query(reply)
@@ -319,6 +474,14 @@ class LiveTradingMonitor:
             self.handle_analyze_query(reply)
         elif reply.startswith("COMPARE "):
             self.handle_compare_query(reply)
+        elif reply.startswith("REPLACE "):
+            self.handle_replace_command(reply)
+        elif reply.startswith("CAPITAL "):
+            self.handle_capital_command(reply)
+        elif reply == "PORTFOLIO":
+            self.handle_portfolio_query()
+        elif reply == "HELP":
+            self.handle_help_query()
         else:
             print(f"⚠️  Unknown reply format: {reply}")
 
@@ -368,15 +531,27 @@ class LiveTradingMonitor:
             stop_loss_pct = float(stop_loss_pct)
         stop_loss = price * (1 - stop_loss_pct)
 
+        # Compute dynamic position size from remaining cash and open slots
+        cash = self.portfolio_state.get_cash()
+        n_currently_held = len(self.position_manager.list_active())
+        remaining_slots = max(1, self.max_positions - n_currently_held)
+        allocated_amount = cash / remaining_slots if cash > 0 else 0.0
+
         # Add position, storing the canonical ticker and exchange for future data fetches
         position = self.position_manager.add(
             symbol, price, stop_loss,
-            yf_ticker=symbol, exchange=exchange
+            yf_ticker=symbol, exchange=exchange,
+            allocated_amount=allocated_amount,
         )
 
         if position:
-            self.notifier.send_position_confirmation(symbol, price, stop_loss, "added", exchange=exchange)
-            print(f"✅ Auto-added position from reply: {symbol} [{exchange}] @ ${price:.2f}")
+            if allocated_amount > 0:
+                self.portfolio_state.deduct_cash(allocated_amount)
+            shares = int(allocated_amount / price) if price > 0 else 0
+            self.notifier.send_position_confirmation(symbol, price, stop_loss, "added", exchange=exchange,
+                                                     allocated_amount=allocated_amount, shares=shares)
+            print(f"✅ Auto-added position from reply: {symbol} [{exchange}] @ ${price:.2f} "
+                  f"(allocated ${allocated_amount:,.2f}, {shares} shares)")
 
             # Clear the buy alert tracking since position was confirmed
             if symbol in self.buy_alerts_sent:
@@ -413,6 +588,13 @@ class LiveTradingMonitor:
         else:
             current_price = entry_price
             pnl = 0.0
+
+        # Return proceeds to cash (proportional gain/loss on allocated amount)
+        allocated = position.get('allocated_amount', 0.0)
+        if allocated > 0 and entry_price > 0:
+            proceeds = allocated * (current_price / entry_price)
+            self.portfolio_state.add_cash(proceeds)
+            print(f"💰 Returned ${proceeds:,.2f} to cash (was ${allocated:,.2f} allocated)")
 
         # Remove the position
         self.position_manager.remove(symbol)
@@ -470,6 +652,302 @@ class LiveTradingMonitor:
             print(f"❌ Error adding {symbol} to watchlist: {e}")
             self.notifier.send_notification("Error", f"Failed to add {symbol}: {e}")
 
+    def handle_remove_command(self, reply):
+        """Handle 'REMOVE SYMBOL' command to remove stock from watchlist"""
+        import os
+
+        parts = reply.split()
+        if len(parts) < 2:
+            self.notifier.send_notification("Invalid Command", "Usage: REMOVE <SYMBOL>")
+            return
+
+        symbol = parts[1].upper().strip()
+
+        watchlist_file = os.path.join(os.path.dirname(__file__), 'watchlist.csv')
+
+        try:
+            with open(watchlist_file, 'r') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            self.notifier.send_notification("Error", "Watchlist file not found")
+            return
+
+        new_lines = [l for l in lines if l.strip().upper() != symbol]
+
+        if len(new_lines) == len(lines):
+            self.notifier.send_notification("Not Found", f"{symbol} is not in the watchlist")
+            return
+
+        with open(watchlist_file, 'w') as f:
+            f.writelines(new_lines)
+
+        if symbol in self.watchlist:
+            self.watchlist.remove(symbol)
+
+        print(f"✅ Removed {symbol} from watchlist")
+        self.notifier.send_notification("Removed from Watchlist", f"{symbol} has been removed from your watchlist")
+
+    def handle_update_command(self, reply):
+        """Handle 'UPDATE SYMBOL PRICE' command to set entry price for a position"""
+        parts = reply.split()
+        if len(parts) < 3:
+            self.notifier.send_notification("Invalid Command", "Usage: UPDATE <SYMBOL> <PRICE>")
+            return
+
+        symbol = self._resolve_symbol(parts[1])
+        try:
+            new_price = float(parts[2].replace('$', ''))
+        except ValueError:
+            self.notifier.send_notification("Invalid Price", f"Could not parse price: {parts[2]}")
+            return
+
+        if not self.position_manager.has_position(symbol):
+            self.notifier.send_notification("Not Found", f"No active position for {symbol}")
+            return
+
+        old_price = self.position_manager.get(symbol)['entry_price']
+        if self.position_manager.update_entry_price(symbol, new_price):
+            self.notifier.send_notification(
+                f"Updated {symbol}",
+                f"Entry price: ${old_price:.2f} → ${new_price:.2f}"
+            )
+        else:
+            self.notifier.send_notification("Error", f"Failed to update {symbol}")
+
+    def _find_worst_held_position(self, held_positions):
+        """Return (symbol, pnl_pct) for the worst-performing held position."""
+        worst_sym = None
+        worst_pnl = float('inf')
+        for sym, pos in held_positions.items():
+            if pos.get('pending_exit'):
+                continue
+            entry = pos['entry_price']
+            yf_ticker = pos.get('yf_ticker', sym)
+            df = self.get_live_data(sym, ticker=yf_ticker)
+            if df is None:
+                continue
+            current = df['Close'].iloc[-1]
+            pnl = (current / entry - 1) * 100
+            if pnl < worst_pnl:
+                worst_pnl = pnl
+                worst_sym = sym
+        return worst_sym, worst_pnl
+
+    def _send_replacement_alert(self, new_sym, new_signal, new_score, worst_sym, worst_pnl):
+        """Send a replacement suggestion alert and store pending state."""
+        held_info = self.position_manager.get(worst_sym)
+        held_days = 0
+        if held_info and held_info.get('entry_date'):
+            from datetime import date as _date
+            try:
+                entry_dt = datetime.fromisoformat(held_info['entry_date']).date()
+                held_days = (_date.today() - entry_dt).days
+            except Exception:
+                pass
+
+        title = f"🔄 REPLACE? {new_sym} → {worst_sym}"
+        message = (
+            f"Portfolio full ({self.max_positions}/{self.max_positions})\n\n"
+            f"NEW SIGNAL: {new_sym}\n"
+            f"  ML Score: {new_score:.0f}/100\n"
+            f"  Price: ${new_signal['price']:.2f}\n\n"
+            f"WORST HELD: {worst_sym}\n"
+            f"  P&L: {worst_pnl:+.1f}%\n"
+            f"  Held: {held_days} days\n\n"
+            f"Reply 'REPLACE {new_sym}' to swap"
+        )
+        self.notifier.send_notification(title, message)
+
+        self.pending_replacements[new_sym] = {
+            'worst_held': worst_sym,
+            'signal': new_signal,
+            'worst_pnl': worst_pnl,
+        }
+        print(f"🔄 Replacement suggestion: {new_sym} (score={new_score:.0f}) vs {worst_sym} (P&L={worst_pnl:+.1f}%)")
+
+    def handle_replace_command(self, reply):
+        """Handle 'REPLACE <SYMBOL>' — execute pending replacement swap."""
+        parts = reply.split()
+        if len(parts) < 2:
+            self.notifier.send_notification("⚠️ Invalid", "Usage: REPLACE <SYMBOL>")
+            return
+        new_sym = self._resolve_symbol(parts[1])
+        pending = self.pending_replacements.get(new_sym)
+        if not pending:
+            self.notifier.send_notification("⚠️ No Pending Replacement",
+                f"No replacement queued for {new_sym}. Wait for a REPLACE? alert first.")
+            return
+
+        worst_sym = pending['worst_held']
+        signal = pending['signal']
+
+        # 1. Sell worst position at current price
+        worst_pos = self.position_manager.get(worst_sym)
+        if not worst_pos:
+            self.notifier.send_notification("⚠️ Error", f"{worst_sym} no longer held")
+            del self.pending_replacements[new_sym]
+            return
+
+        yf_ticker = worst_pos.get('yf_ticker', worst_sym)
+        df = self.get_live_data(worst_sym, ticker=yf_ticker)
+        exit_price = df['Close'].iloc[-1] if df is not None else worst_pos['entry_price']
+        allocated = worst_pos.get('allocated_amount', 0.0)
+        proceeds = allocated * (exit_price / worst_pos['entry_price']) if allocated > 0 else 0.0
+        pnl_pct = (exit_price / worst_pos['entry_price'] - 1) * 100
+
+        self.portfolio_state.add_cash(proceeds)
+        self.position_manager.remove(worst_sym)
+
+        sell_msg = f"Sold {worst_sym} @ ${exit_price:.2f} (P&L: {pnl_pct:+.1f}%)\nProceeds: ${proceeds:,.2f}"
+        self.notifier.send_notification(f"✅ SOLD {worst_sym} (replaced)", sell_msg)
+
+        # 2. Buy new signal
+        cash = self.portfolio_state.get_cash()
+        n_held = len(self.position_manager.list_active())
+        remaining_slots = max(1, self.max_positions - n_held)
+        alloc = cash / remaining_slots
+        self.portfolio_state.deduct_cash(alloc)
+
+        exchange = ''
+        try:
+            exchange = yf.Ticker(new_sym).info.get('fullExchangeName', '')
+        except Exception:
+            pass
+
+        stop_loss_pct = self.params.get('stop_loss_pct', 0.05)
+        if hasattr(stop_loss_pct, '__float__'):
+            stop_loss_pct = float(stop_loss_pct)
+        stop_loss = signal['price'] * (1 - stop_loss_pct)
+
+        self.position_manager.add(new_sym, signal['price'], stop_loss,
+                                  yf_ticker=new_sym, exchange=exchange,
+                                  allocated_amount=alloc)
+        self.buy_alerts_sent[new_sym] = datetime.now().date()
+
+        buy_msg = f"Bought {new_sym} @ ${signal['price']:.2f}\nAllocated: ${alloc:,.2f}"
+        self.notifier.send_notification(f"✅ BOUGHT {new_sym} (replacement)", buy_msg)
+
+        del self.pending_replacements[new_sym]
+        print(f"✅ Replacement complete: {worst_sym} → {new_sym}")
+
+    def handle_capital_command(self, reply):
+        """Handle 'CAPITAL SET x' or 'CAPITAL ADD x'."""
+        parts = reply.split()
+        if len(parts) != 3 or parts[1] not in ('SET', 'ADD'):
+            self.notifier.send_notification("⚠️ Invalid",
+                "Usage: CAPITAL SET <amount> or CAPITAL ADD <amount>")
+            return
+        try:
+            amount = float(parts[2].replace('$', '').replace(',', ''))
+        except ValueError:
+            self.notifier.send_notification("⚠️ Invalid Amount", f"Could not parse: {parts[2]}")
+            return
+
+        if parts[1] == 'SET':
+            self.portfolio_state.set_cash(amount)
+            self.notifier.send_notification("💰 Cash Updated", f"Cash set to ${amount:,.2f}")
+        else:
+            self.portfolio_state.add_cash(amount)
+            new_cash = self.portfolio_state.get_cash()
+            self.notifier.send_notification("💰 Cash Updated",
+                f"+${amount:,.2f} → Total cash: ${new_cash:,.2f}")
+
+    def handle_portfolio_query(self):
+        """Handle 'PORTFOLIO' — show full portfolio state."""
+        positions = self.position_manager.list_all()
+        cash = self.portfolio_state.get_cash()
+        n = len(positions)
+
+        lines = []
+        total_invested = 0.0
+        for sym, pos in positions.items():
+            alloc = pos.get('allocated_amount', 0.0)
+            entry = pos['entry_price']
+            yf_ticker = pos.get('yf_ticker', sym)
+            df = self.get_live_data(sym, ticker=yf_ticker)
+            if df is not None:
+                cur = df['Close'].iloc[-1]
+                pnl = (cur / entry - 1) * 100
+                cur_val = alloc * (cur / entry) if alloc > 0 else 0.0
+            else:
+                pnl = 0.0
+                cur_val = alloc
+            total_invested += cur_val
+            status = "⏳" if pos.get('pending_exit') else "  "
+            lines.append(f"{status}{sym}: ${cur_val:,.0f} ({pnl:+.1f}%)")
+
+        total = cash + total_invested
+        message = (
+            f"Slots: {n}/{self.max_positions}\n"
+            f"Cash:     ${cash:,.2f}\n"
+            f"Invested: ${total_invested:,.2f}\n"
+            f"Total:    ${total:,.2f}\n"
+            f"\n" + "\n".join(lines)
+        )
+        self.notifier.send_notification("📊 Portfolio", message)
+
+    def handle_help_query(self):
+        """Handle 'HELP' command — list all available commands."""
+        message = (
+            "-- Positions --\n"
+            "BOUGHT <SYM>\n"
+            "BOUGHT <SYM> AT <PRICE>\n"
+            "SOLD <SYM>\n"
+            "HOLDINGS\n"
+            "PORTFOLIO\n"
+            "CAPITAL SET <AMT>\n"
+            "CAPITAL ADD <AMT>\n"
+            "\n"
+            "-- Analysis --\n"
+            "LAST <SYM>\n"
+            "BACKTEST <SYM> [1M|3M|6M|1Y|2Y|3Y|5Y]\n"
+            "ANALYZE <SYM>\n"
+            "COMPARE <SYM1> <SYM2> ...\n"
+            "\n"
+            "-- Settings --\n"
+            "ADD <SYM>\n"
+            "REMOVE <SYM>\n"
+            "UPDATE <SYM> <PRICE>\n"
+            "REPLACE <OLD> <NEW>\n"
+            "TIMEFRAME\n"
+            "TIMEFRAME SET [1M|5M|15M|30M|1H|4H|1D]"
+        )
+        self.notifier.send_notification("Commands", message)
+
+    def _get_reliable_price(self, yf_ticker):
+        """
+        Best-effort real-time price for exit decisions.
+
+        Layer 1 — fast_info.last_price (single lightweight API call).
+        Layer 2 — 1-minute intraday download (separate endpoint; immune to the
+                   auto_adjust stale-close bug that affects daily bars).
+
+        Returns None when both layers fail; caller falls back to df close.
+        """
+        # Layer 1: fast_info
+        try:
+            live_price = getattr(yf.Ticker(yf_ticker).fast_info, 'last_price', None)
+            if live_price and live_price > 0:
+                return float(live_price)
+        except Exception:
+            pass
+
+        # Layer 2: recent 1-minute bars
+        try:
+            df_1m = yf.download(yf_ticker, period='1d', interval='1m',
+                                progress=False, auto_adjust=False,
+                                prepost=False, threads=False)
+            if not df_1m.empty:
+                if isinstance(df_1m.columns, pd.MultiIndex):
+                    df_1m.columns = [col[0] for col in df_1m.columns]
+                price = float(df_1m['Close'].iloc[-1])
+                if price > 0:
+                    return price
+        except Exception:
+            pass
+
+        return None
+
     def check_exit(self, symbol):
         """Check if held position should be exited"""
         position = self.position_manager.get(symbol)
@@ -478,48 +956,110 @@ class LiveTradingMonitor:
 
         entry_price = position['entry_price']
         current_stop = position['stop_loss']
-
-        # Use the stored exchange-specific ticker so we always fetch from the right market
         yf_ticker = position.get('yf_ticker', symbol)
         exchange = position.get('exchange', '')
+
+        # === Step 1: Get real-time price independently of bar data ===
+        # This is the price used for all exit comparisons on daily bars.
+        # fast_info.last_price → 1-minute bar fallback → None (fall back to df close)
+        real_price = None
+        on_daily = self.TIMEFRAMES[self.current_timeframe]['interval'] == '1d'
+        if on_daily:
+            real_price = self._get_reliable_price(yf_ticker)
+            if real_price:
+                print(f"   💰 {yf_ticker}: Real-time price ${real_price:.2f}")
+            else:
+                print(f"   ⚠️  {yf_ticker}: Real-time price unavailable, using bar close")
+
+        # === Step 2: Fetch historical bars (needed for ATR, ML features, peak high) ===
         df = self.get_live_data(symbol, ticker=yf_ticker)
         if df is None:
             return
 
-        current_price = df['Close'].iloc[-1]
+        # current_price for display: prefer real_price, fall back to bar close
+        current_price = real_price if real_price else float(df['Close'].iloc[-1])
 
+        # === Step 3: Run cerebro — computes chandelier stop level + ML/earnings exits ===
+        # Chandelier math uses historical highs/ATR (bar data, unaffected by stale close).
+        # The price comparison is intentionally removed from inside cerebro;
+        # we do it below with real_price.
         entry_date = position.get('entry_date')
-        sell_signal = self.strategy.get_exit_signal(df, self.params, entry_price, current_stop, symbol=symbol, entry_date=entry_date)
+        sell_signal = self.strategy.get_exit_signal(
+            df, self.params, entry_price, current_stop, symbol=symbol, entry_date=entry_date
+        )
+
+        # === Step 4: Chandelier stop check with real-time price ===
+        # Cerebro returns the computed stop level.  We compare it against real_price,
+        # not the stale daily close that was in the df.
+        if not sell_signal['signal'] and on_daily and real_price:
+            chandelier_stop = sell_signal.get('chandelier_stop', 0)
+            if chandelier_stop > 0 and real_price < chandelier_stop:
+                peak = sell_signal.get('chandelier_peak', 0)
+                mult = sell_signal.get('chandelier_mult', 0)
+                bar_date = datetime.now().strftime('%Y-%m-%d')
+                sell_signal = {
+                    'signal': True,
+                    'price': real_price,
+                    'stop_type': (
+                        f"CHANDELIER STOP ({real_price:.2f} < {chandelier_stop:.2f}"
+                        + (f", peak={peak:.2f}" if peak else "")
+                        + (f", mult={mult:.2f}x)" if mult else ")")
+                    ),
+                    'new_stop': chandelier_stop,
+                    'bars_ago': 0,
+                    'bar_date': bar_date,
+                }
+
+        # For any signal, always use real_price in the notification if available
+        if sell_signal['signal'] and real_price:
+            sell_signal['price'] = real_price
+
+        already_alerted = position.get('pending_exit', False)
 
         if sell_signal['signal']:
-            # Check if stop was hit in the past
             bars_ago = sell_signal.get('bars_ago', 0)
             bar_date = sell_signal.get('bar_date', 'today')
 
-            if bars_ago > 0:
-                print(f"⚠️  {symbol} hit stop {bars_ago} bar(s) ago on {bar_date}!")
+            if already_alerted:
+                # Alert already sent — don't spam. Position is still monitored;
+                # user chose to hold past the signal. Just log it.
+                print(f"   ⏳ {symbol}: Still below stop (${sell_signal['price']:.2f}), "
+                      f"alert already sent — waiting for 'SOLD {symbol}'")
+            else:
+                if bars_ago > 0:
+                    print(f"⚠️  {symbol} hit stop {bars_ago} bar(s) ago on {bar_date}!")
 
-            # Send SELL alert but DON'T auto-remove position
-            # Wait for user to confirm with "SOLD SYMBOL"
-            self.notifier.send_sell_alert(symbol, sell_signal, entry_price, exchange=exchange)
-            exchange_str = f" [{exchange}]" if exchange else ""
-            print(f"🔴 SELL ALERT: {symbol}{exchange_str} - Stop hit at ${sell_signal['price']:.2f} on {bar_date}")
-            print(f"   ⏳ Waiting for confirmation: Reply 'SOLD {symbol}' to remove position")
+                # Send SELL alert but DON'T auto-remove position.
+                # User must confirm with "SOLD SYMBOL".
+                self.notifier.send_sell_alert(symbol, sell_signal, entry_price, exchange=exchange)
+                exchange_str = f" [{exchange}]" if exchange else ""
+                print(f"🔴 SELL ALERT: {symbol}{exchange_str} - Stop hit at ${sell_signal['price']:.2f} on {bar_date}")
+                print(f"   ⏳ Waiting for confirmation: Reply 'SOLD {symbol}' to remove position")
 
-            # Mark position as "pending exit" to avoid sending duplicate alerts
-            position['pending_exit'] = True
-            position['exit_alerted_date'] = bar_date
-            self.position_manager.positions[symbol] = position
-            self.position_manager._save()
+                # Mark as pending to suppress duplicate alerts for the same condition
+                position['pending_exit'] = True
+                position['exit_alerted_date'] = bar_date
+                self.position_manager.positions[symbol] = position
+                self.position_manager._save()
 
         else:
-            # Update trailing stop
-            old_stop = current_stop
-            new_stop = sell_signal['new_stop']
+            # No exit signal — update trailing stop
+            chandelier_stop = sell_signal.get('chandelier_stop', 0)
+            new_stop = chandelier_stop if chandelier_stop > current_stop else sell_signal['new_stop']
             self.position_manager.update_stop(symbol, new_stop)
 
+            if already_alerted:
+                # Price recovered above stop — clear the pending flag so a future
+                # dip will trigger a fresh alert
+                position['pending_exit'] = False
+                if 'exit_alerted_date' in position:
+                    del position['exit_alerted_date']
+                self.position_manager.positions[symbol] = position
+                self.position_manager._save()
+                print(f"   ✅ {symbol}: Price recovered above stop — exit alert cleared")
+
             # Show stop update info (only if it changed significantly)
-            if abs(new_stop - old_stop) > 0.01:
+            if abs(new_stop - current_stop) > 0.01:
                 pnl = ((current_price / entry_price) - 1) * 100
                 distance_to_stop = ((current_price - new_stop) / current_price) * 100
                 print(f"📊 {symbol}: Price ${current_price:.2f} | P&L {pnl:+.2f}% | "
@@ -546,8 +1086,8 @@ class LiveTradingMonitor:
 
         if not is_open:
             print(f"Market closed (ET time: {now_et.strftime('%I:%M %p')})")
-        #c  creturn True
-        return is_open
+        return True
+        #return is_open
 
     def send_market_open_notification(self):
         """Send notification when market opens (once per day)"""
@@ -622,12 +1162,10 @@ class LiveTradingMonitor:
                                 break
                             try:
                                 position = self.position_manager.get(symbol)
-
-                                # Skip if already sent exit alert (waiting for confirmation)
                                 if position and position.get('pending_exit'):
                                     print(f"   ⏳ {symbol}: Exit alert pending, waiting for 'SOLD {symbol}'")
-                                    continue
-
+                                # Always run exit check — pending_exit only suppresses re-alerting,
+                                # not monitoring. If price recovers above stop, flag is cleared.
                                 self.check_exit(symbol)
                             except Exception as e:
                                 print(f"   ❌ Error checking exit for {symbol}: {e}")
@@ -1245,6 +1783,7 @@ class LiveTradingMonitor:
             initial_cash = 10000
             cerebro.broker.setcash(initial_cash)
             cerebro.broker.setcommission(commission=0.0)
+            cerebro.broker.set_coc(True)  # Fill at signal bar's close, matching backtest.py
 
             # Add analyzers
             cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name="trades")

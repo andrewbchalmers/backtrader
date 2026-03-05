@@ -95,7 +95,7 @@ def calculate_lookback(strategy_class, strategy_params=None):
 # Configuration
 # =============================================================================
 
-symbol = "SOFI"
+symbol = "CAT"
 initial_cash = 10_000
 
 # Load peer universe from classification CSV (fallback to default ETFs)
@@ -118,7 +118,7 @@ strategy_params = {
     # ==================== ML SETTINGS ====================
     'neighbors_count': 11,
     'max_bars_back': 7000,
-    'feature_count': 6,
+    'feature_count': 8,
     'trend_following_labels': True,    # True=trend-following labels (ride continuation)
     'allow_reentry': True,             # Enter anytime signal is favorable
     'min_prediction_strength': 20,     # Normalized scale: 0-100
@@ -126,7 +126,7 @@ strategy_params = {
 
     # ==================== LABEL SETTINGS ====================
     'label_lookahead': 4,              # Bars to look forward
-    'label_dead_zone': 0.1,           # Min ATR move for label: higher=cleaner trend labels
+    'label_dead_zone': 0.18,           # Min ATR move for label: higher=cleaner trend labels
     'use_magnitude_labels': True,
 
     # ==================== FEATURE 1 (RSM - Relative Strength Momentum) ====================
@@ -253,7 +253,7 @@ strategy_params = {
     'chandelier_breakeven_atr': 0.0,   # Requires more profit before locking break-even
 
     # ==================== RISK MANAGEMENT ====================
-    'position_size_pct': Decimal('0.30'),  # Small initial entry; pyramid adds the rest
+    'position_size_pct': Decimal('0.95'),
     'stop_loss_pct': Decimal('0.05'),
     'use_stop_loss': False,
     'long_only': True,
@@ -261,9 +261,9 @@ strategy_params = {
     # ==================== PYRAMIDING ====================
     # Enter small, then add big once the trade is confirmed by another ML signal.
     # With 30% initial + 90% of remaining 70% cash → ~93% total when confirmed.
-    'use_pyramiding': True,
-    'max_pyramid_entries': 1,              # One confirmation add-on
-    'pyramid_size_pct': Decimal('0.90'),   # Use most of remaining cash on add-on
+    'use_pyramiding': False,
+    'max_pyramid_entries': 2,
+    'pyramid_size_pct': Decimal('0.5'),
     'pyramid_min_profit_atr': 1.0,         # Must be up at least 1 ATR before adding
 
     # ==================== OTHER ====================

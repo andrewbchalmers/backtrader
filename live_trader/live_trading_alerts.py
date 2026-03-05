@@ -38,7 +38,7 @@ STRATEGY_MODULE = "../strategies/LORENTZIAN_CLASSIFICATION_10/lorentzian_classif
 STRATEGY_CLASS = "LorentzianClassificationStrategy"
 STRATEGY_PARAMS = {
     # === General Settings ===
-    'neighbors_count': 10,
+    'neighbors_count': 11,
     'max_bars_back': 7000,
     'feature_count': 8,
     'trend_following_labels': True,
@@ -46,12 +46,12 @@ STRATEGY_PARAMS = {
     'min_prediction_strength': 20,       # Percentile rank threshold (0–100 normalised scale)
     'min_raw_prediction': 0.0,           # Raw ATR-unit threshold (0 = disabled)
     'prediction_norm_window': 200,       # Rolling window used to compute the percentile rank
-    'min_bullish_accuracy': 55,          # Minimum ML bullish accuracy % to act on a BUY signal
+    'min_bullish_accuracy': 50,          # Minimum ML bullish accuracy % to act on a BUY signal
     'min_bullish_accuracy_samples': 20,  # Min historical bullish predictions before filter activates
 
     # === Label Settings ===
-    'label_lookahead': 8,
-    'label_dead_zone': 0.225,
+    'label_lookahead': 4,
+    'label_dead_zone': 0.18,
     'use_forward_labels': True,
     'use_magnitude_labels': True,
 
@@ -66,10 +66,10 @@ STRATEGY_PARAMS = {
     'f2_param_a': 25,    # Trend quality over ~1 month
     'f2_param_b': 13,
 
-    # Feature 3: Multi-Timeframe Divergence — short and long timeframes aligned?
-    'f3_type': 'MTD',
-    'f3_param_a': 8,     # Short ROC period
-    'f3_param_b': 252,   # Long ROC period
+    # Feature 3: Momentum Acceleration — short ROC vs medium ROC, ATR-normalised
+    'f3_type': 'MACC',
+    'f3_param_a': 5,     # Short momentum window
+    'f3_param_b': 20,    # Medium momentum window
 
     # Feature 4: Streak Pattern — consecutive directional moves = trend persistence
     'f4_type': 'STRK',
@@ -117,15 +117,15 @@ STRATEGY_PARAMS = {
     'f14_param_b': 40,
 
     # === Filters ===
-    'use_volatility_filter': True,
+    'use_volatility_filter': False,
     'use_regime_filter': True,
     'regime_threshold': Decimal('0'),   # 0=block bearish only
     'regime_period': 'weekly',
     'use_regime_direction': True,
     'regime_stability_min': 0.0,
-    'regime_stability_window': 60,
-    'regime_max_flips': 8,
-    'use_adx_filter': True,
+    'regime_stability_window': 10,
+    'regime_max_flips': 2,
+    'use_adx_filter': False,
     'adx_threshold': 14,
     'use_ema_filter': False,
     'ema_period': 400,
@@ -137,7 +137,7 @@ STRATEGY_PARAMS = {
     # === SPY Market Regime Filter ===
     'use_spy_filter': True,
     'spy_regime_threshold': Decimal('0'),  # 0=block bearish SPY
-    'spy_regime_period': 'monthly',
+    'spy_regime_period': 'weekly',
 
     # === Kernel Settings ===
     'use_kernel_filter': False,
@@ -173,7 +173,7 @@ STRATEGY_PARAMS = {
 
     # === Prediction Validation Exit ===
     'use_prediction_exit': True,
-    'prediction_exit_threshold': -2.0,     # Wider threshold — trends need more time
+    'prediction_exit_threshold': -20.0,    # Exit only on strongly bearish ML signal
 
     # === Loss Penalty ===
     'use_loss_penalty': True,
@@ -227,6 +227,10 @@ WATCHLIST_FILE = "../strategies/sp500_2025.csv"
 # Live mode scan interval (minutes)
 SCAN_INTERVAL = 5
 
+# Portfolio management
+PORTFOLIO_CAPITAL = 100_000   # Starting/current cash for dynamic position sizing
+MAX_POSITIONS     = 20        # Hard cap — no buy alerts sent when portfolio is full
+
 # ============================================================================
 
 
@@ -262,7 +266,9 @@ def main():
         strategy_loader=strategy_loader,
         strategy_params=STRATEGY_PARAMS,
         notifier=notifier,
-        warmup_days=WARMUP_DAYS
+        warmup_days=WARMUP_DAYS,
+        portfolio_capital=PORTFOLIO_CAPITAL,
+        max_positions=MAX_POSITIONS,
     )
 
     # Run in selected mode

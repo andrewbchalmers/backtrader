@@ -2717,9 +2717,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
                 if self.data.close[0] < self._trailing_stop_level:
                     self.signal = -1
                     self._close_position(
-                        f"CHANDELIER STOP ({self.data.close[0]:.2f} < "
-                        f"{self._trailing_stop_level:.2f}, "
-                        f"peak={self._highest_since_entry:.2f}, mult={mult:.2f}x)"
+                        f"Chandelier @{self._trailing_stop_level:.2f} (pk {self._highest_since_entry:.2f}, {mult:.1f}x)"
                     )
                     return True
 
@@ -2742,9 +2740,7 @@ class LorentzianClassificationStrategy(bt.Strategy):
                 if self.data.close[0] > self._trailing_stop_level:
                     self.signal = 1
                     self._close_position(
-                        f"CHANDELIER STOP ({self.data.close[0]:.2f} > "
-                        f"{self._trailing_stop_level:.2f}, "
-                        f"trough={self._lowest_since_entry:.2f}, mult={mult:.2f}x)"
+                        f"Chandelier @{self._trailing_stop_level:.2f} (tr {self._lowest_since_entry:.2f}, {mult:.1f}x)"
                     )
                     return True
 
