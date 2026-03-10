@@ -289,6 +289,13 @@ class StrategyLoader:
                         }
                         break
 
+            # Attach historical ML accuracy for this symbol — used by BEST command ranking.
+            # Already computed as a byproduct of the cerebro run; zero extra cost.
+            if hasattr(strat, 'get_prediction_stats'):
+                pred_stats = strat.get_prediction_stats()
+                result['bullish_accuracy'] = pred_stats.get('bullish_accuracy_pct', None)
+                result['bullish_total'] = pred_stats.get('bullish_total', 0)
+
         except Exception as e:
             print(f"\n❌ Error running ML strategy signal detection: {e}")
 

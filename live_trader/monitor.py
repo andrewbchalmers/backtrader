@@ -3,9 +3,10 @@
 Live trading monitor - scans for opportunities and manages positions
 """
 
+import json
 import os
 import multiprocessing
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -18,6 +19,24 @@ from positions import PositionManager, PortfolioStateManager
 # Suppress yfinance and urllib verbose logging/errors
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+
+
+def _bold(text):
+    """Convert ASCII text to Unicode bold sans-serif glyphs.
+    Pushbullet note bodies are plain text — this is the only way to get
+    visual bold emphasis inside a message body (not just the title).
+    """
+    out = []
+    for ch in str(text):
+        if 'A' <= ch <= 'Z':
+            out.append(chr(0x1D5D4 + ord(ch) - ord('A')))
+        elif 'a' <= ch <= 'z':
+            out.append(chr(0x1D5EE + ord(ch) - ord('a')))
+        elif '0' <= ch <= '9':
+            out.append(chr(0x1D7EC + ord(ch) - ord('0')))
+        else:
+            out.append(ch)
+    return ''.join(out)
 
 
 def _entry_signal_worker(args):
@@ -89,6 +108,13 @@ def _entry_signal_worker(args):
 class LiveTradingMonitor:
     """Monitor stocks and send notifications for trading opportunities"""
 
+    # Pre-market discovery scan starts at this hour (ET, 24h).
+    PRE_MARKET_START_HOUR = 4
+
+    # How often (hours) to run a full discovery scan.
+    # e.g. 3 → runs pre-market, then again mid-morning, then again mid-afternoon.
+    DISCOVERY_INTERVAL_HOURS = 3
+
     # Valid timeframes and their configurations
     TIMEFRAMES = {
         '1M': {'interval': '1m', 'period': '7d', 'description': '1 Minute'},
@@ -117,6 +143,9 @@ class LiveTradingMonitor:
         self.exit_thread = None  # Exit/sell scanning thread
         self.scanning = False  # Flag to control scan loops
         self.pending_replacements = {}  # {new_sym: {'worst_held': sym, 'signal': {...}, 'worst_pnl': float}}
+        self.last_discovery_time = None  # Datetime of last full watchlist scan
+        self.hot_list = {}               # {symbol: {'score': float, 'added_date': str, 'bars_ago': int}}
+        self._load_hot_list()
         self.portfolio_state = PortfolioStateManager(
             initial_capital=portfolio_capital,
             position_manager=self.position_manager,
@@ -162,6 +191,62 @@ class LiveTradingMonitor:
         if cleared > 0:
             self.position_manager._save()
             print(f"ℹ️  Cleared {cleared} pending exit flag(s) from previous session")
+
+    # -------------------------------------------------------------------------
+    # Hot list — fast intraday buy scan
+    # -------------------------------------------------------------------------
+
+    def _load_hot_list(self):
+        """Load persisted hot list from disk, cleaning expired entries."""
+        try:
+            if os.path.exists('hot_list.json'):
+                with open('hot_list.json') as f:
+                    self.hot_list = json.load(f)
+                self._cleanup_hot_list(save=False)
+                if self.hot_list:
+                    print(f"ℹ️  Hot list: {len(self.hot_list)} symbols loaded")
+        except Exception as e:
+            print(f"⚠️  Could not load hot list: {e}")
+            self.hot_list = {}
+
+    def _save_hot_list(self):
+        """Persist hot list to disk."""
+        try:
+            with open('hot_list.json', 'w') as f:
+                json.dump(self.hot_list, f, indent=2)
+        except Exception as e:
+            print(f"⚠️  Could not save hot list: {e}")
+
+    def _add_to_hot_list(self, symbol, score, bars_ago, signal_price=None,
+                         bullish_accuracy=None, bullish_total=0):
+        """Add or refresh a symbol in the hot list."""
+        today = datetime.now().date().isoformat()
+        entry = {
+            'score': float(score),
+            'bars_ago': int(bars_ago),
+            'added_date': today,
+        }
+        if signal_price is not None:
+            entry['signal_price'] = float(signal_price)
+        if bullish_accuracy is not None:
+            entry['bullish_accuracy'] = float(bullish_accuracy)
+            entry['bullish_total'] = int(bullish_total)
+        self.hot_list[symbol] = entry
+        self._save_hot_list()
+
+    def _cleanup_hot_list(self, max_age_days=5, save=True):
+        """Remove entries older than max_age_days."""
+        cutoff = (datetime.now().date() - timedelta(days=max_age_days)).isoformat()
+        before = len(self.hot_list)
+        self.hot_list = {
+            sym: data for sym, data in self.hot_list.items()
+            if data.get('added_date', '') >= cutoff
+        }
+        removed = before - len(self.hot_list)
+        if removed:
+            print(f"ℹ️  Hot list: removed {removed} expired entry(s)")
+        if save:
+            self._save_hot_list()
 
     def _resolve_symbol(self, user_symbol):
         """
@@ -304,11 +389,18 @@ class LiveTradingMonitor:
             print(f"❌ Error fetching historical data for {symbol}: {e}")
             return None
 
-    def scan_for_opportunities(self):
-        """Scan all watchlist stocks for buy opportunities and held positions for exits"""
+    def scan_for_opportunities(self, symbols=None):
+        """Scan stocks for buy opportunities.
+
+        Args:
+            symbols: List of symbols to scan.  If None, scans the full watchlist
+                     (discovery mode).  Pass a subset for hot-list intraday scans.
+        """
         tf_config = self.TIMEFRAMES[self.current_timeframe]
+        discovery = symbols is None
+        mode_label = "DISCOVERY SCAN" if discovery else f"HOT SCAN ({len(symbols)} symbols)"
         print(f"\n{'='*60}")
-        print(f"SCANNING AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{mode_label} AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Timeframe: {self.current_timeframe} ({tf_config['description']})")
         print(f"{'='*60}\n")
 
@@ -327,8 +419,11 @@ class LiveTradingMonitor:
         buy_opportunities = 0
         today = datetime.now().date()
 
-        # Filter watchlist to only symbols we need to scan
-        symbols_to_scan = [s for s in self.watchlist
+        # Choose source list
+        source = self.watchlist if discovery else symbols
+
+        # Filter to only symbols we need to scan
+        symbols_to_scan = [s for s in source
                           if s not in held_positions
                           and self.buy_alerts_sent.get(s) != today]
         total_to_scan = len(symbols_to_scan)
@@ -383,6 +478,12 @@ class LiveTradingMonitor:
                             score = abs(signal.get('prediction', 0))
                             found_signals.append((sym, signal, score))
 
+                            # Always add to hot list — keeps it fresh for intraday re-scans
+                            self._add_to_hot_list(sym, score, bars_ago,
+                                                  signal_price=signal.get('price'),
+                                                  bullish_accuracy=signal.get('bullish_accuracy'),
+                                                  bullish_total=signal.get('bullish_total', 0))
+
                             if self.buy_alerts_sent.get(sym) == today:
                                 print(f"\n   🟢 SIGNAL: {sym} (score={score:.0f}, "
                                       f"bars_ago={bars_ago}) | already alerted today")
@@ -390,12 +491,21 @@ class LiveTradingMonitor:
                                 cur_slots = max(0, self.max_positions -
                                                len(self.position_manager.list_active()))
                                 if cur_slots > 0:
-                                    # Send immediately — don't wait for all 470 to finish
-                                    self.notifier.send_buy_alert(sym, signal)
+                                    # Compute suggested position size (same formula as handle_bought_reply)
+                                    cash = self.portfolio_state.get_cash()
+                                    n_active = len(self.position_manager.list_active())
+                                    remaining_slots = max(1, self.max_positions - n_active)
+                                    suggested_amount = cash / remaining_slots if cash > 0 else 0.0
+                                    suggested_shares = int(suggested_amount / signal['price']) if signal['price'] > 0 else 0
+
+                                    # Send immediately — don't wait for all symbols to finish
+                                    self.notifier.send_buy_alert(sym, signal,
+                                                                 suggested_amount=suggested_amount,
+                                                                 suggested_shares=suggested_shares)
                                     self.buy_alerts_sent[sym] = today
                                     buy_opportunities += 1
                                     print(f"\n   🟢 BUY ALERT SENT: {sym} (score={score:.0f}, "
-                                          f"bars_ago={bars_ago})")
+                                          f"bars_ago={bars_ago}, suggested=${suggested_amount:,.0f})")
                                 else:
                                     print(f"\n   🟢 SIGNAL: {sym} (score={score:.0f}, "
                                           f"bars_ago={bars_ago}) | no slots (overflow)")
@@ -480,6 +590,10 @@ class LiveTradingMonitor:
             self.handle_capital_command(reply)
         elif reply == "PORTFOLIO":
             self.handle_portfolio_query()
+        elif reply == "PORTFOLIO WORST":
+            self.handle_portfolio_worst_query()
+        elif reply == "BEST":
+            self.handle_best_query()
         elif reply == "HELP":
             self.handle_help_query()
         else:
@@ -745,7 +859,7 @@ class LiveTradingMonitor:
             except Exception:
                 pass
 
-        title = f"🔄 REPLACE? {new_sym} → {worst_sym}"
+        title = f"🔄 REPLACE? {worst_sym} → {new_sym}"
         message = (
             f"Portfolio full ({self.max_positions}/{self.max_positions})\n\n"
             f"NEW SIGNAL: {new_sym}\n"
@@ -781,12 +895,23 @@ class LiveTradingMonitor:
         worst_sym = pending['worst_held']
         signal = pending['signal']
 
-        # 1. Sell worst position at current price
+        # Pre-flight checks before any state is modified
         worst_pos = self.position_manager.get(worst_sym)
         if not worst_pos:
             self.notifier.send_notification("⚠️ Error", f"{worst_sym} no longer held")
             del self.pending_replacements[new_sym]
             return
+
+        if self.position_manager.has_position(new_sym):
+            self.notifier.send_notification(
+                "⚠️ Replace Failed",
+                f"{new_sym} is already held. No changes made.\n"
+                f"Send 'SOLD {new_sym}' first if you want to re-enter."
+            )
+            del self.pending_replacements[new_sym]
+            return
+
+        # 1. Sell worst position at current price
 
         yf_ticker = worst_pos.get('yf_ticker', worst_sym)
         df = self.get_live_data(worst_sym, ticker=yf_ticker)
@@ -801,11 +926,8 @@ class LiveTradingMonitor:
         sell_msg = f"Sold {worst_sym} @ ${exit_price:.2f} (P&L: {pnl_pct:+.1f}%)\nProceeds: ${proceeds:,.2f}"
         self.notifier.send_notification(f"✅ SOLD {worst_sym} (replaced)", sell_msg)
 
-        # 2. Buy new signal
-        cash = self.portfolio_state.get_cash()
-        n_held = len(self.position_manager.list_active())
-        remaining_slots = max(1, self.max_positions - n_held)
-        alloc = cash / remaining_slots
+        # 2. Buy new signal — allocate exactly the proceeds from the sale (1-for-1 swap)
+        alloc = proceeds
         self.portfolio_state.deduct_cash(alloc)
 
         exchange = ''
@@ -814,17 +936,23 @@ class LiveTradingMonitor:
         except Exception:
             pass
 
+        # Fetch current price — signal['price'] is stale (from scan time, possibly hours ago)
+        entry_price = signal['price']  # fallback
+        df_new = self.get_live_data(new_sym)
+        if df_new is not None and not df_new.empty:
+            entry_price = float(df_new['Close'].iloc[-1])
+
         stop_loss_pct = self.params.get('stop_loss_pct', 0.05)
         if hasattr(stop_loss_pct, '__float__'):
             stop_loss_pct = float(stop_loss_pct)
-        stop_loss = signal['price'] * (1 - stop_loss_pct)
+        stop_loss = entry_price * (1 - stop_loss_pct)
 
-        self.position_manager.add(new_sym, signal['price'], stop_loss,
+        self.position_manager.add(new_sym, entry_price, stop_loss,
                                   yf_ticker=new_sym, exchange=exchange,
                                   allocated_amount=alloc)
         self.buy_alerts_sent[new_sym] = datetime.now().date()
 
-        buy_msg = f"Bought {new_sym} @ ${signal['price']:.2f}\nAllocated: ${alloc:,.2f}"
+        buy_msg = f"Bought {new_sym} @ ${entry_price:.2f}\nAllocated: ${alloc:,.2f}"
         self.notifier.send_notification(f"✅ BOUGHT {new_sym} (replacement)", buy_msg)
 
         del self.pending_replacements[new_sym]
@@ -886,6 +1014,196 @@ class LiveTradingMonitor:
         )
         self.notifier.send_notification("📊 Portfolio", message)
 
+    def handle_portfolio_worst_query(self):
+        """Handle 'PORTFOLIO WORST' — show the 5 most urgent held positions.
+
+        Ranked by: urgency = days_held / distance_to_stop_pct
+
+        This surfaces positions that are both close to being stopped out AND
+        have been tying up capital for a long time. A position 1% above its
+        stop after 90 days is far more urgent than one 10% above its stop
+        after 5 days. Pending-exit positions (already past stop) always
+        float to the top.
+        """
+        positions = self.position_manager.list_all()
+
+        if not positions:
+            self.notifier.send_notification("📭 No Holdings", "No positions currently held.")
+            return
+
+        ranked = []
+        for sym, pos in positions.items():
+            entry = pos['entry_price']
+            stop = pos['stop_loss']
+            try:
+                ticker = yf.Ticker(pos.get('yf_ticker', sym))
+                cur = getattr(ticker.fast_info, 'last_price', None)
+                if not cur:
+                    cur = ticker.info.get('regularMarketPrice')
+                if not cur:
+                    continue
+                cur = float(cur)
+                pnl = (cur / entry - 1) * 100
+                held_days = (datetime.now().date() - datetime.fromisoformat(pos['entry_date']).date()).days
+                distance_pct = (cur - stop) / cur * 100  # negative if already past stop
+                urgency = held_days / max(distance_pct, 0.5)  # cap so past-stop positions rank highest
+                ranked.append((sym, urgency, pnl, entry, cur, stop, held_days, distance_pct,
+                               pos.get('pending_exit', False)))
+            except Exception:
+                continue
+
+        if not ranked:
+            self.notifier.send_notification("⚠️ No Data", "Could not fetch prices for any held positions.")
+            return
+
+        ranked.sort(key=lambda x: x[1], reverse=True)  # highest urgency first
+        worst = ranked[:5]
+
+        lines = [f"Top {len(worst)} of {len(ranked)} by urgency\n"]
+        for i, (sym, urgency, pnl, entry, cur, stop, held_days, distance_pct, pending) in enumerate(worst, 1):
+            flag = " ⏳" if pending else ""
+            lines.append(
+                f"{i}. {sym}{flag}  {pnl:+.1f}%  ({held_days}d)\n"
+                f"   Stop: ${stop:.2f}  ({distance_pct:+.1f}% away)"
+            )
+
+        self.notifier.send_notification("📉 Most Urgent Positions", "\n".join(lines))
+        print(f"✓ Sent PORTFOLIO WORST ({len(worst)} positions)")
+
+    def handle_best_query(self):
+        """Handle 'BEST' — show top-ranked buy signals from the hot list.
+
+        Composite score = ML_score × freshness_decay × accuracy_weight
+
+          freshness_decay = 0.85 ^ bars_ago
+            Each bar since the signal reduces score by 15% — a fresh signal on the
+            same close beats a stronger signal from 3 days ago.
+
+          accuracy_weight = historical ML bullish accuracy for this symbol
+            Break-even at 60% (weight 1.0). Below 60% penalises; above rewards.
+            Neutral (1.0) when fewer than 20 samples exist (insufficient history).
+            Range: ~0.2 (very low accuracy) → 1.4 (near-perfect accuracy).
+
+        This means a poor-accuracy stock cannot rank highly no matter how strong the
+        current ML signal is — history of the strategy on that symbol dominates.
+        """
+        _FRESHNESS_DECAY = 0.85
+        _ACC_BREAK_EVEN  = 60.0   # accuracy % where weight = 1.0
+        _MIN_SAMPLES     = 20     # below this, treat accuracy as unknown → neutral
+
+        def _accuracy_weight(acc, total):
+            if acc is None or total < _MIN_SAMPLES:
+                return 1.0  # insufficient history — neutral
+            if acc >= _ACC_BREAK_EVEN:
+                return 1.0 + (acc - _ACC_BREAK_EVEN) / 100.0   # 60%→1.0, 80%→1.2, 100%→1.4
+            else:
+                return max(0.2, acc / _ACC_BREAK_EVEN)           # 0%→0.2, 30%→0.5, 60%→1.0
+
+        def composite(data):
+            freshness = _FRESHNESS_DECAY ** data['bars_ago']
+            acc_w = _accuracy_weight(data.get('bullish_accuracy'), data.get('bullish_total', 0))
+            return data['score'] * freshness * acc_w
+
+        self._cleanup_hot_list(save=False)
+
+        if not self.hot_list:
+            self.notifier.send_notification("📭 No Signals", "Hot list is empty. Run a scan first.")
+            return
+
+        held = set(self.position_manager.list_all().keys())
+        today = datetime.now().date().isoformat()
+        yesterday = (datetime.now().date() - timedelta(days=1)).isoformat()
+
+        # Prefer signals from today/yesterday; fall back to all unexpired entries
+        recent = {sym: data for sym, data in self.hot_list.items()
+                  if data.get('added_date', '') >= yesterday}
+        candidates = recent if recent else self.hot_list
+
+        # Rank ALL candidates (held and available) so held positions show where they stand
+        ranked_all = sorted(
+            candidates.items(),
+            key=lambda x: composite(x[1]),
+            reverse=True
+        )
+        n_held_signals = sum(1 for sym, _ in ranked_all if sym in held)
+        n_available = len(ranked_all) - n_held_signals
+
+        if n_available == 0:
+            self.notifier.send_notification(
+                "📭 No New Signals",
+                f"All {len(ranked_all)} recent signal(s) are already held positions."
+            )
+            return
+
+        top = ranked_all[:10]
+        today_date = datetime.now().date()
+        alerted_today = {sym for sym, date in self.buy_alerts_sent.items() if date == today_date}
+
+        # Fetch financial stats for top symbols in parallel (I/O-bound, use threads)
+        fin_data = {}
+        top_syms = [sym for sym, _ in top]
+        try:
+            with ThreadPoolExecutor(max_workers=min(len(top_syms), 5)) as tex:
+                fut_map = {tex.submit(self._get_quick_financials, sym): sym for sym in top_syms}
+                for fut in as_completed(fut_map):
+                    sym = fut_map[fut]
+                    try:
+                        fin_data[sym] = fut.result()
+                    except Exception:
+                        fin_data[sym] = None
+        except Exception:
+            pass  # financial data is bonus; never block BEST output
+
+        header = f"{len(top)} of {len(ranked_all)}"
+        if n_held_signals:
+            header += f"  ({n_held_signals} held)"
+        lines = [header]
+
+        for i, (sym, data) in enumerate(top, 1):
+            bars_ago     = data['bars_ago']
+            acc          = data.get('bullish_accuracy')
+            total        = data.get('bullish_total', 0)
+            comp         = composite(data)
+            signal_price = data.get('signal_price')
+            added        = data.get('added_date', '')
+
+            freshness  = "today" if bars_ago == 0 else f"{bars_ago}d ago"
+            acc_str    = f"{acc:.0f}%" if acc is not None and total >= _MIN_SAMPLES else "?"
+            price_str  = f"  ${signal_price:.2f}" if signal_price else ""
+            alert_mark = "  ✉" if sym in alerted_today else ""
+            age_mark   = f"  [{added}]" if added < today else ""
+            held_mark  = "✓" if sym in held else ""
+
+            # Line 1: rank · symbol (bold) · price · freshness · markers
+            # Leading \n creates a blank line between entries when joined
+            lines.append(f"\n{i}. {held_mark}{_bold(sym)}{price_str}  {freshness}{alert_mark}{age_mark}")
+
+            # Line 2: financials (priority) then ML confidence
+            fin = fin_data.get(sym)
+            detail_parts = []
+            if fin:
+                fin_str = f"F:{fin['score']}/9 {_bold(fin['assessment'])}"
+                fv  = fin.get('avg_fair_value')
+                fup = fin.get('upside')
+                if fv and fup is not None:
+                    fin_str += f" · Est ${fv:.0f} ({fup:+.0f}%)"
+                elif fin.get('target_mean') and fin.get('current_price', 0) > 0:
+                    t    = fin['target_mean']
+                    t_up = (t / fin['current_price'] - 1) * 100
+                    fin_str += f" · Est ${t:.0f} ({t_up:+.0f}%)"
+                detail_parts.append(fin_str)
+            detail_parts.append(f"ML:{comp:.0f} Acc:{acc_str}")
+            lines.append("   " + "  ·  ".join(detail_parts))
+
+        lines.append("\n─────────────────────")
+        footer = "✓ held  ·  F = fundamentals/9"
+        if any(sym in alerted_today for sym, _ in top):
+            footer += "  ·  ✉ alerted"
+        lines.append(footer)
+
+        self.notifier.send_notification("🏆 Best Buy Signals", "\n".join(lines))
+        print(f"✓ Sent BEST signals: {len(top)} shown ({len(ranked_all)} total, {n_held_signals} held)")
+
     def handle_help_query(self):
         """Handle 'HELP' command — list all available commands."""
         message = (
@@ -895,10 +1213,12 @@ class LiveTradingMonitor:
             "SOLD <SYM>\n"
             "HOLDINGS\n"
             "PORTFOLIO\n"
+            "PORTFOLIO WORST\n"
             "CAPITAL SET <AMT>\n"
             "CAPITAL ADD <AMT>\n"
             "\n"
             "-- Analysis --\n"
+            "BEST\n"
             "LAST <SYM>\n"
             "BACKTEST <SYM> [1M|3M|6M|1Y|2Y|3Y|5Y]\n"
             "ANALYZE <SYM>\n"
@@ -983,10 +1303,12 @@ class LiveTradingMonitor:
         # Chandelier math uses historical highs/ATR (bar data, unaffected by stale close).
         # The price comparison is intentionally removed from inside cerebro;
         # we do it below with real_price.
+        # ml_lock prevents concurrent cerebro runs with user commands (LAST, BACKTEST, etc.)
         entry_date = position.get('entry_date')
-        sell_signal = self.strategy.get_exit_signal(
-            df, self.params, entry_price, current_stop, symbol=symbol, entry_date=entry_date
-        )
+        with self.ml_lock:
+            sell_signal = self.strategy.get_exit_signal(
+                df, self.params, entry_price, current_stop, symbol=symbol, entry_date=entry_date
+            )
 
         # === Step 4: Chandelier stop check with real-time price ===
         # Cerebro returns the computed stop level.  We compare it against real_price,
@@ -1065,6 +1387,18 @@ class LiveTradingMonitor:
                 print(f"📊 {symbol}: Price ${current_price:.2f} | P&L {pnl:+.2f}% | "
                       f"Stop ${new_stop:.2f} ({distance_to_stop:.1f}% away)")
 
+    def _et_now(self):
+        """Current datetime in US/Eastern timezone."""
+        import pytz
+        return datetime.now(pytz.timezone('US/Eastern'))
+
+    def _interruptible_sleep(self, seconds):
+        """Sleep for up to `seconds`, waking immediately if scanning is stopped."""
+        for _ in range(int(seconds)):
+            if not self.scanning:
+                break
+            time.sleep(1)
+
     def is_market_hours(self):
         """Check if market is open (US Eastern Time)"""
         from datetime import datetime
@@ -1086,8 +1420,7 @@ class LiveTradingMonitor:
 
         if not is_open:
             print(f"Market closed (ET time: {now_et.strftime('%I:%M %p')})")
-        return True
-        #return is_open
+        return is_open
 
     def send_market_open_notification(self):
         """Send notification when market opens (once per day)"""
@@ -1119,40 +1452,162 @@ class LiveTradingMonitor:
         print(f"📢 Market open notification sent")
 
     def _scan_loop(self, scan_interval):
-        """Background scanning loop - runs in separate thread"""
+        """Background scanning loop - runs in separate thread.
+
+        Time-aware scan schedule (all times US/Eastern):
+
+          Weekdays only.  Two modes alternate automatically:
+
+          DISCOVERY — full watchlist scan (~486 symbols).
+            Triggered when:
+              (a) system starts / never run today, AND in the pre-market window, OR
+              (b) it has been >= DISCOVERY_INTERVAL_HOURS since the last discovery
+                  at any point during the active window (pre-market or market hours).
+            This means discovery runs pre-market, then refreshes mid-morning,
+            then mid-afternoon — catching new signals that emerge as price action
+            develops throughout the day.
+
+          HOT SCAN — only hot-list symbols (seconds, not hours).
+            Runs every scan_interval minutes when discovery is not due.
+            Keeps alerting on already-identified candidates quickly.
+
+          Pre-market window (PRE_MARKET_START_HOUR → 9:30 AM):
+            If discovery is due, it runs here. If discovery is done and market
+            isn't open yet, sleep quietly until open.
+
+          After hours / overnight:
+            Sleep, polling every 5 minutes.
+
+          Weekends: sleep 30 minutes between checks.
+        """
         while self.scanning:
             try:
-                if self.is_market_hours():
-                    # Send market open notification (once per day)
+                now_et = self._et_now()
+                weekday = now_et.weekday()
+
+                # ── Weekend ──────────────────────────────────────────────────
+                if weekday >= 5:
+                    self._interruptible_sleep(1800)
+                    continue
+
+                # ── Time boundaries ──────────────────────────────────────────
+                market_open  = now_et.replace(hour=9,  minute=30, second=0, microsecond=0)
+                market_close = now_et.replace(hour=16, minute=0,  second=0, microsecond=0)
+                pre_start    = now_et.replace(hour=self.PRE_MARKET_START_HOUR,
+                                              minute=0, second=0, microsecond=0)
+
+                in_pre_market = pre_start <= now_et < market_open
+                in_market     = market_open <= now_et < market_close
+
+                # ── Is a discovery scan due? ─────────────────────────────────
+                if self.last_discovery_time is None:
+                    hours_since = float('inf')
+                    discovery_due = True
+                else:
+                    hours_since = (now_et - self.last_discovery_time).total_seconds() / 3600
+                    discovery_due = hours_since >= self.DISCOVERY_INTERVAL_HOURS
+
+                # ── Pre-market window ────────────────────────────────────────
+                if in_pre_market:
+                    if discovery_due:
+                        mins_to_open = int((market_open - now_et).total_seconds() / 60)
+                        print(f"\n📡 PRE-MARKET DISCOVERY — {len(self.watchlist)} symbols  "
+                              f"({mins_to_open} min before open)")
+                        self.scan_for_opportunities(symbols=None)
+                        self.last_discovery_time = self._et_now()
+                        print(f"✅ Discovery complete. "
+                              f"Hot list: {len(self.hot_list)} symbol(s).")
+                        # Don't sleep — re-evaluate immediately (may now be market hours)
+                    else:
+                        mins_to_open = int((market_open - now_et).total_seconds() / 60)
+                        hrs_to_next = self.DISCOVERY_INTERVAL_HOURS - hours_since
+                        print(f"⏳ Pre-market: discovery done, market opens in {mins_to_open} min "
+                              f"(next discovery in ~{hrs_to_next:.1f}h). "
+                              f"Hot list: {len(self.hot_list)} symbol(s).")
+                        self._interruptible_sleep(60)
+
+                # ── Market hours ─────────────────────────────────────────────
+                elif in_market:
                     self.send_market_open_notification()
 
-                    self.scan_for_opportunities()
-                    print(f"\n💤 Next scan in {scan_interval} minutes...")
+                    if discovery_due:
+                        hours_since_str = (f"{hours_since:.1f}h ago"
+                                           if self.last_discovery_time else "never")
+                        print(f"\n📡 DISCOVERY REFRESH — {len(self.watchlist)} symbols "
+                              f"(last run: {hours_since_str})")
+                        self.scan_for_opportunities(symbols=None)
+                        self.last_discovery_time = self._et_now()
+                        print(f"✅ Discovery refresh complete. "
+                              f"Hot list: {len(self.hot_list)} symbol(s).")
+                    else:
+                        self._cleanup_hot_list()
+                        hot_symbols = list(self.hot_list.keys())
+                        hrs_to_next = self.DISCOVERY_INTERVAL_HOURS - hours_since
 
-                    # Sleep in small increments to allow quick shutdown
-                    for _ in range(scan_interval * 60):
-                        if not self.scanning:
-                            break
-                        time.sleep(1)
+                        if hot_symbols:
+                            print(f"\n⚡ HOT SCAN — {len(hot_symbols)} symbol(s) "
+                                  f"(discovery refresh in ~{hrs_to_next:.1f}h)")
+                            self.scan_for_opportunities(symbols=hot_symbols)
+                        else:
+                            print(f"\nℹ️  Hot list empty. "
+                                  f"Discovery refresh in ~{hrs_to_next:.1f}h.")
+
+                    print(f"\n💤 Next scan in {scan_interval} minutes...")
+                    self._interruptible_sleep(scan_interval * 60)
+
+                # ── After hours / overnight ──────────────────────────────────
                 else:
-                    print("Market closed. Sleeping...")
-                    # Sleep in small increments to allow quick shutdown
-                    for _ in range(300):
-                        if not self.scanning:
-                            break
-                        time.sleep(1)
+                    if now_et < pre_start:
+                        secs_to_pre = int((pre_start - now_et).total_seconds())
+                    else:
+                        tomorrow_pre = pre_start + timedelta(days=1)
+                        secs_to_pre = int((tomorrow_pre - now_et).total_seconds())
+
+                    hrs  = secs_to_pre // 3600
+                    mins = (secs_to_pre % 3600) // 60
+                    print(f"After hours ({now_et.strftime('%I:%M %p')} ET). "
+                          f"Pre-market scan at {self.PRE_MARKET_START_HOUR}:00 AM ET "
+                          f"(~{hrs}h {mins}m away). Sleeping...")
+                    self._interruptible_sleep(300)
 
             except Exception as e:
                 print(f"❌ Error in scan loop: {e}")
+                import traceback
+                traceback.print_exc()
                 time.sleep(60)
 
         print("🛑 Scan loop stopped")
+
+    def _reset_stale_pending_exits(self):
+        """Clear pending_exit flags that were set on a previous calendar day.
+
+        Each day is a fresh slate — if the stop is still breached, a new alert
+        fires naturally on the next exit check.
+        """
+        today = datetime.now().date().isoformat()
+        positions = self.position_manager.list_all()
+        cleared = 0
+        for symbol, position in positions.items():
+            if position.get('pending_exit'):
+                alerted_date = position.get('exit_alerted_date', '')
+                if alerted_date != today:
+                    position['pending_exit'] = False
+                    if 'exit_alerted_date' in position:
+                        del position['exit_alerted_date']
+                    self.position_manager.positions[symbol] = position
+                    cleared += 1
+        if cleared > 0:
+            self.position_manager._save()
+            print(f"🔄 Reset {cleared} stale pending exit flag(s) (from previous day)")
 
     def _exit_scan_loop(self, exit_interval=60):
         """Background exit scanning loop - checks held positions for sell signals"""
         while self.scanning:
             try:
                 if self.is_market_hours():
+                    # Reset any pending_exit flags left over from a previous day
+                    self._reset_stale_pending_exits()
+
                     held_positions = list(self.position_manager.list_all().keys())
 
                     if held_positions:
@@ -2040,7 +2495,9 @@ class LiveTradingMonitor:
             # Get current market price (not timeframe dependent)
             try:
                 ticker = yf.Ticker(symbol)
-                current_price = ticker.fast_info.get('lastPrice') or ticker.info.get('regularMarketPrice')
+                current_price = getattr(ticker.fast_info, 'last_price', None)
+                if not current_price:
+                    current_price = ticker.info.get('regularMarketPrice')
                 if current_price is None:
                     raise ValueError("No price available")
                 current_price = float(current_price)
@@ -2154,6 +2611,170 @@ class LiveTradingMonitor:
         self.notifier.send_notification("⏱️ Timeframe Settings", message)
         print(f"✓ Sent timeframe query response (current: {self.current_timeframe})")
 
+    def _compute_financial_score(self, info):
+        """
+        Compute a financial score and fair value estimate from a yfinance info dict.
+        Shared between handle_analyze_query (full report) and _get_quick_financials
+        (compact summary for the BEST command).
+
+        Returns dict with:
+            score (int 0-9), assessment (str, no emojis), positives (list),
+            negatives (list), avg_fair_value (float|None), upside (float|None),
+            fair_pe (float|None), fair_value_details (list[str]),
+            target_mean (float|None), recommendation (str), current_price (float)
+        """
+        import math
+
+        current_price   = float(info.get('currentPrice') or info.get('regularMarketPrice') or 0)
+        sector          = info.get('sector', '')
+        pe_trailing     = info.get('trailingPE')
+        peg_ratio       = info.get('pegRatio')
+        eps             = info.get('trailingEps')
+        book_value      = info.get('bookValue')
+        market_cap      = info.get('marketCap')
+        free_cash_flow  = info.get('freeCashflow')
+        profit_margin   = info.get('profitMargins')
+        roe             = info.get('returnOnEquity')
+        revenue_growth  = info.get('revenueGrowth')
+        earnings_growth = info.get('earningsGrowth')
+        current_ratio   = info.get('currentRatio')
+        debt_to_equity  = info.get('debtToEquity')
+        target_mean     = info.get('targetMeanPrice')
+        recommendation  = info.get('recommendationKey', '')
+
+        if not peg_ratio and pe_trailing and earnings_growth and earnings_growth > 0:
+            peg_ratio = pe_trailing / (earnings_growth * 100)
+
+        # === FAIR VALUE ESTIMATES ===
+        fair_values = []
+        fair_value_details = []
+
+        if eps and eps > 0 and book_value and book_value > 0:
+            graham = math.sqrt(22.5 * eps * book_value)
+            fair_values.append(graham)
+            fair_value_details.append(f"Graham: ${graham:.2f}")
+
+        if free_cash_flow and market_cap and free_cash_flow > 0 and current_price > 0:
+            fcf_yield = free_cash_flow / market_cap
+            if fcf_yield > 0.02:
+                dcf_value = current_price * (fcf_yield / 0.08)
+                fair_values.append(dcf_value)
+                fair_value_details.append(f"FCF-based: ${dcf_value:.2f}")
+
+        if pe_trailing and pe_trailing > 0 and eps and eps > 0:
+            sector_pe = 18 if sector in ['Technology', 'Healthcare'] else 15
+            pe_fair_value = eps * sector_pe
+            fair_values.append(pe_fair_value)
+            fair_value_details.append(f"PE-based: ${pe_fair_value:.2f}")
+
+        if target_mean:
+            fair_values.append(target_mean)
+            fair_value_details.append(f"Analyst avg: ${target_mean:.2f}")
+
+        avg_fair_value = sum(fair_values) / len(fair_values) if fair_values else None
+        upside = ((avg_fair_value / current_price) - 1) * 100 if avg_fair_value and current_price > 0 else None
+
+        fair_pe = None
+        if peg_ratio and peg_ratio > 0 and earnings_growth:
+            fair_pe = abs(earnings_growth) * 100
+
+        # === SCORE (0-9) ===
+        score = 0
+        positives = []
+        negatives = []
+
+        if pe_trailing:
+            if pe_trailing < 20:
+                score += 1
+                positives.append("Reasonably priced")
+            elif pe_trailing > 40:
+                negatives.append("Expensive valuation")
+
+        if peg_ratio:
+            if peg_ratio < 1.5:
+                score += 1
+                positives.append("Good value for growth")
+            elif peg_ratio > 2.5:
+                negatives.append("Overpriced for growth")
+
+        if revenue_growth and revenue_growth > 0.1:
+            score += 1
+            positives.append("Growing sales")
+        elif revenue_growth and revenue_growth < 0:
+            negatives.append("Shrinking revenue")
+
+        if earnings_growth and earnings_growth > 0.1:
+            score += 1
+            positives.append("Growing profits")
+        elif earnings_growth and earnings_growth < 0:
+            negatives.append("Declining earnings")
+
+        if roe and roe > 0.15:
+            score += 1
+            positives.append("Profitable business")
+        if profit_margin and profit_margin > 0.1:
+            score += 1
+            positives.append("Good margins")
+        elif profit_margin and profit_margin < 0:
+            negatives.append("Losing money")
+
+        if current_ratio and current_ratio > 1.5:
+            score += 1
+            positives.append("Financially stable")
+        elif current_ratio and current_ratio < 1:
+            negatives.append("Cash flow concerns")
+
+        if debt_to_equity and debt_to_equity < 100:
+            score += 1
+            positives.append("Low debt")
+        elif debt_to_equity and debt_to_equity > 200:
+            negatives.append("High debt load")
+
+        if upside and upside > 15:
+            score += 1
+            positives.append("Looks undervalued")
+        elif upside and upside < -20:
+            negatives.append("Looks overvalued")
+
+        if score >= 7:
+            assessment = "Strong Buy"
+        elif score >= 5:
+            assessment = "Buy"
+        elif score >= 3:
+            assessment = "Hold"
+        elif score >= 1:
+            assessment = "Caution"
+        else:
+            assessment = "Avoid"
+
+        return {
+            'score':              score,
+            'assessment':         assessment,
+            'positives':          positives,
+            'negatives':          negatives,
+            'avg_fair_value':     avg_fair_value,
+            'upside':             upside,
+            'fair_pe':            fair_pe,
+            'fair_value_details': fair_value_details,
+            'target_mean':        target_mean,
+            'recommendation':     recommendation,
+            'current_price':      current_price,
+        }
+
+    def _get_quick_financials(self, symbol):
+        """
+        Fetch and score financials for a symbol.  Lightweight wrapper around
+        _compute_financial_score used by the BEST command hot-list display.
+        Returns the _compute_financial_score dict, or None on failure.
+        """
+        try:
+            info = yf.Ticker(symbol).info
+            if not info or not (info.get('currentPrice') or info.get('regularMarketPrice')):
+                return None
+            return self._compute_financial_score(info)
+        except Exception:
+            return None
+
     def handle_analyze_query(self, reply):
         """
         Handle 'ANALYZE SYMBOL' query - performs deep fundamental analysis of a stock
@@ -2239,56 +2860,12 @@ class LiveTradingMonitor:
             recommendation = info.get('recommendationKey', 'N/A')
             num_analysts = info.get('numberOfAnalystOpinions', 0)
 
-            # === CALCULATE FAIR VALUE ESTIMATES ===
-            fair_values = []
-            fair_value_details = []
-
-            # Method 1: Graham Number (for value stocks)
-            eps = info.get('trailingEps')
-            book_value = info.get('bookValue')
-            if eps and eps > 0 and book_value and book_value > 0:
-                import math
-                graham = math.sqrt(22.5 * eps * book_value)
-                fair_values.append(graham)
-                fair_value_details.append(f"Graham: ${graham:.2f}")
-
-            # Method 2: DCF-lite using FCF yield
-            market_cap = info.get('marketCap')
-            if free_cash_flow and market_cap and free_cash_flow > 0:
-                fcf_yield = free_cash_flow / market_cap
-                # Assume 10% required return, calculate implied value
-                if fcf_yield > 0.02:  # At least 2% FCF yield
-                    dcf_value = current_price * (fcf_yield / 0.08)  # 8% target yield
-                    fair_values.append(dcf_value)
-                    fair_value_details.append(f"FCF-based: ${dcf_value:.2f}")
-
-            # Method 3: PE-based fair value
-            if pe_trailing and pe_trailing > 0 and eps and eps > 0:
-                # Use sector average PE or 15 as baseline
-                sector_pe = 18 if sector in ['Technology', 'Healthcare'] else 15
-                pe_fair_value = eps * sector_pe
-                fair_values.append(pe_fair_value)
-                fair_value_details.append(f"PE-based: ${pe_fair_value:.2f}")
-
-            # Method 4: Analyst target
-            if target_mean:
-                fair_values.append(target_mean)
-                fair_value_details.append(f"Analyst avg: ${target_mean:.2f}")
-
-            # Calculate average fair value
-            if fair_values:
-                avg_fair_value = sum(fair_values) / len(fair_values)
-                upside = ((avg_fair_value / current_price) - 1) * 100
-            else:
-                avg_fair_value = None
-                upside = None
-
-            # === CALCULATE FAIR PE ===
-            fair_pe = None
-            if peg_ratio and peg_ratio > 0 and earnings_growth:
-                # Fair PE = PEG of 1 * Growth Rate
-                growth_rate = abs(earnings_growth) * 100
-                fair_pe = growth_rate * 1.0  # PEG = 1
+            # === FAIR VALUE & SCORE — shared helper ===
+            _fs                = self._compute_financial_score(info)
+            avg_fair_value     = _fs['avg_fair_value']
+            upside             = _fs['upside']
+            fair_pe            = _fs['fair_pe']
+            fair_value_details = _fs['fair_value_details']
 
             # === BUILD MESSAGE ===
             lines = [
@@ -2526,80 +3103,18 @@ class LiveTradingMonitor:
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             ])
 
-            # Score the stock with user-friendly reasons
-            score = 0
-            positives = []
-            negatives = []
-
-            # Valuation
-            if pe_trailing:
-                if pe_trailing < 20:
-                    score += 1
-                    positives.append("Reasonably priced")
-                elif pe_trailing > 40:
-                    negatives.append("Expensive valuation")
-
-            if peg_ratio:
-                if peg_ratio < 1.5:
-                    score += 1
-                    positives.append("Good value for growth")
-                elif peg_ratio > 2.5:
-                    negatives.append("Overpriced for growth")
-
-            # Growth
-            if revenue_growth and revenue_growth > 0.1:
-                score += 1
-                positives.append("Growing sales")
-            elif revenue_growth and revenue_growth < 0:
-                negatives.append("Shrinking revenue")
-
-            if earnings_growth and earnings_growth > 0.1:
-                score += 1
-                positives.append("Growing profits")
-            elif earnings_growth and earnings_growth < 0:
-                negatives.append("Declining earnings")
-
-            # Profitability
-            if roe and roe > 0.15:
-                score += 1
-                positives.append("Profitable business")
-            if profit_margin and profit_margin > 0.1:
-                score += 1
-                positives.append("Good margins")
-            elif profit_margin and profit_margin < 0:
-                negatives.append("Losing money")
-
-            # Financial health
-            if current_ratio and current_ratio > 1.5:
-                score += 1
-                positives.append("Financially stable")
-            elif current_ratio and current_ratio < 1:
-                negatives.append("Cash flow concerns")
-
-            if debt_to_equity and debt_to_equity < 100:
-                score += 1
-                positives.append("Low debt")
-            elif debt_to_equity and debt_to_equity > 200:
-                negatives.append("High debt load")
-
-            # Upside
-            if upside and upside > 15:
-                score += 1
-                positives.append("Looks undervalued")
-            elif upside and upside < -20:
-                negatives.append("Looks overvalued")
-
-            # Generate assessment
-            if score >= 7:
-                assessment = "Strong Buy 🟢🟢"
-            elif score >= 5:
-                assessment = "Buy 🟢"
-            elif score >= 3:
-                assessment = "Hold 🟡"
-            elif score >= 1:
-                assessment = "Caution 🔴"
-            else:
-                assessment = "Avoid 🔴🔴"
+            # Score from shared helper (computed alongside fair values above)
+            score     = _fs['score']
+            positives = _fs['positives']
+            negatives = _fs['negatives']
+            _emoji_map = {
+                'Strong Buy': 'Strong Buy 🟢🟢',
+                'Buy':        'Buy 🟢',
+                'Hold':       'Hold 🟡',
+                'Caution':    'Caution 🔴',
+                'Avoid':      'Avoid 🔴🔴',
+            }
+            assessment = _emoji_map.get(_fs['assessment'], _fs['assessment'])
 
             lines.append(f"")
             lines.append(f"   Rating         {assessment}")

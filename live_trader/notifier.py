@@ -206,7 +206,7 @@ class PushbulletNotifier:
                                        'ANALYZE ', 'COMPARE ', 'ADD ', 'REMOVE ', 'REPLACE ', 'CAPITAL ',
                                        'UPDATE ']
                     # Exact match commands (no arguments)
-                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME', 'PORTFOLIO', 'HELP']
+                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME', 'PORTFOLIO', 'PORTFOLIO WORST', 'HELP', 'BEST']
 
                     is_valid_command = False
 
@@ -240,11 +240,13 @@ class PushbulletNotifier:
             print(f"❌ Error checking replies: {e}")
             return []
 
-    def send_buy_alert(self, symbol, signal):
+    def send_buy_alert(self, symbol, signal, suggested_amount=None, suggested_shares=None):
         """Send buy opportunity notification"""
         import yfinance as yf
 
-        risk_pct = ((signal['price'] - signal['stop_loss']) / signal['price']) * 100
+        price = signal['price']
+        stop = signal['stop_loss']
+        risk_pct = ((price - stop) / price) * 100
 
         # Get exchange info
         try:
@@ -256,14 +258,18 @@ class PushbulletNotifier:
         title = f"🟢 BUY {symbol}"
         message = (
             f"Exchange: {exchange}\n"
-            f"Price: ${signal['price']:.2f}\n"
-            f"Stop Loss: ${signal['stop_loss']:.2f}\n"
-            f"Risk: {risk_pct:.2f}%\n\n"
-            f"Reply: BOUGHT {symbol}\n"
-            f"Or: BOUGHT {symbol} AT <price>"
+            f"Price: ${price:.2f}\n"
+            f"Stop Loss: ${stop:.2f}\n"
+            f"Risk: {risk_pct:.2f}%"
         )
+
+        if suggested_amount and suggested_amount > 0 and suggested_shares:
+            risk_dollars = (price - stop) * suggested_shares
+            message += f"\nSize: ${suggested_amount:,.0f} (~{suggested_shares} sh, risk ${risk_dollars:,.0f})"
+
         self.send_notification(title, message)
-        print(f"🟢 BUY ALERT: {symbol} ({exchange}) @ ${signal['price']:.2f}, SL @ ${signal['stop_loss']:.2f}")
+        print(f"🟢 BUY ALERT: {symbol} ({exchange}) @ ${price:.2f}, SL @ ${stop:.2f}"
+              + (f", suggested ${suggested_amount:,.0f}" if suggested_amount else ""))
 
     def send_sell_alert(self, symbol, signal, entry_price, exchange=None):
         """Send sell alert notification"""
