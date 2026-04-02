@@ -39,6 +39,333 @@ def _bold(text):
     return ''.join(out)
 
 
+def _run_backtest_for_worker(symbol, df, loader, params, interval):
+    """
+    Run a 1-year backtest on already-fetched data and return a results dict
+    identical in structure to LiveTradingMonitor._run_backtest().
+
+    Called from _entry_signal_worker after the entry-signal cerebro run so the
+    buy-alert chart carries full stats (win rate, Sharpe, ML accuracy, earnings,
+    vs-SPY, etc.) without any data re-fetch and without touching the parent's
+    ml_lock or exit-scan thread.
+
+    Args:
+        symbol:   Stock ticker
+        df:       DataFrame with lowercase columns, tz-naive index, zero-range bars fixed
+        loader:   StrategyLoader instance (for filter_strategy_params + strategy_class)
+        params:   Strategy params dict
+        interval: Bar interval string (e.g. '1d')
+
+    Returns:
+        dict: Same structure as _run_backtest() results, or None on failure
+    """
+    import backtrader as bt
+    import numpy as np
+    import yfinance as _yf
+    import pandas as _pd
+    from datetime import datetime, timedelta
+
+    try:
+        total_bars = len(df)
+
+        # --- 1-year test window ---
+        test_start = datetime.now() - timedelta(days=365)
+        test_start_mask = df.index >= _pd.Timestamp(test_start)
+        if not test_start_mask.any():
+            return None
+        test_start_idx = int(test_start_mask.argmax())
+        if test_start_idx >= total_bars - 10:
+            test_start_idx = max(0, total_bars - 252)
+
+        # --- SPY benchmark ---
+        spy_return = 0
+        try:
+            test_start_date = df.index[test_start_idx]
+            test_end_date   = df.index[-1]
+            if interval in ('1m', '5m', '15m', '30m', '1h', '4h'):
+                max_periods = {'1m': '7d', '5m': '60d', '15m': '60d',
+                               '30m': '60d', '1h': '730d', '4h': '730d'}
+                spy_df = _yf.download('SPY', period=max_periods.get(interval, '60d'),
+                                      interval=interval, progress=False)
+                if not spy_df.empty:
+                    spy_df.index = spy_df.index.tz_localize(None)
+                    spy_df = spy_df[(spy_df.index >= test_start_date) &
+                                    (spy_df.index <= test_end_date)]
+            else:
+                spy_df = _yf.download(
+                    'SPY',
+                    start=test_start_date.strftime('%Y-%m-%d'),
+                    end=(test_end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                    interval=interval, progress=False)
+                if not spy_df.empty:
+                    spy_df.index = spy_df.index.tz_localize(None)
+
+            if not spy_df.empty:
+                if isinstance(spy_df.columns, _pd.MultiIndex):
+                    spy_df.columns = spy_df.columns.get_level_values(0)
+                spy_df.columns = [c.lower() for c in spy_df.columns]
+                spy_df = spy_df.loc[:, ~spy_df.columns.duplicated()]
+                if len(spy_df) > 1 and 'close' in spy_df.columns:
+                    spy_start = float(spy_df['close'].iloc[0])
+                    spy_end   = float(spy_df['close'].iloc[-1])
+                    if spy_start > 0:
+                        spy_return = ((spy_end / spy_start) - 1) * 100
+        except Exception:
+            spy_return = 0
+
+        # --- Cerebro setup ---
+        cerebro = bt.Cerebro(stdstats=False)
+        data = bt.feeds.PandasData(
+            dataname=df, datetime=None,
+            open='open', high='high', low='low', close='close', volume='volume'
+        )
+        cerebro.adddata(data)
+
+        strategy_params = loader.filter_strategy_params(params)
+        strategy_params['verbose'] = False
+        strategy_params['test_start_idx'] = test_start_idx
+        strategy_params['cross_symbol_target_symbol'] = symbol
+        strategy_params['fundamental_symbol'] = symbol
+
+        parent_strategy_class = loader.strategy_class
+
+        class BacktestCaptureStrategy(parent_strategy_class):
+            def __init__(self):
+                super().__init__()
+                self.buy_signals  = []
+                self.sell_signals = []
+
+            def _execute_buy(self):
+                self.buy_signals.append({
+                    'date':  self.data.datetime.date(0),
+                    'price': self.data.close[0],
+                    'bar':   len(self),
+                })
+                super()._execute_buy()
+
+            def _close_position(self, reason):
+                self.sell_signals.append({
+                    'date':   self.data.datetime.date(0),
+                    'price':  self.data.close[0],
+                    'reason': reason,
+                    'bar':    len(self),
+                })
+                super()._close_position(reason)
+
+        cerebro.addstrategy(BacktestCaptureStrategy, **strategy_params)
+
+        initial_cash = 10000
+        cerebro.broker.setcash(initial_cash)
+        cerebro.broker.setcommission(commission=0.0)
+        cerebro.broker.set_coc(True)
+
+        cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
+        cerebro.addanalyzer(bt.analyzers.DrawDown,      _name='dd')
+
+        class PortfolioValue(bt.Observer):
+            lines = ('value',)
+            plotinfo = dict(plot=False)
+            def next(self):     self.lines.value[0] = self._owner.broker.getvalue()
+            def prenext(self):  self.lines.value[0] = self._owner.broker.getvalue()
+
+        cerebro.addobserver(PortfolioValue)
+
+        results = cerebro.run()
+        strat   = results[0]
+
+        trades = strat.analyzers.trades.get_analysis()
+
+        # Portfolio values for test period only
+        test_values = []
+        observer = strat.observers.portfoliovalue
+        for i in range(len(observer.lines.value)):
+            if i >= test_start_idx:
+                try:
+                    val = observer.lines.value.array[i]
+                    if not np.isnan(val) and val > 0:
+                        test_values.append(val)
+                except Exception:
+                    break
+        if len(test_values) < 2:
+            test_values = [initial_cash, cerebro.broker.getvalue()]
+
+        final_value      = test_values[-1]
+        total_return_pct = ((final_value / initial_cash) - 1) * 100
+
+        # Trade metrics
+        total_trades = trades.get('total', {}).get('total', 0)
+        if total_trades > 0:
+            win_count      = trades.get('won',  {}).get('total', 0)
+            win_rate       = (win_count / total_trades) * 100
+            total_win_pnl  = trades.get('won',  {}).get('pnl', {}).get('total', 0)
+            total_loss_pnl = abs(trades.get('lost', {}).get('pnl', {}).get('total', 0))
+            profit_factor  = (total_win_pnl / total_loss_pnl) if total_loss_pnl > 0 else 999
+            avg_win        = trades.get('won',  {}).get('pnl', {}).get('average', 0)
+            avg_loss       = abs(trades.get('lost', {}).get('pnl', {}).get('average', 0))
+        else:
+            win_rate = profit_factor = avg_win = avg_loss = 0
+
+        # Max drawdown
+        peak = test_values[0]
+        max_dd = 0
+        for val in test_values:
+            if val > peak:
+                peak = val
+            dd = ((peak - val) / peak) * 100
+            if dd > max_dd:
+                max_dd = dd
+
+        # Sharpe (annualised for daily bars)
+        if len(test_values) > 1:
+            bar_returns = [(test_values[i] / test_values[i - 1]) - 1
+                           for i in range(1, len(test_values))]
+            if len(bar_returns) > 1 and np.std(bar_returns) > 0:
+                if interval in ('1m', '5m', '15m', '30m', '1h', '4h'):
+                    bpd = {'1m': 390, '5m': 78, '15m': 26, '30m': 13, '1h': 7, '4h': 2}
+                    ann = np.sqrt(252 * bpd.get(interval, 7))
+                else:
+                    ann = np.sqrt(252)
+                sharpe = (np.mean(bar_returns) / np.std(bar_returns)) * ann
+            else:
+                sharpe = 0
+        else:
+            sharpe = 0
+
+        # Annualised return
+        years      = len(test_values) / 252
+        annualized = ((final_value / initial_cash) ** (1 / years) - 1) * 100 if years > 0 else total_return_pct
+
+        test_df        = df.iloc[test_start_idx:]
+        start_date_str = test_df.index[0].strftime('%Y-%m-%d')
+        end_date_str   = test_df.index[-1].strftime('%Y-%m-%d')
+
+        buy_signals_list  = [(s['date'], s['price']) for s in strat.buy_signals]
+        sell_signals_list = [(s['date'], s['price']) for s in strat.sell_signals]
+
+        # ML stats
+        ml_stats = {}
+        ml_diagnostics = {}
+        try:
+            if hasattr(strat, 'get_prediction_stats'):
+                ml_stats = strat.get_prediction_stats()
+            if hasattr(strat, 'get_diagnostics'):
+                ml_diagnostics = strat.get_diagnostics()
+        except Exception:
+            pass
+
+        # Time in market
+        time_in_market_pct = 0.0
+        test_bars_count    = len(test_values)
+        if test_bars_count > 0 and strat.buy_signals and strat.sell_signals:
+            buy_bars  = sorted(s['bar'] for s in strat.buy_signals)
+            sell_bars = sorted(s['bar'] for s in strat.sell_signals)
+            bars_in_position = 0
+            for buy_bar in buy_bars:
+                matching = [s for s in sell_bars if s > buy_bar]
+                if matching:
+                    sell_bar = matching[0]
+                    start    = max(buy_bar, test_start_idx)
+                    end      = sell_bar
+                    if end > start:
+                        bars_in_position += (end - start)
+            time_in_market_pct = (bars_in_position / test_bars_count) * 100
+
+        # Earnings / fundamentals
+        tradeable_quarters = 0
+        total_quarters     = 0
+        earnings_data      = []
+        test_period_start  = test_df.index[0]
+        test_period_end    = test_df.index[-1]
+
+        if (hasattr(strat, 'fundamental_provider') and
+                strat.fundamental_provider is not None and
+                strategy_params.get('use_fundamental_filter', False)):
+            fp          = strat.fundamental_provider
+            min_quality = strategy_params.get('min_quality_score', 0)
+            min_momentum = strategy_params.get('min_momentum_score', 0)
+            if hasattr(fp, '_quarter_report_map') and fp._quarter_report_map:
+                for _quarter_end, report_date in fp._quarter_report_map.items():
+                    report_ts = _pd.Timestamp(report_date)
+                    if test_period_start <= report_ts <= test_period_end:
+                        total_quarters += 1
+                        try:
+                            quality  = fp.get_quality_score(as_of_date=report_date)
+                            momentum = fp.get_growth_momentum_score(as_of_date=report_date)
+                            composite = 0
+                            if quality is not None and momentum is not None:
+                                composite = (quality + momentum) / 2
+                            elif quality is not None:
+                                composite = quality
+                            elif momentum is not None:
+                                composite = momentum
+                            earnings_data.append((report_date, composite))
+                            quality_ok  = min_quality  == 0 or (quality  is not None and quality  >= min_quality)
+                            momentum_ok = min_momentum == 0 or (momentum is not None and momentum >= min_momentum)
+                            if quality_ok and momentum_ok:
+                                tradeable_quarters += 1
+                        except Exception:
+                            earnings_data.append((report_date, 0))
+
+        # Fair value lines on the backtest chart
+        fair_value_history    = []
+        hist_pe_fair_value    = []
+        try:
+            if (hasattr(strat, 'fundamental_provider') and
+                    strat.fundamental_provider is not None and
+                    strategy_params.get('use_fundamental_filter', False)):
+                fp = strat.fundamental_provider
+                fair_value_history = fp.get_fair_value_history(
+                    start_date=test_period_start, end_date=test_period_end)
+                hist_pe_fair_value = fp.get_historical_pe_fair_value_history(
+                    start_date=test_period_start, end_date=test_period_end,
+                    price_df=df)
+                print(f"   📊 Fair value (yellow): {len(fair_value_history)} qtrs, "
+                      f"hist PE (purple): {len(hist_pe_fair_value)} qtrs")
+        except Exception as e:
+            import traceback
+            print(f"   ⚠️  Fair value history error: {e}")
+            traceback.print_exc()
+
+        cerebro.runstop()
+        del cerebro
+
+        return {
+            'start_date':          start_date_str,
+            'end_date':            end_date_str,
+            'interval':            interval,
+            'total_bars':          total_bars,
+            'test_bars':           len(test_values),
+            'total_return_pct':    total_return_pct,
+            'annualized_return':   annualized,
+            'spy_return':          spy_return,
+            'total_trades':        total_trades,
+            'win_rate':            win_rate,
+            'profit_factor':       profit_factor,
+            'max_drawdown':        max_dd,
+            'sharpe_ratio':        sharpe,
+            'avg_win':             avg_win,
+            'avg_loss':            avg_loss,
+            'final_value':         final_value,
+            'chart_df':            df,
+            'test_start_idx':      test_start_idx,
+            'buy_signals':         buy_signals_list,
+            'sell_signals':        sell_signals_list,
+            'ml_stats':            ml_stats,
+            'ml_diagnostics':      ml_diagnostics,
+            'time_in_market_pct':  time_in_market_pct,
+            'tradeable_quarters':  tradeable_quarters,
+            'total_quarters':      total_quarters,
+            'earnings_data':       earnings_data,
+            'fair_value_history':  fair_value_history,
+            'hist_pe_fair_value':  hist_pe_fair_value,
+        }
+
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def _entry_signal_worker(args):
     """
     Worker function for parallel buy-scan.  Runs in a separate spawned process
@@ -71,7 +398,7 @@ def _entry_signal_worker(args):
         df = _yf.download(yf_ticker, period=period, interval=interval,
                           progress=False, auto_adjust=True, prepost=False, threads=False)
         if df.empty or len(df) < 200:
-            return symbol, {'signal': False}, 'no_data'
+            return symbol, {'signal': False}, 'no_data', None
 
         if isinstance(df.columns, _pd.MultiIndex):
             df.columns = [col[0] for col in df.columns]
@@ -97,12 +424,54 @@ def _entry_signal_worker(args):
         loader = StrategyLoader(strategy_module, strategy_class)
         signal = loader.get_entry_signal(df, params, symbol=symbol)
 
+        # --- Generate backtest chart if BUY signal found ---
+        # Runs a 1Y backtest in this worker process (already isolated — no ml_lock needed).
+        # Produces the identical chart + stats as the BACKTEST command.
+        chart_bytes = None
+        if signal.get('signal') and signal.get('signal_type') == 'BUY':
+            try:
+                import io as _io
+                from chart_generator import ChartGenerator
+
+                # generate_backtest_chart / _run_backtest_for_worker expect lowercase columns
+                df_bt = df.copy()
+                df_bt.columns = [c.lower() for c in df_bt.columns]
+
+                # Fix zero-range bars on the copy (same fix applied inside _get_ml_strategy_signal)
+                zero_range = df_bt['high'] == df_bt['low']
+                if zero_range.any():
+                    epsilon = df_bt['close'][zero_range] * 1e-6
+                    df_bt.loc[zero_range, 'high'] += epsilon
+                    df_bt.loc[zero_range, 'low']  -= epsilon
+
+                bt_results = _run_backtest_for_worker(symbol, df_bt, loader, params, interval)
+
+                if bt_results:
+                    chart_gen = ChartGenerator(loader, params)
+                    buf = chart_gen.generate_backtest_chart(
+                        symbol=symbol,
+                        df=df_bt,
+                        test_start_idx=bt_results['test_start_idx'],
+                        buy_signals=bt_results['buy_signals'],
+                        sell_signals=bt_results['sell_signals'],
+                        period_label='1Y',
+                        interval=interval,
+                        results=bt_results,
+                        earnings_data=bt_results.get('earnings_data', []),
+                        fair_value_data=bt_results.get('fair_value_history', []),
+                        hist_pe_data=bt_results.get('hist_pe_fair_value', []),
+                    )
+                    if buf:
+                        chart_bytes = buf.getvalue()
+            except Exception:
+                pass
+
         del df, loader
         _gc.collect()
-        return symbol, signal, None
+        return symbol, signal, None, chart_bytes
 
     except Exception as e:
-        return symbol, {'signal': False}, str(e)
+        return symbol, {'signal': False}, str(e), None
 
 
 class LiveTradingMonitor:
@@ -467,7 +836,7 @@ class LiveTradingMonitor:
                 completed += 1
                 print(f"\r   [{completed}/{total_to_scan}] scanning...", end='', flush=True)
                 try:
-                    sym, signal, error = future.result()
+                    sym, signal, error, chart_bytes = future.result()
                     if error and error != 'no_data':
                         print(f"\n   ❌ {sym}: {error}")
                     elif (signal.get('signal') and
@@ -476,7 +845,7 @@ class LiveTradingMonitor:
                         bars_ago = signal.get('bars_ago', 0)
                         if bars_ago <= 3:
                             score = abs(signal.get('prediction', 0))
-                            found_signals.append((sym, signal, score))
+                            found_signals.append((sym, signal, score, chart_bytes))
 
                             # Always add to hot list — keeps it fresh for intraday re-scans
                             self._add_to_hot_list(sym, score, bars_ago,
@@ -498,14 +867,22 @@ class LiveTradingMonitor:
                                     suggested_amount = cash / remaining_slots if cash > 0 else 0.0
                                     suggested_shares = int(suggested_amount / signal['price']) if signal['price'] > 0 else 0
 
-                                    # Send immediately — don't wait for all symbols to finish
-                                    self.notifier.send_buy_alert(sym, signal,
-                                                                 suggested_amount=suggested_amount,
-                                                                 suggested_shares=suggested_shares)
+                                    # Send immediately — with chart if generated, text-only as fallback
+                                    import io
+                                    if chart_bytes:
+                                        self.notifier.send_buy_alert_with_chart(
+                                            sym, signal, io.BytesIO(chart_bytes),
+                                            suggested_amount=suggested_amount,
+                                            suggested_shares=suggested_shares)
+                                    else:
+                                        self.notifier.send_buy_alert(sym, signal,
+                                                                     suggested_amount=suggested_amount,
+                                                                     suggested_shares=suggested_shares)
                                     self.buy_alerts_sent[sym] = today
                                     buy_opportunities += 1
                                     print(f"\n   🟢 BUY ALERT SENT: {sym} (score={score:.0f}, "
-                                          f"bars_ago={bars_ago}, suggested=${suggested_amount:,.0f})")
+                                          f"bars_ago={bars_ago}, suggested=${suggested_amount:,.0f}, "
+                                          f"chart={'yes' if chart_bytes else 'no'})")
                                 else:
                                     print(f"\n   🟢 SIGNAL: {sym} (score={score:.0f}, "
                                           f"bars_ago={bars_ago}) | no slots (overflow)")
@@ -530,7 +907,7 @@ class LiveTradingMonitor:
 
         # Collect overflow signals (not yet alerted, no slots available)
         overflow_signals = []
-        for symbol, signal, score in found_signals:
+        for symbol, signal, score, _chart in found_signals:
             if self.buy_alerts_sent.get(symbol) == today:
                 continue  # already sent in Phase 1
             if symbol in held_positions_dict:
@@ -1073,7 +1450,7 @@ class LiveTradingMonitor:
     def handle_best_query(self):
         """Handle 'BEST' — show top-ranked buy signals from the hot list.
 
-        Composite score = ML_score × freshness_decay × accuracy_weight
+        Composite score = ML_score × freshness_decay × accuracy_weight × fin_factor
 
           freshness_decay = 0.85 ^ bars_ago
             Each bar since the signal reduces score by 15% — a fresh signal on the
@@ -1084,12 +1461,17 @@ class LiveTradingMonitor:
             Neutral (1.0) when fewer than 20 samples exist (insufficient history).
             Range: ~0.2 (very low accuracy) → 1.4 (near-perfect accuracy).
 
-        This means a poor-accuracy stock cannot rank highly no matter how strong the
-        current ML signal is — history of the strategy on that symbol dominates.
+          fin_factor = 0.7 + 0.3 × (fin_score / 9)
+            Scales from 0.70 (worst financials, 0/9) to 1.0 (best, 9/9).
+            When financials are unavailable: 0.85 (mild penalty for unknown).
+
+        Ranking is two-pass: first rank all candidates by ML composite to select
+        the top 20, then fetch financials for those 20, then re-rank with fin_factor.
         """
-        _FRESHNESS_DECAY = 0.85
-        _ACC_BREAK_EVEN  = 60.0   # accuracy % where weight = 1.0
-        _MIN_SAMPLES     = 20     # below this, treat accuracy as unknown → neutral
+        _FRESHNESS_DECAY   = 0.85
+        _ACC_BREAK_EVEN    = 60.0   # accuracy % where weight = 1.0
+        _MIN_SAMPLES       = 20     # below this, treat accuracy as unknown → neutral
+        _FIN_UNKNOWN       = 0.85   # fin_factor when financials unavailable
 
         def _accuracy_weight(acc, total):
             if acc is None or total < _MIN_SAMPLES:
@@ -1099,10 +1481,18 @@ class LiveTradingMonitor:
             else:
                 return max(0.2, acc / _ACC_BREAK_EVEN)           # 0%→0.2, 30%→0.5, 60%→1.0
 
-        def composite(data):
+        def _ml_composite(data):
             freshness = _FRESHNESS_DECAY ** data['bars_ago']
             acc_w = _accuracy_weight(data.get('bullish_accuracy'), data.get('bullish_total', 0))
             return data['score'] * freshness * acc_w
+
+        def _fin_factor(fin):
+            if fin is None:
+                return _FIN_UNKNOWN
+            return 0.7 + 0.3 * (fin.get('score', 0) / 9.0)
+
+        def composite(data, fin=None):
+            return _ml_composite(data) * _fin_factor(fin)
 
         self._cleanup_hot_list(save=False)
 
@@ -1119,32 +1509,29 @@ class LiveTradingMonitor:
                   if data.get('added_date', '') >= yesterday}
         candidates = recent if recent else self.hot_list
 
-        # Rank ALL candidates (held and available) so held positions show where they stand
-        ranked_all = sorted(
+        # Pass 1: ML-only rank to get top candidates; count held/available from full list
+        ml_ranked = sorted(
             candidates.items(),
-            key=lambda x: composite(x[1]),
+            key=lambda x: _ml_composite(x[1]),
             reverse=True
         )
-        n_held_signals = sum(1 for sym, _ in ranked_all if sym in held)
-        n_available = len(ranked_all) - n_held_signals
+        n_held_signals = sum(1 for sym, _ in ml_ranked if sym in held)
+        n_available = len(ml_ranked) - n_held_signals
 
         if n_available == 0:
             self.notifier.send_notification(
                 "📭 No New Signals",
-                f"All {len(ranked_all)} recent signal(s) are already held positions."
+                f"All {len(ml_ranked)} recent signal(s) are already held positions."
             )
             return
 
-        top = ranked_all[:10]
-        today_date = datetime.now().date()
-        alerted_today = {sym for sym, date in self.buy_alerts_sent.items() if date == today_date}
-
-        # Fetch financial stats for top symbols in parallel (I/O-bound, use threads)
+        # Fetch financials for top 20 candidates (I/O-bound, use threads)
+        pre_candidates = ml_ranked[:20]
         fin_data = {}
-        top_syms = [sym for sym, _ in top]
+        pre_syms = [sym for sym, _ in pre_candidates]
         try:
-            with ThreadPoolExecutor(max_workers=min(len(top_syms), 5)) as tex:
-                fut_map = {tex.submit(self._get_quick_financials, sym): sym for sym in top_syms}
+            with ThreadPoolExecutor(max_workers=min(len(pre_syms), 5)) as tex:
+                fut_map = {tex.submit(self._get_quick_financials, sym): sym for sym in pre_syms}
                 for fut in as_completed(fut_map):
                     sym = fut_map[fut]
                     try:
@@ -1154,7 +1541,17 @@ class LiveTradingMonitor:
         except Exception:
             pass  # financial data is bonus; never block BEST output
 
-        header = f"{len(top)} of {len(ranked_all)}"
+        # Pass 2: re-rank top 20 using combined ML + financial score
+        ranked_top = sorted(
+            pre_candidates,
+            key=lambda x: composite(x[1], fin_data.get(x[0])),
+            reverse=True
+        )
+        top = ranked_top[:10]
+        today_date = datetime.now().date()
+        alerted_today = {sym for sym, date in self.buy_alerts_sent.items() if date == today_date}
+
+        header = f"{len(top)} of {len(ml_ranked)}"
         if n_held_signals:
             header += f"  ({n_held_signals} held)"
         lines = [header]
@@ -1163,7 +1560,8 @@ class LiveTradingMonitor:
             bars_ago     = data['bars_ago']
             acc          = data.get('bullish_accuracy')
             total        = data.get('bullish_total', 0)
-            comp         = composite(data)
+            fin          = fin_data.get(sym)
+            comp         = composite(data, fin)
             signal_price = data.get('signal_price')
             added        = data.get('added_date', '')
 
@@ -1178,8 +1576,7 @@ class LiveTradingMonitor:
             # Leading \n creates a blank line between entries when joined
             lines.append(f"\n{i}. {held_mark}{_bold(sym)}{price_str}  {freshness}{alert_mark}{age_mark}")
 
-            # Line 2: financials (priority) then ML confidence
-            fin = fin_data.get(sym)
+            # Line 2: financials (priority) then combined composite
             detail_parts = []
             if fin:
                 fin_str = f"F:{fin['score']}/9 {_bold(fin['assessment'])}"
@@ -1192,17 +1589,17 @@ class LiveTradingMonitor:
                     t_up = (t / fin['current_price'] - 1) * 100
                     fin_str += f" · Est ${t:.0f} ({t_up:+.0f}%)"
                 detail_parts.append(fin_str)
-            detail_parts.append(f"ML:{comp:.0f} Acc:{acc_str}")
+            detail_parts.append(f"Score:{comp:.0f} Acc:{acc_str}")
             lines.append("   " + "  ·  ".join(detail_parts))
 
         lines.append("\n─────────────────────")
-        footer = "✓ held  ·  F = fundamentals/9"
+        footer = "✓ held  ·  F = fundamentals/9  ·  Score = ML×freshness×acc×fin"
         if any(sym in alerted_today for sym, _ in top):
             footer += "  ·  ✉ alerted"
         lines.append(footer)
 
         self.notifier.send_notification("🏆 Best Buy Signals", "\n".join(lines))
-        print(f"✓ Sent BEST signals: {len(top)} shown ({len(ranked_all)} total, {n_held_signals} held)")
+        print(f"✓ Sent BEST signals: {len(top)} shown ({len(ml_ranked)} total, {n_held_signals} held)")
 
     def handle_help_query(self):
         """Handle 'HELP' command — list all available commands."""
@@ -2001,7 +2398,9 @@ class LiveTradingMonitor:
                     period_label=period,
                     interval=results['interval'],
                     results=results,
-                    earnings_data=results.get('earnings_data', [])
+                    earnings_data=results.get('earnings_data', []),
+                    fair_value_data=results.get('fair_value_history', []),
+                    hist_pe_data=results.get('hist_pe_fair_value', []),
                 )
             except Exception as chart_error:
                 print(f"⚠️ Chart generation failed: {chart_error}")
@@ -2049,29 +2448,18 @@ class LiveTradingMonitor:
         end_date = datetime.now()
         test_start = end_date - timedelta(days=days)
 
-        # Add warmup period (need extra data for ML model)
-        # For intraday, we need more calendar days to get enough bars
-        if interval in ['1m', '5m', '15m', '30m', '1h', '4h']:
-            # Intraday: ~7 trading hours per day, need more calendar days
-            bars_per_day = {'1m': 390, '5m': 78, '15m': 26, '30m': 13, '1h': 7, '4h': 2}
-            bpd = bars_per_day.get(interval, 7)
-            warmup_calendar_days = int((self.warmup_days / bpd) * 1.5) + 60
-        else:
-            warmup_calendar_days = int(self.warmup_days * 1.5)
-
-        data_start = test_start - timedelta(days=warmup_calendar_days)
-
         print(f"   Timeframe: {self.current_timeframe} ({tf_description})")
-        print(f"   Fetching data from {data_start.date()} to {end_date.date()}...")
 
         # Fetch data
         try:
             import yfinance as yf
 
-            # For intraday data, yfinance has limitations on how far back we can go
-            # Use period parameter for intraday to get maximum available data
+            # Intraday intervals: yfinance caps how far back they go — use period parameter.
+            # Daily: use period='max' so yfinance returns all available history.
+            #   Using an explicit start date derived from warmup_days (7000 bars = ~28 years)
+            #   causes yfinance to silently return an empty DataFrame for very old start dates.
+            #   period='max' is reliable for any ticker; test_start_idx below selects the window.
             if interval in ['1m', '5m', '15m', '30m', '1h', '4h']:
-                # Map interval to yfinance max period
                 max_periods = {
                     '1m': '7d',
                     '5m': '60d',
@@ -2081,10 +2469,11 @@ class LiveTradingMonitor:
                     '4h': '730d',
                 }
                 period = max_periods.get(interval, '60d')
-                df = yf.download(symbol, period=period, interval=interval, progress=False)
+                df = yf.download(symbol, period=period, interval=interval,
+                                 progress=False, auto_adjust=True, threads=False)
             else:
-                df = yf.download(symbol, start=data_start.strftime('%Y-%m-%d'),
-                               end=end_date.strftime('%Y-%m-%d'), interval=interval, progress=False)
+                df = yf.download(symbol, period='max', interval=interval,
+                                 progress=False, auto_adjust=True, threads=False)
 
             if df.empty or len(df) < 100:
                 print(f"   ❌ Insufficient data for {symbol}")
@@ -2430,6 +2819,26 @@ class LiveTradingMonitor:
                             except:
                                 earnings_data.append((report_date, 0))
 
+            # Fair value lines on the backtest chart
+            fair_value_history = []
+            hist_pe_fair_value = []
+            try:
+                if (hasattr(strat, 'fundamental_provider') and
+                        strat.fundamental_provider is not None and
+                        self.params.get('use_fundamental_filter', False)):
+                    fp = strat.fundamental_provider
+                    fair_value_history = fp.get_fair_value_history(
+                        start_date=test_period_start, end_date=test_period_end)
+                    hist_pe_fair_value = fp.get_historical_pe_fair_value_history(
+                        start_date=test_period_start, end_date=test_period_end,
+                        price_df=df)
+                    print(f"   📊 Fair value (yellow): {len(fair_value_history)} qtrs, "
+                          f"hist PE (purple): {len(hist_pe_fair_value)} qtrs")
+            except Exception as e:
+                import traceback
+                print(f"   ⚠️  Fair value history error: {e}")
+                traceback.print_exc()
+
             return {
                 'start_date': start_date_str,
                 'end_date': end_date_str,
@@ -2460,7 +2869,9 @@ class LiveTradingMonitor:
                 'time_in_market_pct': time_in_market_pct,
                 'tradeable_quarters': tradeable_quarters,
                 'total_quarters': total_quarters,
-                'earnings_data': earnings_data,  # List of (date, score) tuples
+                'earnings_data': earnings_data,
+                'fair_value_history': fair_value_history,
+                'hist_pe_fair_value': hist_pe_fair_value,
             }
 
         except Exception as e:

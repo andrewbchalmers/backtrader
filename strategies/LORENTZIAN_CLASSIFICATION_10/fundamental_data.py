@@ -1347,6 +1347,207 @@ class FundamentalDataProvider:
         except (TypeError, ValueError):
             return default
 
+    def get_fair_value_history(self, start_date=None, end_date=None):
+        """
+        Compute a point-in-time fair value estimate for each quarterly earnings
+        report within the specified date range.
+
+        For each quarter the fair value is the average of available estimates:
+          - PE-based:      TTM_EPS × sector_PE  (18 for Tech/Healthcare, else 15)
+          - Graham Number: sqrt(22.5 × TTM_EPS × book_value_per_share)
+
+        Both are computed using only data publicly available as of each report date
+        (no lookahead bias).  Quarters where TTM EPS is unavailable or negative are
+        omitted silently.
+
+        Args:
+            start_date: Only include report dates on/after this date, or None for all.
+            end_date:   Only include report dates on/before this date, or None for all.
+
+        Returns:
+            list of (report_date, fair_value) tuples sorted by date.
+            report_date is a pd.Timestamp; fair_value is a float.
+        """
+        import math
+
+        if not self._quarter_report_map:
+            return []
+
+        start_ts = pd.Timestamp(start_date) if start_date is not None else None
+        end_ts   = pd.Timestamp(end_date)   if end_date is not None else None
+
+        # Sector-appropriate PE multiple (mirrors _compute_financial_score logic)
+        sector    = self._info.get('sector', '')
+        sector_pe = 18 if sector in ('Technology', 'Healthcare') else 15
+
+        sorted_quarters = sorted(self._quarter_report_map.items())
+        most_recent_quarter = sorted_quarters[-1][0] if sorted_quarters else None
+
+        output = []
+        for quarter_end, report_date in sorted_quarters:
+            report_ts = pd.Timestamp(report_date)
+
+            if start_ts is not None and report_ts < start_ts:
+                continue
+            if end_ts is not None and report_ts > end_ts:
+                continue
+
+            # Point-in-time data — only quarters reported on/before this report date
+            income_df  = self._get_available_quarters(report_ts, self._quarterly_income)
+            balance_df = self._get_available_quarters(report_ts, self._quarterly_balance)
+
+            ttm_eps = self._calculate_ttm_metric(
+                ['Diluted EPS', 'DilutedEPS', 'Basic EPS', 'BasicEPS'], income_df)
+
+            if ttm_eps is None or ttm_eps <= 0:
+                continue  # No positive EPS — skip this quarter
+
+            estimates = [ttm_eps * sector_pe]  # PE-based is always available when EPS > 0
+
+            # Graham Number — requires positive book value per share
+            equity = self._safe_get_quarterly(
+                ['Stockholders Equity', 'StockholdersEquity', 'Common Stock Equity'],
+                balance_df)
+            shares = self._safe_get_quarterly(
+                ['Ordinary Shares Number', 'OrdinarySharesNumber',
+                 'Share Issued', 'ShareIssued'], balance_df)
+            if shares is None:
+                shares = self._shares_outstanding
+            if equity is not None and shares is not None and shares > 0:
+                bvps = equity / shares
+                if bvps > 0:
+                    estimates.append(math.sqrt(22.5 * ttm_eps * bvps))
+
+            # For the most recent quarter, blend in live FCF and analyst target
+            # (same inputs as _compute_financial_score / ANALYZE command).
+            # Historical quarters use only point-in-time data; this quarter is current.
+            if quarter_end == most_recent_quarter:
+                current_price  = float(self._info.get('currentPrice') or
+                                       self._info.get('regularMarketPrice') or 0)
+                free_cash_flow = self._info.get('freeCashflow')
+                market_cap     = self._info.get('marketCap')
+                target_mean    = self._info.get('targetMeanPrice')
+
+                if (free_cash_flow and market_cap and free_cash_flow > 0
+                        and current_price > 0 and market_cap > 0):
+                    fcf_yield = free_cash_flow / market_cap
+                    if fcf_yield > 0.02:
+                        estimates.append(current_price * (fcf_yield / 0.08))
+
+                if target_mean and target_mean > 0:
+                    estimates.append(float(target_mean))
+
+            output.append((report_ts, sum(estimates) / len(estimates)))
+
+        return output
+
+    def get_historical_pe_fair_value_history(self, start_date=None, end_date=None,
+                                              price_df=None):
+        """
+        Compute per-quarter fair value using the stock's own historical median P/E.
+
+        Rather than a fixed sector multiple, this samples the trailing P/E ratio at
+        monthly intervals over the full available price history, takes the median, and
+        applies it to the TTM EPS reported each quarter.  This adapts automatically to
+        each stock's normal valuation range — high-growth names get a high multiple,
+        value stocks get a low one.
+
+        Shown as a purple dotted line on the backtest chart alongside the yellow
+        Graham/sector-PE line.
+
+        Args:
+            start_date: Only include report dates on/after this date, or None for all.
+            end_date:   Only include report dates on/before this date, or None for all.
+            price_df:   Optional pre-loaded OHLCV DataFrame (columns lowercase or
+                        title-case).  Used when _price_history is unavailable (e.g.
+                        ticker.history() failed during _fetch_data).  Falls back to a
+                        fresh yf.download('5y') if neither is available.
+
+        Returns:
+            list of (report_date, fair_value) tuples sorted by date, or [] if
+            insufficient history or EPS data is unavailable.
+        """
+        import numpy as np
+
+        if not self._quarter_report_map:
+            return []
+        if self._quarterly_income is None or self._quarterly_income.empty:
+            return []
+
+        # --- Resolve price source (priority: caller-supplied → _price_history → fresh fetch) ---
+        if price_df is not None and not price_df.empty:
+            price_hist = price_df.copy()
+        elif self._price_history is not None and not self._price_history.empty:
+            price_hist = self._price_history.copy()
+        else:
+            # _price_history missing — fetch a 5-year daily series on-demand
+            try:
+                import yfinance as _yf
+                price_hist = _yf.download(self.symbol, period='5y', interval='1d',
+                                          progress=False, auto_adjust=True, threads=False)
+                if price_hist.empty:
+                    return []
+                if isinstance(price_hist.columns, pd.MultiIndex):
+                    price_hist.columns = price_hist.columns.get_level_values(0)
+            except Exception:
+                return []
+
+        if price_hist.index.tz is not None:
+            price_hist.index = price_hist.index.tz_localize(None)
+
+        close_col = 'Close' if 'Close' in price_hist.columns else 'close'
+        if close_col not in price_hist.columns:
+            return []
+
+        # Sample roughly monthly (every 21 trading days) to keep it fast
+        sample_idx = price_hist.index[::21]
+        pe_ratios = []
+        for sample_date in sample_idx:
+            try:
+                price = float(price_hist.loc[sample_date, close_col])
+            except (KeyError, TypeError):
+                continue
+            if not price or price <= 0:
+                continue
+
+            income_df = self._get_available_quarters(sample_date, self._quarterly_income)
+            ttm_eps = self._calculate_ttm_metric(
+                ['Diluted EPS', 'DilutedEPS', 'Basic EPS', 'BasicEPS'], income_df)
+
+            if ttm_eps is not None and ttm_eps > 0:
+                pe = price / ttm_eps
+                if 1 < pe < 1000:   # discard negative-earnings and outlier periods
+                    pe_ratios.append(pe)
+
+        if len(pe_ratios) < 4:      # need at least a year's worth of samples
+            return []
+
+        historical_median_pe = float(np.median(pe_ratios))
+
+        # --- Step 2: apply that multiple to each quarter's TTM EPS ---
+        start_ts = pd.Timestamp(start_date) if start_date is not None else None
+        end_ts   = pd.Timestamp(end_date)   if end_date is not None else None
+
+        output = []
+        for quarter_end, report_date in sorted(self._quarter_report_map.items()):
+            report_ts = pd.Timestamp(report_date)
+
+            if start_ts is not None and report_ts < start_ts:
+                continue
+            if end_ts is not None and report_ts > end_ts:
+                continue
+
+            income_df = self._get_available_quarters(report_ts, self._quarterly_income)
+            ttm_eps = self._calculate_ttm_metric(
+                ['Diluted EPS', 'DilutedEPS', 'Basic EPS', 'BasicEPS'], income_df)
+
+            if ttm_eps is None or ttm_eps <= 0:
+                continue
+
+            output.append((report_ts, ttm_eps * historical_median_pe))
+
+        return output
+
     def get_summary(self, as_of_date: datetime = None, price: float = None) -> Dict:
         """Get a summary of all scores and key metrics."""
         return {

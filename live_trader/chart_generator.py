@@ -397,7 +397,8 @@ class ChartGenerator:
         return buf
 
     def generate_backtest_chart(self, symbol, df, test_start_idx, buy_signals, sell_signals,
-                                 period_label, interval='1d', results=None, earnings_data=None):
+                                 period_label, interval='1d', results=None, earnings_data=None,
+                                 fair_value_data=None, hist_pe_data=None):
         """
         Generate a backtest chart showing price action with buy/sell signals
 
@@ -514,6 +515,39 @@ class ChartGenerator:
             if len(plotted_earnings) > 0:
                 ax.axvline(x=df_chart.index[0], color='#ff6b6b', linestyle='--',
                           linewidth=1.5, alpha=0, label=f'Earnings ({len(plotted_earnings)})')
+
+        # Helper: draw per-quarter fair value as dotted horizontal segments
+        def _draw_fv_segments(data, color, legend_label):
+            if not data:
+                return
+            sorted_data  = sorted(data, key=lambda x: pd.Timestamp(x[0]))
+            chart_start  = df_chart.index[0]
+            chart_end    = df_chart.index[-1]
+            legend_added = False
+
+            for i, (fv_date, fv_price) in enumerate(sorted_data):
+                seg_start = pd.Timestamp(fv_date)
+                seg_end   = pd.Timestamp(sorted_data[i + 1][0]) if i + 1 < len(sorted_data) else chart_end
+                seg_start = max(seg_start, chart_start)
+                seg_end   = min(seg_end,   chart_end)
+                if seg_start >= seg_end:
+                    continue
+
+                label = legend_label if not legend_added else '_nolegend_'
+                ax.hlines(y=fv_price, xmin=seg_start, xmax=seg_end,
+                          colors=color, linestyles='dotted', linewidth=1.5,
+                          alpha=0.75, label=label, zorder=4)
+                legend_added = True
+
+                mid = seg_start + (seg_end - seg_start) / 2
+                ax.text(mid, fv_price, f'${fv_price:.0f}',
+                        color=color, fontsize=7, fontweight='bold',
+                        ha='center', va='bottom', alpha=0.9, zorder=5)
+
+        # Yellow: Graham / sector-PE fair value
+        _draw_fv_segments(fair_value_data, '#FFD700', 'Fair Value — Graham/PE (qtr)')
+        # Purple: historical median-PE fair value
+        _draw_fv_segments(hist_pe_data,    '#BF7FFF', 'Fair Value — hist. median PE (qtr)')
 
         # Title with results summary
         title = f'{symbol} Backtest - {period_label}'

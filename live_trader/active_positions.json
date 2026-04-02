@@ -4,56 +4,83 @@
     "entry_date": "2026-01-22T12:49:39.647545",
     "stop_loss": 190.0,
     "pending_exit": true,
-    "exit_alerted_date": "2026-03-10"
+    "exit_alerted_date": "2026-04-02"
   },
   "AAPL": {
     "entry_price": 276.9,
     "entry_date": "2026-02-04T10:44:02.846726",
     "stop_loss": 263.05499999999995,
     "pending_exit": true,
-    "exit_alerted_date": "2026-03-10"
-  },
-  "KMI": {
-    "entry_price": 31.01,
-    "entry_date": "2026-02-09T15:03:16.250849",
-    "stop_loss": 33.06348440566586
+    "exit_alerted_date": "2026-04-02"
   },
   "LHX": {
     "entry_price": 350.34,
     "entry_date": "2026-02-09T15:08:32.094952",
-    "stop_loss": 358.18048133446626,
-    "pending_exit": false
-  },
-  "CMS": {
-    "entry_price": 75.11,
-    "entry_date": "2026-02-12T13:43:14.840189",
-    "stop_loss": 75.73550181790537
+    "stop_loss": 363.1263329778902,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-04-02"
   },
   "IZV": {
     "entry_price": 26.23,
     "entry_date": "2026-02-12T15:40:51.288785",
-    "stop_loss": 41.877781220057756
-  },
-  "RTX": {
-    "entry_price": 199.42,
-    "entry_date": "2026-02-13T15:12:56.287094",
-    "stop_loss": 202.18158165644394,
-    "pending_exit": false
+    "stop_loss": 194.51500839453664
   },
   "VZ": {
     "entry_price": 50.36,
     "entry_date": "2026-03-05T10:40:54.420478",
-    "stop_loss": 48.48244519839193,
+    "stop_loss": 49.78488813103382,
     "yf_ticker": "VZ",
     "exchange": "NYSE",
-    "allocated_amount": 1210.0
+    "allocated_amount": 1210.0,
+    "pending_exit": true,
+    "exit_alerted_date": "2026-04-02"
   },
-  "JKHY": {
-    "entry_price": 171.37,
-    "entry_date": "2026-03-10T11:41:10.315480",
-    "stop_loss": 162.8015,
-    "yf_ticker": "JKHY",
-    "exchange": "NasdaqGS",
+  "DGX": {
+    "entry_price": 203.32,
+    "entry_date": "2026-03-10T14:41:06.909358",
+    "stop_loss": 195.79565661494817,
+    "yf_ticker": "DGX",
+    "exchange": "NYSE",
     "allocated_amount": 428.2951338183035
+  },
+  "KEYS": {
+    "entry_price": 284.78,
+    "entry_date": "2026-03-11T11:14:19.285004",
+    "stop_loss": 274.7606427492902,
+    "yf_ticker": "KEYS",
+    "exchange": "NYSE",
+    "allocated_amount": 395.3493542938186
+  },
+  "DECK": {
+    "entry_price": 106.79,
+    "entry_date": "2026-03-18T14:07:13.025085",
+    "stop_loss": 101.4505,
+    "yf_ticker": "DECK",
+    "exchange": "NYSE",
+    "allocated_amount": 362.4035747693337
+  },
+  "CAT": {
+    "entry_price": 707.39,
+    "entry_date": "2026-03-18T14:09:40.583437",
+    "stop_loss": 674.3628569303963,
+    "yf_ticker": "CAT",
+    "exchange": "NYSE",
+    "allocated_amount": 362.4035747693337
+  },
+  "NI": {
+    "entry_price": 46.65,
+    "entry_date": "2026-03-18T15:03:15.510887",
+    "stop_loss": 45.26951206609979,
+    "yf_ticker": "NI",
+    "exchange": "NYSE",
+    "allocated_amount": 362.40357476933366
+  },
+  "WMB": {
+    "entry_price": 73.24,
+    "entry_date": "2026-03-18T15:58:05.884935",
+    "stop_loss": 71.22719397624385,
+    "yf_ticker": "WMB",
+    "exchange": "NYSE",
+    "allocated_amount": 362.40357476933366
   }
 }

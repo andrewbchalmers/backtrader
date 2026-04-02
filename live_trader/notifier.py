@@ -271,6 +271,39 @@ class PushbulletNotifier:
         print(f"🟢 BUY ALERT: {symbol} ({exchange}) @ ${price:.2f}, SL @ ${stop:.2f}"
               + (f", suggested ${suggested_amount:,.0f}" if suggested_amount else ""))
 
+    def send_buy_alert_with_chart(self, symbol, signal, chart_buffer, suggested_amount=None, suggested_shares=None):
+        """Send buy opportunity notification with 1Y backtest context chart"""
+        import yfinance as yf
+
+        price = signal['price']
+        stop = signal['stop_loss']
+        risk_pct = ((price - stop) / price) * 100
+
+        try:
+            ticker = yf.Ticker(symbol)
+            exchange = ticker.info.get('fullExchangeName', 'Unknown')
+        except Exception:
+            exchange = 'Unknown'
+
+        title = f"🟢 BUY {symbol}"
+        message = (
+            f"Exchange: {exchange}\n"
+            f"Price: ${price:.2f}\n"
+            f"Stop Loss: ${stop:.2f}\n"
+            f"Risk: {risk_pct:.2f}%"
+        )
+
+        if suggested_amount and suggested_amount > 0 and suggested_shares:
+            risk_dollars = (price - stop) * suggested_shares
+            message += f"\nSize: ${suggested_amount:,.0f} (~{suggested_shares} sh, risk ${risk_dollars:,.0f})"
+
+        sent = self.send_notification_with_image(title, message, chart_buffer, f"{symbol}_buy_chart.png")
+        if not sent:
+            # Image send failed — fall back to text-only so alert is never lost
+            self.send_notification(title, message)
+        print(f"🟢 BUY ALERT (with chart): {symbol} ({exchange}) @ ${price:.2f}, SL @ ${stop:.2f}"
+              + (f", suggested ${suggested_amount:,.0f}" if suggested_amount else ""))
+
     def send_sell_alert(self, symbol, signal, entry_price, exchange=None):
         """Send sell alert notification"""
         pnl = ((signal['price'] / entry_price) - 1) * 100
