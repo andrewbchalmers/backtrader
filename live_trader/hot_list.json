@@ -10,10 +10,10 @@
   "ADI": {
     "score": 96.50000000000001,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 320.5799865722656,
-    "bullish_accuracy": 51.629955947136565,
-    "bullish_total": 5675
+    "bullish_accuracy": 51.556728232189975,
+    "bullish_total": 5685
   },
   "ADSK": {
     "score": 80.5,
@@ -80,12 +80,12 @@
     "bullish_total": 1344
   },
   "AMZN": {
-    "score": 72.50000000000001,
-    "bars_ago": 2,
-    "added_date": "2026-04-02",
-    "signal_price": 208.27000427246094,
-    "bullish_accuracy": 53.823953823953815,
-    "bullish_total": 3465
+    "score": 48.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 210.57000732421875,
+    "bullish_accuracy": 54.353411361689986,
+    "bullish_total": 3503
   },
   "AOS": {
     "score": 71.50000000000001,
@@ -96,11 +96,11 @@
     "bullish_total": 5203
   },
   "APO": {
-    "score": 53.49999999999999,
+    "score": 73.50000000000001,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
-    "signal_price": 110.25,
-    "bullish_accuracy": 53.78006872852234,
+    "added_date": "2026-04-06",
+    "signal_price": 107.04000091552734,
+    "bullish_accuracy": 55.670103092783506,
     "bullish_total": 1746
   },
   "AVGO": {
@@ -122,9 +122,9 @@
   "AZO": {
     "score": 76.49999999999999,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 3426.469970703125,
-    "bullish_accuracy": 52.09510357815442,
+    "bullish_accuracy": 52.024482109227876,
     "bullish_total": 4248
   },
   "AXP": {
@@ -202,10 +202,10 @@
   "CB": {
     "score": 98.50000000000001,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 327.1600036621094,
-    "bullish_accuracy": 54.518222666001,
-    "bullish_total": 4006
+    "bullish_accuracy": 54.75113122171946,
+    "bullish_total": 3978
   },
   "CCI": {
     "score": 97.50000000000001,
@@ -250,10 +250,10 @@
   "CNP": {
     "score": 42.50000000000001,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 43.25,
-    "bullish_accuracy": 51.46154811190565,
-    "bullish_total": 7971
+    "bullish_accuracy": 51.43862294258072,
+    "bullish_total": 7959
   },
   "COR": {
     "score": 55.49999999999999,
@@ -266,10 +266,10 @@
   "COP": {
     "score": 29.499999999999993,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 128.3800048828125,
-    "bullish_accuracy": 52.169864034270816,
-    "bullish_total": 5369
+    "bullish_accuracy": 51.7814288351486,
+    "bullish_total": 5417
   },
   "CPAY": {
     "score": 76.49999999999999,
@@ -362,10 +362,10 @@
   "DLTR": {
     "score": 70.5,
     "bars_ago": 1,
-    "added_date": "2026-04-02",
+    "added_date": "2026-04-06",
     "signal_price": 108.69999694824219,
-    "bullish_accuracy": 53.40969632392115,
-    "bullish_total": 3754
+    "bullish_accuracy": 54.28798305982001,
+    "bullish_total": 3778
   },
   "DIS": {
     "score": 36.5,
@@ -444,24 +444,24 @@
     "bars_ago": 1,
     "added_date": "2026-04-02",
     "signal_price": 140.4199981689453,
-    "bullish_accuracy": 51.784511784511785,
-    "bullish_total": 4455
+    "bullish_accuracy": 51.785313271951495,
+    "bullish_total": 4453
   },
   "EQR": {
     "score": 24.50000000000001,
     "bars_ago": 1,
     "added_date": "2026-04-02",
     "signal_price": 59.54999923706055,
-    "bullish_accuracy": 53.003533568904594,
-    "bullish_total": 3962
+    "bullish_accuracy": 53.03909205548549,
+    "bullish_total": 3965
   },
   "ETN": {
     "score": 98.50000000000001,
     "bars_ago": 1,
     "added_date": "2026-04-02",
     "signal_price": 365.55999755859375,
-    "bullish_accuracy": 53.14842578710645,
-    "bullish_total": 6670
+    "bullish_accuracy": 53.07438512297541,
+    "bullish_total": 6668
   },
   "EXE": {
     "score": 55.49999999999999,
@@ -520,12 +520,12 @@
     "bullish_total": 745
   },
   "FIX": {
-    "score": 35.5,
-    "bars_ago": 2,
-    "added_date": "2026-04-02",
-    "signal_price": 1378.989990234375,
-    "bullish_accuracy": 53.54445090063916,
-    "bullish_total": 3442
+    "score": 57.49999999999999,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 1417.18994140625,
+    "bullish_accuracy": 53.63401321459351,
+    "bullish_total": 3481
   },
   "FTNT": {
     "score": 64.5,
@@ -652,8 +652,8 @@
     "bars_ago": 1,
     "added_date": "2026-04-02",
     "signal_price": 329.55999755859375,
-    "bullish_accuracy": 53.74149659863946,
-    "bullish_total": 5439
+    "bullish_accuracy": 53.761265403715285,
+    "bullish_total": 5437
   },
   "HPE": {
     "score": 71.50000000000001,
@@ -680,12 +680,12 @@
     "bullish_total": 5644
   },
   "IBKR": {
-    "score": 61.5,
-    "bars_ago": 2,
-    "added_date": "2026-04-02",
-    "signal_price": 67.06999969482422,
-    "bullish_accuracy": 56.08228980322003,
-    "bullish_total": 2236
+    "score": 23.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 67.73999786376953,
+    "bullish_accuracy": 55.92691622103387,
+    "bullish_total": 2244
   },
   "HUM": {
     "score": 64.5,
@@ -1016,12 +1016,12 @@
     "bullish_total": 5602
   },
   "PANW": {
-    "score": 76.49999999999999,
-    "bars_ago": 2,
-    "added_date": "2026-04-02",
-    "signal_price": 160.32000732421875,
-    "bullish_accuracy": 55.718849840255594,
-    "bullish_total": 1565
+    "score": 42.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 163.2100067138672,
+    "bullish_accuracy": 54.14790996784566,
+    "bullish_total": 1555
   },
   "PAYX": {
     "score": 97.50000000000001,
@@ -1502,5 +1502,205 @@
     "signal_price": 160.77999877929688,
     "bullish_accuracy": 54.122674710910005,
     "bullish_total": 7956
+  },
+  "AFL": {
+    "score": 79.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-02",
+    "signal_price": 109.63999938964844,
+    "bullish_accuracy": 52.23483504788933,
+    "bullish_total": 5638
+  },
+  "CME": {
+    "score": 35.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 296.94000244140625,
+    "bullish_accuracy": 55.15280739161336,
+    "bullish_total": 2814
+  },
+  "DOW": {
+    "score": 36.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 41.400001525878906,
+    "bullish_accuracy": 52.58152173913043,
+    "bullish_total": 736
+  },
+  "DOC": {
+    "score": 61.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 16.520000457763672,
+    "bullish_accuracy": 52.523627588980496,
+    "bullish_total": 4973
+  },
+  "DPZ": {
+    "score": 98.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 370.82000732421875,
+    "bullish_accuracy": 56.75039246467818,
+    "bullish_total": 2548
+  },
+  "EME": {
+    "score": 99.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 756.2999877929688,
+    "bullish_accuracy": 54.37252311756935,
+    "bullish_total": 3785
+  },
+  "ES": {
+    "score": 26.49999999999999,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 69.47000122070312,
+    "bullish_accuracy": 50.374904361132366,
+    "bullish_total": 6535
+  },
+  "GEHC": {
+    "score": 22.500000000000007,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 70.3499984741211,
+    "bullish_accuracy": 50.719424460431654,
+    "bullish_total": 278
+  },
+  "GS": {
+    "score": 99.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 863.0399780273438,
+    "bullish_accuracy": 53.786945812807886,
+    "bullish_total": 3248
+  },
+  "LH": {
+    "score": 28.499999999999993,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 273.7200012207031,
+    "bullish_accuracy": 52.476603515179185,
+    "bullish_total": 4381
+  },
+  "META": {
+    "score": 79.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 574.4600219726562,
+    "bullish_accuracy": 56.27329192546584,
+    "bullish_total": 1610
+  },
+  "MTB": {
+    "score": 66.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 210.16000366210938,
+    "bullish_accuracy": 53.24238128986535,
+    "bullish_total": 5644
+  },
+  "NVDA": {
+    "score": 88.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 177.38999938964844,
+    "bullish_accuracy": 54.74430067775724,
+    "bullish_total": 3246
+  },
+  "NVR": {
+    "score": 22.500000000000007,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 6663.14013671875,
+    "bullish_accuracy": 50.01006238679815,
+    "bullish_total": 4969
+  },
+  "ON": {
+    "score": 21.500000000000007,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 62.189998626708984,
+    "bullish_accuracy": 51.80878552971576,
+    "bullish_total": 3096
+  },
+  "SLB": {
+    "score": 64.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 49.439998626708984,
+    "bullish_accuracy": 51.254349020325954,
+    "bullish_total": 5461
+  },
+  "SYK": {
+    "score": 99.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 331.5400085449219,
+    "bullish_accuracy": 53.07094952347335,
+    "bullish_total": 5666
+  },
+  "T": {
+    "score": 89.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 28.329999923706055,
+    "bullish_accuracy": 53.75911008822401,
+    "bullish_total": 5214
+  },
+  "TJX": {
+    "score": 92.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 161.2899932861328,
+    "bullish_accuracy": 53.755770037767526,
+    "bullish_total": 4766
+  },
+  "TTD": {
+    "score": 32.49999999999999,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 22.049999237060547,
+    "bullish_accuracy": 53.27014218009478,
+    "bullish_total": 1055
+  },
+  "VICI": {
+    "score": 84.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 27.65999984741211,
+    "bullish_accuracy": 53.093363329583795,
+    "bullish_total": 889
+  },
+  "VMC": {
+    "score": 49.500000000000014,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 279.8800048828125,
+    "bullish_accuracy": 51.816530426884654,
+    "bullish_total": 6606
+  },
+  "ZBRA": {
+    "score": 22.500000000000007,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 202.83999633789062,
+    "bullish_accuracy": 51.812366737739865,
+    "bullish_total": 4221
+  },
+  "AMAT": {
+    "score": 85.5,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 348.4700012207031,
+    "bullish_accuracy": 52.459598650328545,
+    "bullish_total": 5631
+  },
+  "APH": {
+    "score": 96.50000000000001,
+    "bars_ago": 1,
+    "added_date": "2026-04-06",
+    "signal_price": 128.0,
+    "bullish_accuracy": 54.62941037177362,
+    "bullish_total": 4223
   }
 }

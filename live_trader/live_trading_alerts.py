@@ -27,6 +27,9 @@ except FileNotFoundError:
 # Pushbullet API key
 PUSHBULLET_API_KEY = "o.ptYJ8W8YpFEnDVZ1CL4vO9N7suOvJURG"
 
+# Finnhub API key (free at finnhub.io) — leave blank to disable news monitoring
+FINNHUB_API_KEY = "d77bmrhr01qp6afl1npgd77bmrhr01qp6afl1nq0"
+
 # Testing mode
 TESTING_MODE = False  # Set to True for backtesting, False for live trading
 TEST_START_DATE = "2024-06-01"
@@ -269,6 +272,7 @@ def main():
         warmup_days=WARMUP_DAYS,
         portfolio_capital=PORTFOLIO_CAPITAL,
         max_positions=MAX_POSITIONS,
+        finnhub_api_key=FINNHUB_API_KEY,
     )
 
     # Run in selected mode

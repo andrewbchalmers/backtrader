@@ -496,7 +496,7 @@ class LiveTradingMonitor:
     }
 
     def __init__(self, watchlist, strategy_loader, strategy_params, notifier, warmup_days=300,
-                 portfolio_capital=100_000, max_positions=10):
+                 portfolio_capital=100_000, max_positions=10, finnhub_api_key=''):
         self.watchlist = watchlist
         self.strategy = strategy_loader
         self.params = strategy_params
@@ -504,6 +504,7 @@ class LiveTradingMonitor:
         self.position_manager = PositionManager()
         self.warmup_days = warmup_days
         self.max_positions = max_positions
+        self.finnhub_api_key = finnhub_api_key
         self.buy_alerts_sent = {}  # Track when buy alerts were sent: {symbol: date}
         self.market_open_notified_date = None  # Track when market open notification was sent
         self.current_timeframe = '1D'  # Default to daily bars
@@ -514,6 +515,8 @@ class LiveTradingMonitor:
         self.pending_replacements = {}  # {new_sym: {'worst_held': sym, 'signal': {...}, 'worst_pnl': float}}
         self.last_discovery_time = None  # Datetime of last full watchlist scan
         self.hot_list = {}               # {symbol: {'score': float, 'added_date': str, 'bars_ago': int}}
+        self.spy_outlook_sent_date = None       # Track when daily SPY outlook was last sent
+        self.premarket_movers_sent_date = None  # Track when pre-market movers were last sent
         self._load_hot_list()
         self.portfolio_state = PortfolioStateManager(
             initial_capital=portfolio_capital,
@@ -843,7 +846,7 @@ class LiveTradingMonitor:
                           signal.get('signal_type', 'BUY') == 'BUY' and
                           not self.position_manager.has_position(sym)):
                         bars_ago = signal.get('bars_ago', 0)
-                        if bars_ago <= 3:
+                        if bars_ago <= 1:
                             score = abs(signal.get('prediction', 0))
                             found_signals.append((sym, signal, score, chart_bytes))
 
@@ -1848,6 +1851,268 @@ class LiveTradingMonitor:
         self.market_open_notified_date = today
         print(f"📢 Market open notification sent")
 
+    def _news_monitor_loop(self):
+        """
+        Background thread that polls Finnhub market news every 2 minutes.
+        On first poll, seeds seen article IDs without sending notifications (avoids
+        a flood of old news on startup). After that, any new article matching
+        high-impact keywords fires a Pushbullet notification immediately.
+        Runs continuously while self.scanning is True.
+        """
+        import requests
+
+        POLL_INTERVAL = 120  # seconds between polls
+
+        HIGH_IMPACT_KEYWORDS = [
+            # Fed / monetary policy
+            'federal reserve', 'fed ', 'interest rate', 'rate hike', 'rate cut',
+            'powell', 'fomc', 'quantitative', 'inflation', 'cpi', 'ppi',
+            # Economic data
+            'nonfarm', 'unemployment', 'jobs report', 'gdp', 'recession',
+            'debt ceiling', 'government shutdown',
+            # Trade / geopolitical
+            'tariff', 'trade war', 'trade deal', 'sanctions', 'embargo',
+            'trump', 'executive order',
+            # Market structure
+            'circuit breaker', 'market halt', 'flash crash', 'black swan',
+            'systemic', 'contagion', 'liquidity crisis',
+            # Macro shocks
+            'war', 'invasion', 'attack', 'explosion', 'catastrophe',
+        ]
+
+        url = f"https://finnhub.io/api/v1/news?category=general&token={self.finnhub_api_key}"
+        seen_ids = set()
+        first_poll = True
+
+        print("📰 News monitor running...")
+
+        while self.scanning:
+            try:
+                resp = requests.get(url, timeout=10)
+
+                if resp.status_code == 200:
+                    articles = resp.json()
+                    now_ts = time.time()
+                    new_alerts = 0
+
+                    for article in articles:
+                        article_id = article.get('id')
+                        if article_id in seen_ids:
+                            continue
+                        seen_ids.add(article_id)
+
+                        if first_poll:
+                            continue  # Seed without notifying on startup
+
+                        # Only alert on articles published since the last poll
+                        article_ts = article.get('datetime', 0)
+                        if now_ts - article_ts > POLL_INTERVAL + 60:
+                            continue
+
+                        headline = article.get('headline', '')
+                        summary  = article.get('summary', '')
+                        text     = (headline + ' ' + summary).lower()
+
+                        if any(kw in text for kw in HIGH_IMPACT_KEYWORDS):
+                            source   = article.get('source', 'Unknown')
+                            pub_time = datetime.fromtimestamp(article_ts).strftime('%I:%M%p').lstrip('0')
+
+                            # Trim summary to a readable length
+                            snippet = summary[:220].rsplit(' ', 1)[0] + '…' if len(summary) > 220 else summary
+
+                            title   = f"📰 {source}"
+                            message = f"{headline}\n\n{snippet}\n\n{pub_time} ET"
+
+                            self.notifier.send_notification(title, message)
+                            print(f"📰 News alert: {headline[:70]}")
+                            new_alerts += 1
+
+                    if first_poll:
+                        print(f"📰 News monitor seeded ({len(seen_ids)} existing articles ignored)")
+                        first_poll = False
+
+                    # Keep seen_ids from growing unboundedly
+                    if len(seen_ids) > 1000:
+                        seen_ids = set(list(seen_ids)[-400:])
+
+                elif resp.status_code == 429:
+                    print("⚠️  Finnhub rate limit hit — backing off 60s")
+                    time.sleep(60)
+                else:
+                    print(f"⚠️  Finnhub returned {resp.status_code}")
+
+            except Exception as e:
+                print(f"⚠️  News monitor error: {e}")
+
+            self._interruptible_sleep(POLL_INTERVAL)
+
+        print("🛑 News monitor stopped")
+
+    def _send_premarket_movers(self):
+        """
+        Runs in its own daemon thread, spawned at 4am ET.
+        Waits until 9:00am ET (30 min before open) when pre-market prices are meaningful,
+        then checks all held positions for moves >2% vs prior close.
+        Only sends a notification if at least one position is moving significantly.
+        """
+        import pytz
+        eastern = pytz.timezone('US/Eastern')
+
+        print("📊 Pre-market movers thread started — waiting until 9:00am ET...")
+
+        # Sleep until 9:00am ET, checking every 30s to allow clean shutdown
+        while self.scanning:
+            now_et = datetime.now(eastern)
+            target = now_et.replace(hour=9, minute=0, second=0, microsecond=0)
+            if now_et >= target:
+                break
+            time.sleep(30)
+
+        if not self.scanning:
+            return
+
+        positions = self.position_manager.list_all()
+        if not positions:
+            return
+
+        print(f"📊 Checking pre-market prices for {len(positions)} held position(s)...")
+
+        movers = []
+        for symbol, pos in positions.items():
+            try:
+                yf_ticker = pos.get('yf_ticker', symbol)
+                fast = yf.Ticker(yf_ticker).fast_info
+
+                pre_price  = getattr(fast, 'pre_market_price', None)
+                prev_close = (getattr(fast, 'regular_market_previous_close', None)
+                              or getattr(fast, 'previous_close', None))
+
+                if not pre_price or not prev_close or prev_close == 0:
+                    continue
+
+                pct = (pre_price - prev_close) / prev_close * 100
+
+                if abs(pct) >= 2.0:
+                    movers.append((symbol, pre_price, prev_close, pct, pos['entry_price']))
+
+            except Exception:
+                continue
+
+        if not movers:
+            print("📊 Pre-market movers: no significant moves (>2%) in held positions")
+            return
+
+        # Sort largest move first
+        movers.sort(key=lambda x: abs(x[3]), reverse=True)
+
+        lines = []
+        for symbol, pre_price, prev_close, pct, entry_price in movers:
+            entry_pnl = (pre_price / entry_price - 1) * 100
+            if pct >= 5:
+                emoji = "🚀"
+            elif pct >= 2:
+                emoji = "📈"
+            elif pct <= -5:
+                emoji = "⚠️"
+            else:
+                emoji = "📉"
+
+            lines.append(
+                f"{emoji} {symbol}: {pct:+.1f}% pre-mkt\n"
+                f"   ${pre_price:.2f} (prev ${prev_close:.2f})\n"
+                f"   vs entry: {entry_pnl:+.1f}%"
+            )
+
+        title = f"🔔 Pre-Market Movers ({len(movers)} of {len(positions)} held)"
+        self.notifier.send_notification(title, "\n\n".join(lines))
+        print(f"📊 Pre-market movers sent: {len(movers)} position(s) moving >2%")
+
+    def _send_spy_daily_outlook(self):
+        """
+        Runs in its own daemon thread, spawned once at market open.
+        Polls for intraday SPY data every 60s until 30 minutes of bars are available
+        (6 × 5-min bars), then computes VWAP and sends the outlook notification.
+        Completely independent of the scan and exit threads.
+        """
+        print("📊 SPY outlook thread started — waiting for 30 min of intraday data...")
+
+        # Wait until we have at least 6 bars (30 minutes of 5-min data)
+        df = pd.DataFrame()
+        while self.scanning:
+            try:
+                df = yf.download('SPY', period='1d', interval='5m',
+                                 progress=False, auto_adjust=True, threads=False)
+                if not df.empty:
+                    if isinstance(df.columns, pd.MultiIndex):
+                        df.columns = [col[0] for col in df.columns]
+                    df = df.loc[:, ~df.columns.duplicated()]
+                    df.index = df.index.tz_localize(None)
+                    if len(df) >= 6:
+                        break
+            except Exception:
+                pass
+            time.sleep(60)
+
+        if not self.scanning or df.empty:
+            return
+
+        try:
+
+            # VWAP: (typical price × volume) summed over all bars so far today
+            typical = (df['High'] + df['Low'] + df['Close']) / 3
+            vwap = float((typical * df['Volume']).sum() / df['Volume'].sum())
+
+            current = float(df['Close'].iloc[-1])
+            open_price = float(df['Open'].iloc[0])
+
+            # Gap from prior close
+            spy_daily = yf.download('SPY', period='5d', interval='1d',
+                                    progress=False, auto_adjust=True, threads=False)
+            prev_close = None
+            if not spy_daily.empty and len(spy_daily) >= 2:
+                if isinstance(spy_daily.columns, pd.MultiIndex):
+                    spy_daily.columns = [col[0] for col in spy_daily.columns]
+                spy_daily = spy_daily.loc[:, ~spy_daily.columns.duplicated()]
+                prev_close = float(spy_daily['Close'].iloc[-2])
+
+            gap_pct = ((open_price - prev_close) / prev_close * 100) if prev_close else 0.0
+            vwap_pct = (current - vwap) / vwap * 100
+            intraday_pct = (current - open_price) / open_price * 100
+
+            # Scoring: VWAP is the primary signal (weighted 2), gap and intraday direction support
+            score = 0
+            score += 2 if current > vwap else -2
+            score += 1 if gap_pct > 0.2 else (-1 if gap_pct < -0.2 else 0)
+            score += 1 if intraday_pct > 0.1 else (-1 if intraday_pct < -0.1 else 0)
+
+            if score >= 2:
+                outlook, emoji = "Bullish", "🟢"
+            elif score <= -2:
+                outlook, emoji = "Bearish", "🔴"
+            else:
+                outlook, emoji = "Neutral", "🟡"
+
+            vwap_label = "above" if current > vwap else "below"
+            gap_str = f"{gap_pct:+.2f}%" if abs(gap_pct) > 0.05 else "flat open"
+            bars_in = len(df)
+            mins_in = bars_in * 5
+
+            title = f"{emoji} S&P500: {outlook}"
+            message = (
+                f"SPY ${current:.2f}  ({mins_in} min in)\n"
+                f"VWAP ${vwap:.2f} — {vwap_label} ({vwap_pct:+.2f}%)\n"
+                f"Open gap: {gap_str}\n"
+                f"Intraday: {intraday_pct:+.2f}%"
+            )
+
+            self.notifier.send_notification(title, message)
+            print(f"📊 SPY daily outlook sent: {outlook} "
+                  f"(VWAP {vwap_label} by {vwap_pct:+.2f}%, gap {gap_str}, "
+                  f"{mins_in} min of data)")
+
+        except Exception as e:
+            print(f"⚠️  Could not compute SPY daily outlook: {e}")
+
     def _scan_loop(self, scan_interval):
         """Background scanning loop - runs in separate thread.
 
@@ -1906,6 +2171,11 @@ class LiveTradingMonitor:
 
                 # ── Pre-market window ────────────────────────────────────────
                 if in_pre_market:
+                    # Once-per-day pre-market movers check — thread waits until 9:00am ET
+                    if self.premarket_movers_sent_date != datetime.now().date():
+                        self.premarket_movers_sent_date = datetime.now().date()
+                        threading.Thread(target=self._send_premarket_movers, daemon=True).start()
+
                     if discovery_due:
                         mins_to_open = int((market_open - now_et).total_seconds() / 60)
                         print(f"\n📡 PRE-MARKET DISCOVERY — {len(self.watchlist)} symbols  "
@@ -1926,6 +2196,12 @@ class LiveTradingMonitor:
                 # ── Market hours ─────────────────────────────────────────────
                 elif in_market:
                     self.send_market_open_notification()
+
+                    # Once-per-day SPY directional outlook — spawns its own thread at market open,
+                    # waits independently for 30 min of intraday data before sending.
+                    if self.spy_outlook_sent_date != datetime.now().date():
+                        self.spy_outlook_sent_date = datetime.now().date()
+                        threading.Thread(target=self._send_spy_daily_outlook, daemon=True).start()
 
                     if discovery_due:
                         hours_since_str = (f"{hours_since:.1f}h ago"
@@ -2071,6 +2347,13 @@ class LiveTradingMonitor:
         self.exit_thread = threading.Thread(target=self._exit_scan_loop, args=(exit_interval,), daemon=True)
         self.exit_thread.start()
         print("✓ Exit scan thread started")
+
+        # News monitor thread (Finnhub) — only if API key is configured
+        if self.finnhub_api_key:
+            threading.Thread(target=self._news_monitor_loop, daemon=True).start()
+            print("✓ News monitor thread started (Finnhub)")
+        else:
+            print("ℹ️  News monitor disabled (no FINNHUB_API_KEY set)")
 
         try:
             # Keep main thread alive for keyboard interrupt
