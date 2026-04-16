@@ -297,7 +297,10 @@ class StrategyLoader:
                 result['bullish_total'] = pred_stats.get('bullish_total', 0)
 
         except Exception as e:
-            print(f"\n❌ Error running ML strategy signal detection: {e}")
+            sym_label = f" [{symbol}]" if symbol else ""
+            print(f"\n❌ Error running ML strategy signal detection{sym_label}: {e}")
+            import traceback
+            traceback.print_exc()
 
         finally:
             # Clean up cerebro and force garbage collection

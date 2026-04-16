@@ -576,9 +576,18 @@ class ChartGenerator:
 
         # Add annotation box with key stats
         if results:
+            # Buy-and-hold return for the stock over the test period
+            bah_return = 0.0
+            if len(df_chart) >= 2 and 'close' in df_chart.columns:
+                bah_start = float(df_chart['close'].iloc[0])
+                bah_end   = float(df_chart['close'].iloc[-1])
+                if bah_start > 0:
+                    bah_return = (bah_end / bah_start - 1) * 100
+
             stats_lines = [
                 f"Sharpe: {results.get('sharpe_ratio', 0):.2f}",
                 f"Max DD: {results.get('max_drawdown', 0):.1f}%",
+                f"Buy & Hold: {bah_return:+.1f}%",
                 f"vs SPY: {results.get('total_return_pct', 0) - results.get('spy_return', 0):+.1f}%",
             ]
 

@@ -232,7 +232,7 @@ SCAN_INTERVAL = 5
 
 # Portfolio management
 PORTFOLIO_CAPITAL = 100_000   # Starting/current cash for dynamic position sizing
-MAX_POSITIONS     = 20        # Hard cap — no buy alerts sent when portfolio is full
+MAX_POSITIONS     = 25        # Hard cap — no buy alerts sent when portfolio is full
 
 # ============================================================================
 

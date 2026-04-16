@@ -206,7 +206,7 @@ class PushbulletNotifier:
                                        'ANALYZE ', 'COMPARE ', 'ADD ', 'REMOVE ', 'REPLACE ', 'CAPITAL ',
                                        'UPDATE ']
                     # Exact match commands (no arguments)
-                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME', 'PORTFOLIO', 'PORTFOLIO WORST', 'HELP', 'BEST']
+                    exact_commands = ['HOLDING', 'HOLDINGS', 'TIMEFRAME', 'PORTFOLIO', 'PORTFOLIO WORST', 'HELP', 'BEST', 'NEWS']
 
                     is_valid_command = False
 

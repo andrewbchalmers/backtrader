@@ -484,6 +484,11 @@ class LiveTradingMonitor:
     # e.g. 3 → runs pre-market, then again mid-morning, then again mid-afternoon.
     DISCOVERY_INTERVAL_HOURS = 3
 
+    # Post-market discovery window: market_close → this hour ET.
+    # Daily bars are COMPLETE at close, so this is the first chance to catch
+    # today's signals. After this hour, just wait for tomorrow's pre-market.
+    POST_MARKET_SCAN_END_HOUR = 20  # 8 PM ET
+
     # Valid timeframes and their configurations
     TIMEFRAMES = {
         '1M': {'interval': '1m', 'period': '7d', 'description': '1 Minute'},
@@ -517,6 +522,7 @@ class LiveTradingMonitor:
         self.hot_list = {}               # {symbol: {'score': float, 'added_date': str, 'bars_ago': int}}
         self.spy_outlook_sent_date = None       # Track when daily SPY outlook was last sent
         self.premarket_movers_sent_date = None  # Track when pre-market movers were last sent
+        self.post_market_scan_date = None       # Track when post-market discovery scan last ran
         self._load_hot_list()
         self.portfolio_state = PortfolioStateManager(
             initial_capital=portfolio_capital,
@@ -974,6 +980,8 @@ class LiveTradingMonitor:
             self.handle_portfolio_worst_query()
         elif reply == "BEST":
             self.handle_best_query()
+        elif reply == "NEWS":
+            self.handle_news_query()
         elif reply == "HELP":
             self.handle_help_query()
         else:
@@ -1618,6 +1626,7 @@ class LiveTradingMonitor:
             "CAPITAL ADD <AMT>\n"
             "\n"
             "-- Analysis --\n"
+            "NEWS\n"
             "BEST\n"
             "LAST <SYM>\n"
             "BACKTEST <SYM> [1M|3M|6M|1Y|2Y|3Y|5Y]\n"
@@ -1633,6 +1642,98 @@ class LiveTradingMonitor:
             "TIMEFRAME SET [1M|5M|15M|30M|1H|4H|1D]"
         )
         self.notifier.send_notification("Commands", message)
+
+    def handle_news_query(self):
+        """Handle 'NEWS' command — fetch and summarize today's most relevant market news."""
+        import requests
+        from datetime import date, time as _time, datetime as _dt
+
+        if not self.finnhub_api_key:
+            self.notifier.send_notification("📰 News", "Finnhub API key not configured.")
+            return
+
+        HIGH_IMPACT_KEYWORDS = [
+            'federal reserve', 'fed ', 'interest rate', 'rate hike', 'rate cut',
+            'powell', 'fomc', 'quantitative', 'inflation', 'cpi', 'ppi',
+            'nonfarm', 'unemployment', 'jobs report', 'gdp', 'recession',
+            'debt ceiling', 'government shutdown',
+            'tariff', 'trade war', 'trade deal', 'sanctions', 'embargo',
+            'trump', 'executive order',
+            'circuit breaker', 'market halt', 'flash crash', 'black swan',
+            'systemic', 'contagion', 'liquidity crisis',
+            'war', 'invasion', 'attack', 'explosion', 'catastrophe',
+        ]
+
+        try:
+            url = f"https://finnhub.io/api/v1/news?category=general&token={self.finnhub_api_key}"
+            resp = requests.get(url, timeout=10)
+
+            if resp.status_code == 429:
+                self.notifier.send_notification("📰 News", "Finnhub rate limit hit — try again shortly.")
+                return
+            if resp.status_code != 200:
+                self.notifier.send_notification("📰 News", f"Finnhub returned {resp.status_code}.")
+                return
+
+            articles = resp.json()
+            cutoff_ts = _dt.combine(date.today(), _time.min).timestamp()
+
+            scored = []
+            for article in articles:
+                article_ts = article.get('datetime', 0)
+                if article_ts < cutoff_ts:
+                    continue
+                headline = article.get('headline', '')
+                summary  = article.get('summary', '')
+                text     = (headline + ' ' + summary).lower()
+                score    = sum(1 for kw in HIGH_IMPACT_KEYWORDS if kw in text)
+                scored.append((score, article_ts, article))
+
+            if not scored:
+                self.notifier.send_notification("📰 News", "No market news indexed for today yet.")
+                return
+
+            # Sort by relevance score desc, then most-recent first
+            scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+            import pytz as _pytz
+            _eastern_tz = _pytz.timezone('US/Eastern')
+            now_ts = _dt.now().timestamp()
+
+            def _fmt_pub(ts):
+                try:
+                    et = _dt.fromtimestamp(ts, tz=_pytz.utc).astimezone(_eastern_tz)
+                    return et.strftime('%-I:%M%p').lower() + ' ET'
+                except Exception:
+                    return ''
+
+            def _rel(ts):
+                age = now_ts - ts
+                if age < 60:
+                    return 'just now'
+                elif age < 3600:
+                    return f"{int(age // 60)}m ago"
+                else:
+                    h = int(age // 3600)
+                    m = int((age % 3600) // 60)
+                    return f"{h}h {m}m ago" if m else f"{h}h ago"
+
+            top = scored[:7]
+            lines = [f"{len(scored)} articles today — top {len(top)} by relevance\n"]
+
+            for score, article_ts, article in top:
+                headline = article.get('headline', '')
+                source   = article.get('source', 'Unknown')
+                pub_time = _fmt_pub(article_ts)
+                emoji    = "🔴" if score >= 3 else ("🟡" if score >= 1 else "⚪")
+                lines.append(f"{emoji} {pub_time} · {_rel(article_ts)} · {source}\n{headline}")
+
+            self.notifier.send_notification("📰 Today's News", "\n\n".join(lines))
+            print(f"✓ Sent NEWS summary: {len(top)} of {len(scored)} today's articles")
+
+        except Exception as e:
+            print(f"❌ NEWS query error: {e}")
+            self.notifier.send_notification("📰 News Error", str(e)[:100])
 
     def _get_reliable_price(self, yf_ticker):
         """
@@ -1880,9 +1981,18 @@ class LiveTradingMonitor:
             'war', 'invasion', 'attack', 'explosion', 'catastrophe',
         ]
 
+        import pytz
+        _eastern = pytz.timezone('US/Eastern')
+
+        # Max age for an article to be alertable. Finnhub indexes with variable
+        # delay (often 5–30 min); 4 hours is generous while blocking truly stale
+        # articles that surface hours after publication.
+        MAX_ARTICLE_AGE_SECS = 4 * 3600
+
         url = f"https://finnhub.io/api/v1/news?category=general&token={self.finnhub_api_key}"
-        seen_ids = set()
-        first_poll = True
+        seen_ids       = {}   # id → article_ts; dict preserves insertion order for safe pruning
+        seen_headlines = {}   # normalised_headline → sent_ts; cross-source duplicate suppression
+        first_poll     = True
 
         print("📰 News monitor running...")
 
@@ -1896,44 +2006,77 @@ class LiveTradingMonitor:
                     new_alerts = 0
 
                     for article in articles:
-                        article_id = article.get('id')
+                        article_id  = article.get('id')
+                        article_ts  = article.get('datetime', 0)
+
+                        # --- ID deduplication ---
                         if article_id in seen_ids:
                             continue
-                        seen_ids.add(article_id)
+                        seen_ids[article_id] = article_ts
 
                         if first_poll:
                             continue  # Seed without notifying on startup
 
-                        # Only alert on articles published since the last poll
-                        article_ts = article.get('datetime', 0)
-                        if now_ts - article_ts > POLL_INTERVAL + 60:
+                        # --- Age filter: skip articles older than MAX_ARTICLE_AGE_SECS ---
+                        if article_ts and (now_ts - article_ts) > MAX_ARTICLE_AGE_SECS:
                             continue
 
-                        headline = article.get('headline', '')
-                        summary  = article.get('summary', '')
+                        headline = article.get('headline', '') or ''
+                        summary  = article.get('summary',  '') or ''
                         text     = (headline + ' ' + summary).lower()
 
-                        if any(kw in text for kw in HIGH_IMPACT_KEYWORDS):
-                            source   = article.get('source', 'Unknown')
-                            pub_time = datetime.fromtimestamp(article_ts).strftime('%I:%M%p').lstrip('0')
+                        if not any(kw in text for kw in HIGH_IMPACT_KEYWORDS):
+                            continue
 
-                            # Trim summary to a readable length
-                            snippet = summary[:220].rsplit(' ', 1)[0] + '…' if len(summary) > 220 else summary
+                        # --- Cross-source duplicate suppression ---
+                        # Normalise: lowercase, strip punctuation, first 80 chars
+                        norm = ''.join(c for c in headline.lower() if c.isalnum() or c == ' ')[:80].strip()
+                        if norm in seen_headlines:
+                            print(f"📰 Duplicate headline suppressed: {headline[:60]}")
+                            continue
+                        seen_headlines[norm] = now_ts
 
-                            title   = f"📰 {source}"
-                            message = f"{headline}\n\n{snippet}\n\n{pub_time} ET"
+                        source = article.get('source', 'Unknown')
 
-                            self.notifier.send_notification(title, message)
-                            print(f"📰 News alert: {headline[:70]}")
-                            new_alerts += 1
+                        # Format publish time in ET (correct regardless of server timezone)
+                        try:
+                            pub_dt   = datetime.fromtimestamp(article_ts, tz=pytz.utc).astimezone(_eastern)
+                            pub_time = pub_dt.strftime('%-I:%M%p').lower() + ' ET'
+                        except Exception:
+                            pub_time = ''
+
+                        age_secs = now_ts - article_ts
+                        if age_secs < 60:
+                            rel_time = 'just now'
+                        elif age_secs < 3600:
+                            rel_time = f"{int(age_secs // 60)}m ago"
+                        else:
+                            h = int(age_secs // 3600)
+                            m = int((age_secs % 3600) // 60)
+                            rel_time = f"{h}h {m}m ago" if m else f"{h}h ago"
+
+                        # Trim summary to a readable length
+                        snippet = summary[:220].rsplit(' ', 1)[0] + '…' if len(summary) > 220 else summary
+
+                        title   = f"📰 {source}"
+                        message = f"{headline}\n\n{snippet}\n\n{pub_time} · {rel_time}"
+
+                        self.notifier.send_notification(title, message)
+                        print(f"📰 News alert: {headline[:70]}")
+                        new_alerts += 1
 
                     if first_poll:
                         print(f"📰 News monitor seeded ({len(seen_ids)} existing articles ignored)")
                         first_poll = False
 
-                    # Keep seen_ids from growing unboundedly
+                    # Keep seen_ids from growing unboundedly — drop oldest by timestamp
                     if len(seen_ids) > 1000:
-                        seen_ids = set(list(seen_ids)[-400:])
+                        keep = sorted(seen_ids.items(), key=lambda x: x[1])[-400:]
+                        seen_ids = dict(keep)
+
+                    # Expire seen_headlines older than 2 × MAX_ARTICLE_AGE_SECS
+                    cutoff = now_ts - 2 * MAX_ARTICLE_AGE_SECS
+                    seen_headlines = {h: ts for h, ts in seen_headlines.items() if ts > cutoff}
 
                 elif resp.status_code == 429:
                     print("⚠️  Finnhub rate limit hit — backing off 60s")
@@ -2118,26 +2261,23 @@ class LiveTradingMonitor:
 
         Time-aware scan schedule (all times US/Eastern):
 
-          Weekdays only.  Two modes alternate automatically:
+          Weekdays only.  Windows in order each day:
 
-          DISCOVERY — full watchlist scan (~486 symbols).
-            Triggered when:
-              (a) system starts / never run today, AND in the pre-market window, OR
-              (b) it has been >= DISCOVERY_INTERVAL_HOURS since the last discovery
-                  at any point during the active window (pre-market or market hours).
-            This means discovery runs pre-market, then refreshes mid-morning,
-            then mid-afternoon — catching new signals that emerge as price action
-            develops throughout the day.
+          PRE-MARKET (PRE_MARKET_START_HOUR → 9:30 AM):
+            Run discovery scan if due, then sleep quietly until open.
 
-          HOT SCAN — only hot-list symbols (seconds, not hours).
-            Runs every scan_interval minutes when discovery is not due.
-            Keeps alerting on already-identified candidates quickly.
+          MARKET HOURS (9:30 AM → 4:00 PM):
+            HOT SCAN every scan_interval minutes (hot-list symbols only).
+            DISCOVERY REFRESH every DISCOVERY_INTERVAL_HOURS hours.
 
-          Pre-market window (PRE_MARKET_START_HOUR → 9:30 AM):
-            If discovery is due, it runs here. If discovery is done and market
-            isn't open yet, sleep quietly until open.
+          POST-MARKET (4:00 PM → POST_MARKET_SCAN_END_HOUR):
+            Run ONE full discovery scan ~15 min after close.
+            This is the most important scan for daily bars — it is the first
+            time today's completed closing bar is available to the strategy.
+            Signals found here can be acted on after hours or at tomorrow's open,
+            well before the next day's pre-market scan would fire.
 
-          After hours / overnight:
+          OVERNIGHT (POST_MARKET_SCAN_END_HOUR → next PRE_MARKET_START_HOUR):
             Sleep, polling every 5 minutes.
 
           Weekends: sleep 30 minutes between checks.
@@ -2153,13 +2293,16 @@ class LiveTradingMonitor:
                     continue
 
                 # ── Time boundaries ──────────────────────────────────────────
-                market_open  = now_et.replace(hour=9,  minute=30, second=0, microsecond=0)
-                market_close = now_et.replace(hour=16, minute=0,  second=0, microsecond=0)
-                pre_start    = now_et.replace(hour=self.PRE_MARKET_START_HOUR,
-                                              minute=0, second=0, microsecond=0)
+                market_open      = now_et.replace(hour=9,  minute=30, second=0, microsecond=0)
+                market_close     = now_et.replace(hour=16, minute=0,  second=0, microsecond=0)
+                post_market_end  = now_et.replace(hour=self.POST_MARKET_SCAN_END_HOUR,
+                                                  minute=0, second=0, microsecond=0)
+                pre_start        = now_et.replace(hour=self.PRE_MARKET_START_HOUR,
+                                                  minute=0, second=0, microsecond=0)
 
-                in_pre_market = pre_start <= now_et < market_open
-                in_market     = market_open <= now_et < market_close
+                in_pre_market  = pre_start <= now_et < market_open
+                in_market      = market_open <= now_et < market_close
+                in_post_market = market_close <= now_et < post_market_end
 
                 # ── Is a discovery scan due? ─────────────────────────────────
                 if self.last_discovery_time is None:
@@ -2228,7 +2371,43 @@ class LiveTradingMonitor:
                     print(f"\n💤 Next scan in {scan_interval} minutes...")
                     self._interruptible_sleep(scan_interval * 60)
 
-                # ── After hours / overnight ──────────────────────────────────
+                # ── Post-market window (4:00 PM – POST_MARKET_SCAN_END_HOUR) ─
+                # Daily bars are COMPLETE at close — this is the first opportunity
+                # to detect signals based on today's closing prices.
+                elif in_post_market:
+                    today = datetime.now().date()
+                    if self.post_market_scan_date == today:
+                        # Already scanned today — rest until tomorrow's pre-market
+                        if now_et < pre_start:
+                            secs_to_pre = int((pre_start - now_et).total_seconds())
+                        else:
+                            tomorrow_pre = pre_start + timedelta(days=1)
+                            secs_to_pre = int((tomorrow_pre - now_et).total_seconds())
+                        hrs  = secs_to_pre // 3600
+                        mins = (secs_to_pre % 3600) // 60
+                        print(f"Post-market scan done ({now_et.strftime('%I:%M %p')} ET). "
+                              f"Next pre-market at {self.PRE_MARKET_START_HOUR}:00 AM ET "
+                              f"(~{hrs}h {mins}m away). Hot list: {len(self.hot_list)} symbol(s).")
+                        self._interruptible_sleep(300)
+                    else:
+                        # Wait 15 min after close for yfinance to finalise daily bars,
+                        # then run a full discovery scan on today's completed closes.
+                        mins_since_close = int((now_et - market_close).total_seconds() / 60)
+                        if mins_since_close < 15:
+                            wait_secs = (15 - mins_since_close) * 60
+                            print(f"⏳ Post-market: {mins_since_close}m since close — "
+                                  f"waiting {15 - mins_since_close}m for daily bars to finalise...")
+                            self._interruptible_sleep(wait_secs)
+                        else:
+                            print(f"\n📡 POST-MARKET DISCOVERY — {len(self.watchlist)} symbols "
+                                  f"(daily bar complete, {mins_since_close}m after close)")
+                            self.scan_for_opportunities(symbols=None)
+                            self.last_discovery_time = self._et_now()
+                            self.post_market_scan_date = today
+                            print(f"✅ Post-market discovery complete. "
+                                  f"Hot list: {len(self.hot_list)} symbol(s).")
+
+                # ── Overnight (POST_MARKET_SCAN_END_HOUR – pre-market) ────────
                 else:
                     if now_et < pre_start:
                         secs_to_pre = int((pre_start - now_et).total_seconds())
@@ -2238,7 +2417,7 @@ class LiveTradingMonitor:
 
                     hrs  = secs_to_pre // 3600
                     mins = (secs_to_pre % 3600) // 60
-                    print(f"After hours ({now_et.strftime('%I:%M %p')} ET). "
+                    print(f"Overnight ({now_et.strftime('%I:%M %p')} ET). "
                           f"Pre-market scan at {self.PRE_MARKET_START_HOUR}:00 AM ET "
                           f"(~{hrs}h {mins}m away). Sleeping...")
                     self._interruptible_sleep(300)
